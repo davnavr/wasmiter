@@ -5,6 +5,10 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 
-mod input;
+pub mod input;
 
-pub use input::Input;
+/// Contains commonly used traits and types.
+pub mod prelude {
+    #[doc(no_inline)]
+    pub use crate::input::Source;
+}
