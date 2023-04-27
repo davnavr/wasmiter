@@ -2,7 +2,7 @@
 
 mod input;
 
-pub use input::{FileInput, FileReader};
+pub use input::{FileInput, FileReader, Input};
 
 /// Specifies what kind of error occured during parsing.
 #[derive(thiserror::Error, Debug)]
@@ -57,6 +57,7 @@ pub struct Parser<I: input::Input> {
     input: I,
 }
 
+// TODO: Have WASM specific types moved to crate root
 /// Parses the sections of a WebAssembly module.
 #[derive(Debug)]
 pub struct SectionsParser {}

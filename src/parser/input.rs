@@ -1,16 +1,30 @@
 use std::fs::File;
 use std::io::{Read, Result, Seek, SeekFrom};
 
-#[allow(unreachable_pub)]
+/// Allows reading bytes from some source.
+///
+/// [`Input`] implementations are expected to keep track of their position within the
+/// original source.
 pub trait Input: Sized {
+    /// The [`Read`] implementation used to read bytes.
+    ///
+    /// Calls to read bytes from the input **must** advance the [`Input`]'s position.
     type Reader<'a>: Read
     where
         Self: 'a;
 
+    /// Returns a duplicate of the [`Input`] at the current position.
+    ///
+    /// Using the [`Reader`](Input::Reader) of the duplicate **does not** change the position of
+    /// the original.
     fn fork(&self) -> Result<Self>;
 
+    /// Returns a reader used to read bytes.
+    ///
+    /// Consuming bytes from this reader advances the [`position`](Input::position).
     fn reader(&mut self) -> Result<Self::Reader<'_>>;
 
+    /// Gets current position, which is a byte offset from the start of the input.
     fn position(&self) -> Result<u64>;
 }
 
