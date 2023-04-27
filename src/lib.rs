@@ -7,14 +7,12 @@
 
 pub mod parser;
 
-/// Parses the sections of an in-memory WebAssembly module.
-pub fn parse_sections_from_bytes(bytes: &[u8]) -> parser::Result<parser::SectionsParser> {
-    parser::SectionsParser::from_input(std::io::Cursor::new(bytes))
-}
+mod sections;
 
-/// Parses the sections of a WebAssembly module file.
-pub fn parse_sections_from_path<P: AsRef<std::path::Path>>(
-    path: P,
-) -> parser::Result<parser::SectionsParser> {
-    parser::SectionsParser::from_input(parser::FileInput::from_path(path)?)
+pub use sections::{Section, SectionId, SectionKind, SectionSequence};
+
+/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
+/// returning the sequence of sections.
+pub fn parse_module_sections<I: parser::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
+    todo!()
 }

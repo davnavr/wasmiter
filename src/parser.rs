@@ -53,17 +53,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Parses a stream of bytes.
 #[derive(Debug)]
-pub struct Parser<I: input::Input> {
+pub struct Parser<I: Input> {
     input: I,
 }
 
-// TODO: Have WASM specific types moved to crate root
-/// Parses the sections of a WebAssembly module.
-#[derive(Debug)]
-pub struct SectionsParser {}
-
-impl SectionsParser {
-    pub(crate) fn from_input<I: input::Input>(input: I) -> Result<Self> {
-        todo!()
+impl<I: Input> Parser<I> {
+    /// Creates a new parser over the specified [`Input`].
+    pub fn new(input: I) -> Self {
+        Self { input }
     }
 }
