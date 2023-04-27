@@ -62,6 +62,51 @@ known_ids! {
     DATA = 11;
     /// [The *data count* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-datacountsec)
     DATA_COUNT = 12;
+
+    // Proposed
+
+    /// [The *tag* section](https://webassembly.github.io/exception-handling/core/binary/modules.html#binary-tagsec),
+    /// introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
+    TAG = 13;
+}
+
+macro_rules! known_custom_ids {
+    ($(
+        $(#[$meta:meta])*
+        $name:ident = $value:literal;
+    )*) => {
+        impl SectionKind {
+            $(
+                $(#[$meta])*
+                pub const $name: Self = Self::Custom(std::borrow::Cow::Borrowed($value));
+            )*
+        }
+    };
+}
+
+known_custom_ids! {
+    /// [The `name` custom section](https://webassembly.github.io/spec/core/appendix/custom.html#name-section),
+    /// described in the WebAssembly specification appendix.
+    NAME = "name";
+    /// [The `build_id` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/BuildId.md),
+    /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions).
+    BUILD_ID = "build_id";
+    /// [The `producers` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/ProducersSection.md),
+    /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions).
+    PRODUCERS = "producers";
+    /// [The `core` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Coredump.md#process-information),
+    /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for core dumps.
+    CORE = "core";
+    /// [The `corestack` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Coredump.md#threads-and-stack-frames),
+    /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for core dumps.
+    CORESTACK = "corestack";
+    /// [The `dylink.0` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md),
+    /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for dynamic linking.
+    DYLINK_0 = "dylink.0";
+    /// [The `linking` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#linking-metadata-section),
+    /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for static linking.
+    LINKING = "linking";
 }
 
 /// Represents a
