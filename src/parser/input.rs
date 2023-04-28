@@ -1,5 +1,32 @@
 use std::fs::File;
-use std::io::{Read, Result, Seek, SeekFrom};
+use std::io::{Cursor, Read, Result, Seek, SeekFrom};
+
+/// Conversion to an [`Input`].
+pub trait IntoInput {
+    /// The [`Input`] implementation.
+    type In: Input;
+
+    /// Attempts to convert a value to an [`Input`].
+    fn into_input(self) -> Result<Self::In>;
+}
+
+impl<I: Input> IntoInput for I {
+    type In = Self;
+
+    #[inline]
+    fn into_input(self) -> Result<Self::In> {
+        Ok(self)
+    }
+}
+
+impl<'c, 'a> IntoInput for &'c mut Cursor<&'a [u8]> {
+    type In = Cursor<&'a [u8]>;
+
+    #[inline]
+    fn into_input(self) -> Result<Self::In> {
+        Ok(self.clone())
+    }
+}
 
 /// Allows reading bytes from some source.
 ///
@@ -9,7 +36,7 @@ pub trait Input: Sized {
     /// The [`Read`] implementation used to read bytes.
     ///
     /// Calls to read bytes from the input **must** advance the [`Input`]'s position.
-    type Reader<'a>: Read
+    type Reader<'a>: Read + IntoInput
     where
         Self: 'a;
 
@@ -28,7 +55,7 @@ pub trait Input: Sized {
     fn position(&self) -> Result<u64>;
 }
 
-impl<'a> Input for std::io::Cursor<&'a [u8]> {
+impl<'a> Input for Cursor<&'a [u8]> {
     type Reader<'b> = &'b mut Self where 'a: 'b;
 
     #[inline]
@@ -44,6 +71,23 @@ impl<'a> Input for std::io::Cursor<&'a [u8]> {
     #[inline]
     fn position(&self) -> Result<u64> {
         Ok(self.position())
+    }
+}
+
+#[inline]
+fn clone_result<T: Clone>(result: &Result<T>) -> Result<T> {
+    #[inline(never)]
+    #[cold]
+    fn clone_error(error: &std::io::Error) -> std::io::Error {
+        std::io::Error::new(
+            error.kind(),
+            format!("unable to access underlying reader: {error}"),
+        )
+    }
+
+    match result {
+        Ok(value) => Ok(value.clone()),
+        Err(e) => Err(clone_error(e)),
     }
 }
 
@@ -63,6 +107,17 @@ impl Read for FileReader<'_> {
     #[inline]
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
         self.file.read_exact(buf)
+    }
+}
+
+impl IntoInput for FileReader<'_> {
+    type In = FileInput;
+
+    fn into_input(self) -> Result<Self::In> {
+        Ok(FileInput {
+            offset: clone_result(self.offset),
+            file: self.file.try_clone()?,
+        })
     }
 }
 
@@ -93,19 +148,7 @@ impl Input for FileInput {
     type Reader<'b> = FileReader<'b> where Self: 'b;
 
     fn position(&self) -> Result<u64> {
-        #[inline(never)]
-        #[cold]
-        fn clone_error(error: &std::io::Error) -> std::io::Error {
-            std::io::Error::new(
-                error.kind(),
-                format!("unable to access underlying reader: {error}"),
-            )
-        }
-
-        match self.offset.as_ref() {
-            Ok(offset) => Ok(*offset),
-            Err(e) => Err(clone_error(e)),
-        }
+        clone_result(&self.offset)
     }
 
     fn fork(&self) -> Result<Self> {

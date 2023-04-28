@@ -2,7 +2,7 @@
 
 mod input;
 
-pub use input::{FileInput, FileReader, Input};
+pub use input::{FileInput, FileReader, Input, IntoInput};
 
 use std::borrow::Cow;
 use std::fmt::Display;
