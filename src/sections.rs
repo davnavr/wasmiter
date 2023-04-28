@@ -117,17 +117,20 @@ pub struct Section<I: Input> {
     contents: I,
 }
 
+//pub trait SectionParser
+//impl Section { fn select_parser(&self) -> dyn SectionParser }
+
 /// Represents the
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
 /// in a WebAssembly module.
 #[derive(Debug)]
 pub struct SectionSequence<I: Input> {
-    parser: Parser<I>,
+    input: I,
 }
 
 impl<I: Input> SectionSequence<I> {
-    /// Creates a sequence of sections read from the given [`Parser`].
-    pub fn new(parser: Parser<I>) -> Self {
-        Self { parser }
+    /// Creates a sequence of sections read from the given [`Input`].
+    pub fn new(input: I) -> Self {
+        Self { input }
     }
 }

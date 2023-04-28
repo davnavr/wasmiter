@@ -80,7 +80,8 @@ pub struct FileInput {
 }
 
 impl FileInput {
-    pub(crate) fn from_path<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
+    /// Opens the file at the given [`Path`](std::path::Path) as [`Input`].
+    pub fn from_path<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         Ok(Self {
             offset: Ok(0),
             file: File::open(path)?,
