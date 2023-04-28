@@ -9,17 +9,14 @@ pub mod parser;
 
 mod sections;
 
-pub use sections::{Section, SectionId, SectionKind, SectionSequence};
+pub use sections::{Section, SectionId, SectionIterator, SectionKind, SectionSequence};
 
 const MAGIC: [u8; 4] = *b"\0asm";
 
 const VERSION: [u8; 4] = u32::to_le_bytes(1);
-
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
-pub fn parse_module_sections<I: parser::Input>(
-    mut binary: I,
-) -> parser::Result<SectionSequence<I>> {
+pub fn parse_module_sections<I: parser::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
     use parser::{Error, ResultExt};
 
     let mut parser = parser::Parser::new(binary.reader()?);

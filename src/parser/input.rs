@@ -2,28 +2,46 @@ use std::fs::File;
 use std::io::{Cursor, Read, Result, Seek, SeekFrom};
 
 /// Conversion to an [`Input`].
-pub trait IntoInput {
+pub trait ToInput<'a> {
     /// The [`Input`] implementation.
     type In: Input;
 
-    /// Attempts to convert a value to an [`Input`].
-    fn into_input(self) -> Result<Self::In>;
+    /// Attempts to create to an [`Input`].
+    fn to_input(&'a self) -> Result<Self::In>;
 }
 
-impl<I: Input> IntoInput for I {
-    type In = Self;
+impl<'a, I: ToInput<'a>> ToInput<'a> for &I {
+    type In = I::In;
 
     #[inline]
-    fn into_input(self) -> Result<Self::In> {
+    fn to_input(&'a self) -> Result<Self::In> {
+        Ok(I::to_input(&self))
+    }
+}
+
+impl<'a, I: ToInput<'a>> ToInput<'a> for &mut I {
+    type In = I::In;
+
+    #[inline]
+    fn to_input(&'a self) -> Result<Self::In> {
+        Ok(I::to_input(&self))
+    }
+}
+
+impl<'a> ToInput<'a> for &'a [u8] {
+    type In = &'a [u8];
+
+    #[inline]
+    fn to_input(&'a self) -> Result<Self::In> {
         Ok(self)
     }
 }
 
-impl<'c, 'a> IntoInput for &'c mut Cursor<&'a [u8]> {
-    type In = Cursor<&'a [u8]>;
+impl<'a> ToInput<'a> for Cursor<&'a [u8]> {
+    type In = Self;
 
     #[inline]
-    fn into_input(self) -> Result<Self::In> {
+    fn to_input(&self) -> Result<Self::In> {
         Ok(self.clone())
     }
 }
@@ -36,7 +54,7 @@ pub trait Input: Sized {
     /// The [`Read`] implementation used to read bytes.
     ///
     /// Calls to read bytes from the input **must** advance the [`Input`]'s position.
-    type Reader<'a>: Read + IntoInput
+    type Reader<'a>: Read + ToInput<'a>
     where
         Self: 'a;
 
@@ -110,13 +128,13 @@ impl Read for FileReader<'_> {
     }
 }
 
-impl IntoInput for FileReader<'_> {
+impl<'a> ToInput<'a> for FileReader<'a> {
     type In = FileInput;
 
-    fn into_input(self) -> Result<Self::In> {
+    fn to_input(&self) -> Result<Self::In> {
         Ok(FileInput {
             offset: clone_result(self.offset),
-            file: self.file.try_clone()?,
+            file: self.file,
         })
     }
 }

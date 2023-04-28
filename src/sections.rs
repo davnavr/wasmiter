@@ -1,4 +1,4 @@
-use crate::parser::{Input, Parser, Result};
+use crate::parser::{Input, ToInput, Parser, Result};
 
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
@@ -44,23 +44,23 @@ known_ids! {
     IMPORT = 2;
     /// [The *function* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-funcsec).
     FUNC = 3;
-    /// [The *table* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-tablesec)
+    /// [The *table* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-tablesec).
     TABLE = 4;
-    /// [The *memory* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-memsec)
+    /// [The *memory* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-memsec).
     MEMORY = 5;
-    /// [The *global* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-globalsec)
+    /// [The *global* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-globalsec).
     GLOBAL = 6;
-    /// [The *export* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-exportsec)
+    /// [The *export* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-exportsec).
     EXPORT = 7;
-    /// [The *start* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-startsec)
+    /// [The *start* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-startsec).
     START = 8;
-    /// [The *element* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-elemsec)
+    /// [The *element* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-elemsec).
     ELEMENT = 9;
-    /// [The *code* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec)
+    /// [The *code* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec).
     CODE = 10;
-    /// [The *data* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-datasec)
+    /// [The *data* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-datasec).
     DATA = 11;
-    /// [The *data count* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-datacountsec)
+    /// [The *data count* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-datacountsec).
     DATA_COUNT = 12;
 
     // Proposed
@@ -117,6 +117,15 @@ pub struct Section<I: Input> {
     contents: I,
 }
 
+impl<I: Input> Section<I> {
+    /// Gets the
+    /// [*id* or custom section name](https://webassembly.github.io/spec/core/binary/modules.html#sections)
+    /// for this section.
+    pub fn kind(&self) -> &SectionKind {
+        &self.kind
+    }
+}
+
 //pub trait SectionParser
 //impl Section { fn select_parser(&self) -> dyn SectionParser }
 
@@ -128,9 +137,15 @@ pub struct SectionSequence<I: Input> {
     input: I,
 }
 
+pub struct SectionIterator<'a, R: std::io::Read + ToInput<'a>> {
+    reader: R,
+}
+
 impl<I: Input> SectionSequence<I> {
     /// Creates a sequence of sections read from the given [`Input`].
     pub fn new(input: I) -> Self {
         Self { input }
     }
 }
+
+//impl<R: std::io::Read + IntoInput>
