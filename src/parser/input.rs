@@ -15,7 +15,7 @@ impl<'a, I: ToInput<'a>> ToInput<'a> for &I {
 
     #[inline]
     fn to_input(&'a self) -> Result<Self::In> {
-        Ok(I::to_input(&self))
+        I::to_input(&self)
     }
 }
 
@@ -24,16 +24,16 @@ impl<'a, I: ToInput<'a>> ToInput<'a> for &mut I {
 
     #[inline]
     fn to_input(&'a self) -> Result<Self::In> {
-        Ok(I::to_input(&self))
+        I::to_input(&self)
     }
 }
 
 impl<'a> ToInput<'a> for &'a [u8] {
-    type In = &'a [u8];
+    type In = Cursor<&'a [u8]>;
 
     #[inline]
     fn to_input(&'a self) -> Result<Self::In> {
-        Ok(self)
+        Ok(Cursor::new(self))
     }
 }
 
@@ -74,7 +74,7 @@ pub trait Input: Sized {
 }
 
 impl<'a> Input for Cursor<&'a [u8]> {
-    type Reader<'b> = &'b mut Self where 'a: 'b;
+    type Reader<'b> = Cursor<&'b [u8]> where 'a: 'b;
 
     #[inline]
     fn fork(&self) -> Result<Self> {
@@ -83,7 +83,7 @@ impl<'a> Input for Cursor<&'a [u8]> {
 
     #[inline]
     fn reader(&mut self) -> Result<Self::Reader<'_>> {
-        Ok(self)
+        Ok(self.clone())
     }
 
     #[inline]
@@ -134,7 +134,7 @@ impl<'a> ToInput<'a> for FileReader<'a> {
     fn to_input(&self) -> Result<Self::In> {
         Ok(FileInput {
             offset: clone_result(self.offset),
-            file: self.file,
+            file: self.file.try_clone()?,
         })
     }
 }

@@ -204,7 +204,7 @@ impl<'a, R: Read + ToInput<'a>> ToInput<'a> for Parser<R> {
     type In = R::In;
 
     #[inline]
-    fn to_input(&self) -> std::io::Result<Self::In> {
-        self.reader.into_input()
+    fn to_input(&'a self) -> std::io::Result<Self::In> {
+        self.reader.to_input()
     }
 }
