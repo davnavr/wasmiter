@@ -2,7 +2,7 @@
 
 mod input;
 
-pub use input::{FileInput, FileReader, Input, ToInput};
+pub use input::{FileInput, Input, IntoInput, SeekingInput, SharedInput};
 
 use std::borrow::Cow;
 use std::fmt::Display;
@@ -197,14 +197,5 @@ impl<R: Read> Parser<R> {
         }
 
         Ok(())
-    }
-}
-
-impl<'a, R: Read + ToInput<'a>> ToInput<'a> for Parser<R> {
-    type In = R::In;
-
-    #[inline]
-    fn to_input(&'a self) -> std::io::Result<Self::In> {
-        self.reader.to_input()
     }
 }

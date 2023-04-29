@@ -1,186 +1,163 @@
 use std::fs::File;
 use std::io::{Cursor, Read, Result, Seek, SeekFrom};
 
-/// Conversion to an [`Input`].
-pub trait ToInput<'a> {
+/// Conversion into an [`Input`].
+pub trait IntoInput {
     /// The [`Input`] implementation.
     type In: Input;
 
-    /// Attempts to create to an [`Input`].
-    fn to_input(&'a self) -> Result<Self::In>;
+    /// Gets an [`Input`] from a value.
+    fn into_input(self) -> Self::In;
 }
 
-impl<'a, I: ToInput<'a>> ToInput<'a> for &I {
-    type In = I::In;
-
-    #[inline]
-    fn to_input(&'a self) -> Result<Self::In> {
-        I::to_input(&self)
-    }
-}
-
-impl<'a, I: ToInput<'a>> ToInput<'a> for &mut I {
-    type In = I::In;
-
-    #[inline]
-    fn to_input(&'a self) -> Result<Self::In> {
-        I::to_input(&self)
-    }
-}
-
-impl<'a> ToInput<'a> for &'a [u8] {
-    type In = Cursor<&'a [u8]>;
-
-    #[inline]
-    fn to_input(&'a self) -> Result<Self::In> {
-        Ok(Cursor::new(self))
-    }
-}
-
-impl<'a> ToInput<'a> for Cursor<&'a [u8]> {
+impl<I: Input> IntoInput for I {
     type In = Self;
 
     #[inline]
-    fn to_input(&self) -> Result<Self::In> {
-        Ok(self.clone())
+    fn into_input(self) -> Self::In {
+        self
     }
 }
 
-/// Allows reading bytes from some source.
-///
-/// [`Input`] implementations are expected to keep track of their position within the
-/// original source.
-pub trait Input: Sized {
-    /// The [`Read`] implementation used to read bytes.
-    ///
-    /// Calls to read bytes from the input **must** advance the [`Input`]'s position.
-    type Reader<'a>: Read + ToInput<'a>
-    where
-        Self: 'a;
+impl<'a> IntoInput for &'a [u8] {
+    type In = Cursor<&'a [u8]>;
 
-    /// Returns a duplicate of the [`Input`] at the current position.
-    ///
-    /// Using the [`Reader`](Input::Reader) of the duplicate **does not** change the position of
-    /// the original.
+    #[inline]
+    fn into_input(self) -> Self::In {
+        Cursor::new(self)
+    }
+}
+
+/// An extension of the [`Read`] trait that allows creating new readers to read bytes starting at
+/// the current position.
+pub trait Input: Read + Seek + Sized {
+    /// Returns a new reader that reads bytes from the original source, starting at the current location.
     fn fork(&self) -> Result<Self>;
 
-    /// Returns a reader used to read bytes.
-    ///
-    /// Consuming bytes from this reader advances the [`position`](Input::position).
-    fn reader(&mut self) -> Result<Self::Reader<'_>>;
-
-    /// Gets current position, which is a byte offset from the start of the input.
-    fn position(&self) -> Result<u64>;
+    //fn fork_with_length(&self, length: usize) -> Result<std::io::Take<Self>>;
 }
 
 impl<'a> Input for Cursor<&'a [u8]> {
-    type Reader<'b> = Cursor<&'b [u8]> where 'a: 'b;
-
     #[inline]
     fn fork(&self) -> Result<Self> {
         Ok(self.clone())
     }
+}
 
-    #[inline]
-    fn reader(&mut self) -> Result<Self::Reader<'_>> {
-        Ok(self.clone())
-    }
+/// An extension to the [`Read`] trait that allows creating a new reader that shares the same
+/// underlying source.
+///
+/// Certain [`Read`] implementations, such as [`std::fs::File`], provide `try_clone` methods that
+/// create a new reader that is affected by changes to the original. This makes implementing
+/// [`Input::fork`] difficult, which is what the [`SeekingInput<I>`] struct is for.
+pub trait SharedInput: Read + Seek + Sized {
+    /// Attempts to create a new reader to read bytes just like the original.
+    ///
+    /// Changes to the original **will** result in changes to the clone.
+    fn duplicate(&self) -> Result<Self>;
+}
 
-    #[inline]
-    fn position(&self) -> Result<u64> {
-        Ok(self.position())
+impl SharedInput for File {
+    fn duplicate(&self) -> Result<Self> {
+        self.try_clone()
     }
 }
 
-#[inline]
-fn clone_result<T: Clone>(result: &Result<T>) -> Result<T> {
-    #[inline(never)]
+impl<'a, I> SharedInput for &'a I
+where
+    I: SharedInput,
+    &'a I: Read + Seek,
+{
+    fn duplicate(&self) -> Result<Self> {
+        Ok(self)
+    }
+}
+
+/// An [`Input`] implementation that implements [`Read`] methods by first seeking to a cached
+/// location.
+///
+/// Note that relying on certain [`Read`] implementations such as [`std::fs::File`], which can be
+/// shared and mutated across threads, may cause **race conditions** leading to incorrect bytes
+/// being returned by a [`SeekingInput<I>`].
+#[derive(Debug)]
+pub struct SeekingInput<I: SharedInput> {
+    position: u64,
+    reader: I,
+}
+
+impl<I: SharedInput> SeekingInput<I> {
+    /// Creates a new [`SeekingInput<I>`] that reads bytes from the start of the stream.
+    #[inline]
+    pub fn new(reader: I) -> Self {
+        Self {
+            position: 0,
+            reader,
+        }
+    }
+
+    /// Gets a byte offset from the start of the stream representing the current position.
+    #[inline]
+    pub fn position(&self) -> u64 {
+        self.position
+    }
+
+    /// Unwraps this [`SeekingInput<I>`], returning the underlying [`SharedInput`].
+    #[inline]
+    pub fn into_inner(self) -> I {
+        self.reader
+    }
+}
+
+impl<I: SharedInput> From<I> for SeekingInput<I> {
+    #[inline]
+    fn from(reader: I) -> Self {
+        Self::new(reader)
+    }
+}
+
+fn increment_position(position: &mut u64, amount: usize) -> Result<()> {
+    #[inline]
     #[cold]
-    fn clone_error(error: &std::io::Error) -> std::io::Error {
-        std::io::Error::new(
-            error.kind(),
-            format!("unable to access underlying reader: {error}"),
-        )
+    fn position_overflowed() -> std::io::Error {
+        std::io::Error::new(std::io::ErrorKind::Other, "position overflowed")
     }
 
-    match result {
-        Ok(value) => Ok(value.clone()),
-        Err(e) => Err(clone_error(e)),
-    }
+    *position = position
+        .checked_add(u64::try_from(amount).map_err(|_| position_overflowed())?)
+        .ok_or_else(position_overflowed)?;
+    Ok(())
 }
 
-/// Reads bytes from a [`File`] starting at a given location.
-#[derive(Debug)]
-pub struct FileReader<'a> {
-    offset: &'a mut Result<u64>,
-    file: &'a File,
-}
-
-impl Read for FileReader<'_> {
-    #[inline]
+impl<I: SharedInput> Read for SeekingInput<I> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.file.read(buf)
+        self.reader.seek(SeekFrom::Start(self.position))?;
+        let amount = self.reader.read(buf)?;
+        increment_position(&mut self.position, amount)?;
+        Ok(amount)
+    }
+}
+
+impl<I: SharedInput> Seek for SeekingInput<I> {
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
+        let offset = self.reader.seek(pos)?;
+        self.position = offset;
+        Ok(offset)
     }
 
     #[inline]
-    fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
-        self.file.read_exact(buf)
+    fn stream_position(&mut self) -> Result<u64> {
+        Ok(self.position)
     }
 }
 
-impl<'a> ToInput<'a> for FileReader<'a> {
-    type In = FileInput;
-
-    fn to_input(&self) -> Result<Self::In> {
-        Ok(FileInput {
-            offset: clone_result(self.offset),
-            file: self.file.try_clone()?,
-        })
-    }
-}
-
-impl Drop for FileReader<'_> {
-    fn drop(&mut self) {
-        *self.offset = self.file.stream_position();
-    }
-}
-
-/// Allows reading bytes from different parts of a [`File`].
-#[derive(Debug)]
-pub struct FileInput {
-    offset: Result<u64>,
-    file: File,
-}
-
-impl FileInput {
-    /// Opens the file at the given [`Path`](std::path::Path) as [`Input`].
-    pub fn from_path<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
-        Ok(Self {
-            offset: Ok(0),
-            file: File::open(path)?,
-        })
-    }
-}
-
-impl Input for FileInput {
-    type Reader<'b> = FileReader<'b> where Self: 'b;
-
-    fn position(&self) -> Result<u64> {
-        clone_result(&self.offset)
-    }
-
+impl<I: SharedInput> Input for SeekingInput<I> {
     fn fork(&self) -> Result<Self> {
-        Ok(FileInput {
-            offset: Ok(self.position()?),
-            file: self.file.try_clone()?,
-        })
-    }
-
-    fn reader(&mut self) -> Result<FileReader<'_>> {
-        self.file.seek(SeekFrom::Start(self.position()?))?;
-        Ok(FileReader {
-            offset: &mut self.offset,
-            file: &self.file,
+        Ok(Self {
+            position: self.position,
+            reader: self.reader.duplicate()?,
         })
     }
 }
+
+/// An [`Input`] implementation that reads bytes from a [`File`].
+pub type FileInput = SeekingInput<File>;

@@ -1,4 +1,4 @@
-use crate::parser::{Input, Parser, Result, ToInput};
+use crate::parser::{Input, Parser, Result};
 
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
@@ -137,37 +137,13 @@ pub struct SectionSequence<I: Input> {
     input: I,
 }
 
-/// Iterates over the sequence of sections in a WebAssembly module.
-#[derive(Debug)]
-pub struct SectionIterator<R: std::io::Read> {
-    reader: Parser<R>,
-}
-
 impl<I: Input> SectionSequence<I> {
     /// Creates a sequence of sections read from the given [`Input`].
     pub fn new(input: I) -> Self {
         Self { input }
     }
 
-    /// Returns an iterator over the sequence of sections.
-    pub fn iter(&mut self) -> Result<SectionIterator<I::Reader<'_>>> {
-        //Ok(SectionIterator { reader: Parser::new(self.input.fork()?.)} })
-        todo!() // TODO: Have into_reader in Input trait?
-    }
-}
-
-impl<'a, R: std::io::Read + ToInput<'a>> SectionIterator<R> {
-    /// Parses a section.
-    pub fn parse(&mut self) -> Option<Result<Section<R::In>>> {
+    fn parse(&mut self) -> Option<Result<Section<I>>> {
         todo!()
-    }
-}
-
-impl<'a, R: std::io::Read + ToInput<'a>> Iterator for SectionIterator<R> {
-    type Item = Result<Section<<R as ToInput<'a>>::In>>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.parse()
     }
 }

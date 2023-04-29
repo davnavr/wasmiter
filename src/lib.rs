@@ -9,19 +9,16 @@ pub mod parser;
 
 mod sections;
 
-pub use sections::{Section, SectionId, SectionIterator, SectionKind, SectionSequence};
+pub use sections::{Section, SectionId, SectionKind, SectionSequence};
 
 const MAGIC: [u8; 4] = *b"\0asm";
 
 const VERSION: [u8; 4] = u32::to_le_bytes(1);
-/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
-/// returning the sequence of sections.
-pub fn parse_module_sections<I: parser::Input>(
-    mut binary: I,
-) -> parser::Result<SectionSequence<I>> {
+
+fn parse_module_binary<I: parser::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
     use parser::{Error, ResultExt};
 
-    let mut parser = parser::Parser::new(binary.reader()?);
+    let mut parser = parser::Parser::new(binary);
     let mut preamble = [0u8; 8];
     parser
         .bytes_exact(&mut preamble)
@@ -43,6 +40,15 @@ pub fn parse_module_sections<I: parser::Input>(
     todo!()
 }
 
+/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
+/// returning the sequence of sections.
+#[inline]
+pub fn parse_module_sections<I: parser::IntoInput>(
+    binary: I,
+) -> parser::Result<SectionSequence<I::In>> {
+    parse_module_binary(binary.into_input())
+}
+
 /// Opens a file containing a
 /// [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html) at the
 /// given [`Path`](std::path::Path).
@@ -52,5 +58,5 @@ pub fn parse_module_sections<I: parser::Input>(
 pub fn parse_module_sections_from_path<P: AsRef<std::path::Path>>(
     path: P,
 ) -> parser::Result<SectionSequence<parser::FileInput>> {
-    parse_module_sections(parser::FileInput::from_path(path)?)
+    parse_module_binary(parser::FileInput::new(std::fs::File::open(path)?))
 }
