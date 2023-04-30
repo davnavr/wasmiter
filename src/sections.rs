@@ -1,4 +1,4 @@
-use crate::parser::{Input, Parser, Result};
+use crate::parser::{Input, Parser, Result, ResultExt};
 
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
@@ -134,16 +134,36 @@ impl<I: Input> Section<I> {
 /// in a WebAssembly module.
 #[derive(Debug)]
 pub struct SectionSequence<I: Input> {
-    input: I,
+    parser: Parser<I>,
 }
 
 impl<I: Input> SectionSequence<I> {
     /// Creates a sequence of sections read from the given [`Input`].
     pub fn new(input: I) -> Self {
-        Self { input }
+        Self {
+            parser: Parser::new(input),
+        }
     }
 
-    fn parse(&mut self) -> Option<Result<Section<I>>> {
+    fn parse(&mut self) -> Result<Option<Section<I>>> {
+        let mut id_byte = 0u8;
+        self.parser
+            .bytes_exact(std::slice::from_mut(&mut id_byte))
+            .context("section id byte")?;
+
+        let kind = SectionId::new(id_byte);
+
+        //let size = self.parser.leb128_u64;
+
         todo!()
+    }
+}
+
+impl<I: Input> Iterator for SectionSequence<I> {
+    type Item = Result<Section<I>>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse().transpose()
     }
 }
