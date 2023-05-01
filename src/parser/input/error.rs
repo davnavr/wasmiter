@@ -36,7 +36,7 @@ impl ConstantError {
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 enum ErrorMessage {
     Message(&'static str),
-    Boxed(alloc::boxed::Box<dyn std::fmt::ToString + Send + Sync>),
+    Boxed(alloc::boxed::Box<dyn Display + Send + Sync>),
 }
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
@@ -51,7 +51,7 @@ impl Display for ErrorMessage {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Message(message) => Display::fmt(message, f),
-            Self::Boxed(boxed) => std::fmt::ToString::fmt(&boxed, f),
+            Self::Boxed(boxed) => Display::fmt(&boxed, f),
         }
     }
 }
@@ -83,7 +83,7 @@ pub struct Error {
     #[cfg(not(any(feature = "std", feature = "alloc")))]
     inner: &'static ConstantError,
     #[cfg(all(not(feature = "std"), feature = "alloc"))]
-    inner: Box<ErrorInner>,
+    inner: alloc::boxed::Box<ErrorInner>,
 }
 
 impl Error {
@@ -97,7 +97,7 @@ impl Error {
         {
             #[cfg(feature = "alloc")]
             return Self {
-                inner: Box::new(ErrorInner::from_const(error)),
+                inner: alloc::boxed::Box::new(ErrorInner::from_const(*error)),
             };
 
             #[cfg(not(feature = "alloc"))]
@@ -155,7 +155,7 @@ impl Display for Error {
         Display::fmt(&self.inner, f)
     }
 
-    #[cfg(not(feature = "alloc"))]
+    #[cfg(not(feature = "std"))]
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         Display::fmt(&self.inner.message, f)
     }
