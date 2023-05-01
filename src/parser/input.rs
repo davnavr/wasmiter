@@ -35,6 +35,8 @@ pub trait Input: Read + Seek + Sized {
     fn fork(&self) -> Result<Self>;
 
     //fn fork_with_length(&self, length: usize) -> Result<std::io::Take<Self>>;
+
+    // TODO: Add peeking methods.
 }
 
 impl<'a> Input for Cursor<&'a [u8]> {

@@ -170,6 +170,24 @@ impl<T, E: Into<Error>> ResultExt<T> for std::result::Result<T, E> {
     }
 }
 
+trait IntegerEncoding: From<u8> + Copy + Default + std::ops::BitOr + std::ops::ShlAssign {
+    /// A buffer type to contain the maximum number of bytes that a value is allowed to be encoded
+    /// in.
+    ///
+    /// According to the
+    /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/values.html#integers),
+    /// this should have a length equal to `ceil(BITS / 7)`.
+    type Buffer: AsRef<[u8]> + Default;
+}
+
+impl IntegerEncoding for u32 {
+    type Buffer = [u8; 5];
+}
+
+impl IntegerEncoding for u64 {
+    type Buffer = [u8; 10];
+}
+
 /// Parses a stream of bytes.
 #[derive(Debug)]
 pub struct Parser<R: Read> {
@@ -197,5 +215,11 @@ impl<R: Read> Parser<R> {
         }
 
         Ok(())
+    }
+
+    fn leb128_unsigned<I: IntegerEncoding>(&mut self) -> Result<I> {
+        let mut buffer = I::Buffer::default();
+        let mut value = I::default();
+        todo!()
     }
 }
