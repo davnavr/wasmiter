@@ -22,14 +22,19 @@ macro_rules! const_input_error {
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Trait for reading bytes at specific locations from a source.
+/// 
+/// This functions as a combination of the [`std::io::Read`](https://doc.rust-lang.org/std/io/trait.Read.html) and 
 pub trait Input {
     /// Moves the reader to a location specified by a byte `offset` from the start of the source.
     fn seek(&mut self, offset: u64) -> Result<()>;
 
     /// Reads bytes starting at the current [`position`](Input::position) without advancing the
-    /// reader. Returns the portion of the buffer filled with the bytes read from the source, and
-    /// the remaining portion of the buffer.
-    fn peek<'b>(&mut self, buffer: &'b mut [u8]) -> Result<(&'b [u8], &'b [u8])>; // TODO: struct PeekBuffers<'a>
+    /// reader. Returns the number of bytes copied from the source to the `buffer`.
+    fn peek(&mut self, buffer: &mut [u8]) -> Result<usize>;
+    
+    // TODO: struct PeekBuffers<'a> { read: &'b mut [u8], unfilled: usize } use split_at_mut
+    //Returns the portion of the `buffer` filled with the bytes read from the source, and the remaining portion of the `buffer`.
+    //fn peek_bytes<'b>(&mut self, buffer: &'b mut [u8]) -> Result<PeekBuffers<'b>>
 
     /// Advances the reader by the given byte `amount`, returning the number of bytes that were
     /// skipped.

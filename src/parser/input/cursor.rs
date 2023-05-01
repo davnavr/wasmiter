@@ -41,11 +41,11 @@ impl<T: AsRef<[u8]>> Input for Cursor<T> {
         Ok(target - position)
     }
 
-    fn peek<'b>(&mut self, buffer: &'b mut [u8]) -> Result<(&'b [u8], &'b [u8])> {
+    fn peek<'b>(&mut self, buffer: &'b mut [u8]) -> Result<usize> {
         let position = Cursor::position(self);
         let amount = Read::read(self, buffer)?;
         Cursor::set_position(self, position);
-        Ok(buffer.split_at(amount))
+        Ok(amount)
     }
 
     #[inline]
