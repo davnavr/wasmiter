@@ -1,8 +1,19 @@
 //! Traits and type definitions for reading bytes from a source.
 
+mod cursor;
 mod error;
 
+pub use cursor::Cursor;
 pub use error::{Error, ErrorKind};
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! const_input_error {
+    ($kind:expr, $message:literal) => {{
+        const ERROR: &error::ConstantError = &error::ConstantError::new($kind, $message);
+        Error::from_const(ERROR)
+    }};
+}
 
 /// Result type used when an operation with an [`Input`] fails.
 ///
@@ -18,11 +29,14 @@ pub trait Input {
     /// Reads bytes starting at the current [`position`](Input::position) without advancing the
     /// reader. Returns the portion of the buffer filled with the bytes read from the source, and
     /// the remaining portion of the buffer.
-    fn peek(&mut self, buffer: &mut [u8]) -> Result<(&[u8], &[u8])>;
+    fn peek<'b>(&mut self, buffer: &'b mut [u8]) -> Result<(&'b [u8], &'b [u8])>; // TODO: struct PeekBuffers<'a>
 
-    /// Advances the reader by the given byte `amount`. This is equivalent to calling
-    /// [`seek`](Input::seek) with the current [`position`](Input::position) plus `amount`.
-    fn read(&mut self, amount: u64) -> Result<()>;
+    /// Advances the reader by the given byte `amount`, returning the number of bytes that were
+    /// skipped.
+    ///
+    /// This is equivalent to calling [`seek`](Input::seek) with the current
+    /// [`position`](Input::position) plus `amount`.
+    fn read(&mut self, amount: u64) -> Result<u64>;
 
     /// Returns the current position of the reader, as a byte offset from the start of the source.
     fn position(&self) -> Result<u64>; // u64?
