@@ -3,10 +3,16 @@
 #![deny(missing_docs)]
 #![deny(unreachable_pub)]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![warn(clippy::alloc_instead_of_core)]
 #![deny(clippy::undocumented_unsafe_blocks)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 pub mod parser;
 
+/*
 mod sections;
 
 pub use sections::{Section, SectionId, SectionKind, SectionSequence};
@@ -60,3 +66,4 @@ pub fn parse_module_sections_from_path<P: AsRef<std::path::Path>>(
 ) -> parser::Result<SectionSequence<parser::FileInput>> {
     parse_module_binary(parser::FileInput::new(std::fs::File::open(path)?))
 }
+*/

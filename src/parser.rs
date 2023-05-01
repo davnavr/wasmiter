@@ -1,9 +1,8 @@
 //! Low-level types and functions for parsing.
 
-mod input;
+pub mod input;
 
-pub use input::{FileInput, Input, IntoInput, SeekingInput, SharedInput};
-
+/*
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::io::Read;
@@ -223,3 +222,4 @@ impl<R: Read> Parser<R> {
         todo!()
     }
 }
+*/
