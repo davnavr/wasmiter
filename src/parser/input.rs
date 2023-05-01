@@ -6,8 +6,6 @@ mod error;
 pub use cursor::Cursor;
 pub use error::{Error, ErrorKind};
 
-#[macro_export]
-#[doc(hidden)]
 macro_rules! const_input_error {
     ($kind:expr, $message:literal) => {{
         const ERROR: &error::ConstantError = &error::ConstantError::new($kind, $message);
@@ -46,15 +44,54 @@ pub trait Input {
     /// Returns the current position of the reader, as a byte offset from the start of the source.
     fn position(&self) -> Result<u64>; // u64?
 
-    // TODO: functions to help with caches/buffers, no-op default impl
+    //fn fork(&self) -> Result<Self::Fork>;
 
-    //fn read_bytes(&mut self, buffer: &mut [u8])
-    // fn read_bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
-    //     match self.peek(buffer)? {
-    //         (_, []) => Ok(()),
-    //         (_, remaining) => todo!("error for remaining")
-    //     }
-    // }
+    /// Reads bytes to fill the `buffer`, advancing the reader by the number of bytes that were
+    /// read. Returns the number of bytes copied to the `buffer`.
+    ///
+    /// This is equivalent to calling [`peek`](Input::peek) followed by call to
+    /// [`read`](Input::read).
+    ///
+    /// This method is the equivalent of
+    /// [`std::io::Read::read`](https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read).
+    fn take(&mut self, buffer: &mut [u8]) -> Result<usize> {
+        #[cfg(feature = "std")]
+        let offset_overflowed = |e| Error::from(std::io::Error::new(ErrorKind::InvalidData, e));
+
+        #[cfg(not(feature = "std"))]
+        let offset_overflowed = |_| {
+            const_input_error!(
+                ErrorKind::InvalidData,
+                "reader position overflowed while filling buffer"
+            )
+        };
+
+        let amount = self.peek(buffer)?;
+        self.read(u64::try_from(amount).map_err(offset_overflowed)?)?;
+        Ok(amount)
+    }
+
+    /// A variant of [`Input::take` that attempts to completely fill the `buffer`, returning an
+    /// error otherwise.
+    ///
+    /// This method is the equivalent of
+    /// [`std::io::Read::read_exact`](https://doc.rust-lang.org/std/io/trait.Read.html#method.read_exact).
+    fn take_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        let amount = self.take(buffer)?;
+
+        if amount != buffer.len() {
+            return Err(const_input_error!(
+                ErrorKind::UnexpectedEof,
+                "buffer could not be completely filled"
+            ));
+        }
+
+        Ok(())
+    }
+
+    //fn take_exact_bytes
+
+    // TODO: functions to help with caches/buffers, no-op default impl
 }
 
 //impl Input for core::io::Cursor // Oops, no core::io::cursor

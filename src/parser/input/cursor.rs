@@ -99,6 +99,16 @@ impl<T: AsRef<[u8]>> Input for Cursor<T> {
     }
 
     #[inline]
+    fn take(&mut self, buffer: &mut [u8]) -> Result<usize> {
+        Ok(Read::read(self, buffer)?)
+    }
+
+    #[inline]
+    fn take_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        Ok(Read::read_exact(self, buffer)?)
+    }
+
+    #[inline]
     fn position(&self) -> Result<u64> {
         Ok(Cursor::position(self))
     }
