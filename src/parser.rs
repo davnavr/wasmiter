@@ -107,6 +107,8 @@ impl<I: Input> Parser<I> {
                 shift = 7u8 * i;
             }
 
+            debug_assert!(shift <= N::BITS);
+
             value |= N::from(bits) << shift;
 
             if !more {
