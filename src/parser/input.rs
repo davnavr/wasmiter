@@ -21,7 +21,10 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// Trait for reading bytes at specific locations from a source.
 ///
-/// This functions as a combination of the [`std::io::Read`](https://doc.rust-lang.org/std/io/trait.Read.html) and
+/// This trait serves as a combination of the
+/// [`std::io::Read`](https://doc.rust-lang.org/std/io/trait.Read.html) and
+/// [`std::io::Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits, but with a
+/// few differences.
 pub trait Input {
     /// Moves the reader to a location specified by a byte `offset` from the start of the source.
     fn seek(&mut self, offset: u64) -> Result<()>;
@@ -89,9 +92,5 @@ pub trait Input {
         Ok(())
     }
 
-    //fn take_exact_bytes
-
     // TODO: functions to help with caches/buffers, no-op default impl
 }
-
-//impl Input for core::io::Cursor // Oops, no core::io::cursor
