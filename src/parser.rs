@@ -70,8 +70,10 @@ pub struct Parser<I: Input> {
 
 impl<I: Input> Parser<I> {
     /// Creates a new parser with the specified [`Input`].
-    pub fn new(input: I) -> Self {
-        Self { input }
+    pub fn new<S: input::IntoInput<In = I>>(input: S) -> Self {
+        Self {
+            input: input.into_input(),
+        }
     }
 
     fn leb128_unsigned<N: IntegerEncoding>(&mut self) -> Result<N> {

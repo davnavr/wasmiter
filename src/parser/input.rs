@@ -94,3 +94,44 @@ pub trait Input {
 
     // TODO: functions to help with caches/buffers, no-op default impl
 }
+
+/// Trait for conversion into an [`Input`].
+pub trait IntoInput {
+    /// The [`Input`] implementation.
+    type In: Input;
+
+    /// Converts a value into an [`Input`].
+    fn into_input(self) -> Self::In;
+}
+
+impl<I: Input> IntoInput for I {
+    type In = I;
+
+    fn into_input(self) -> I {
+        self
+    }
+}
+
+impl<'a> IntoInput for &'a [u8] {
+    type In = Cursor<Self>;
+
+    fn into_input(self) -> Self::In {
+        Cursor::new(self)
+    }
+}
+
+impl<'a, const N: usize> IntoInput for &'a [u8; N] {
+    type In = Cursor<Self>;
+
+    fn into_input(self) -> Self::In {
+        Cursor::new(self)
+    }
+}
+
+impl<const N: usize> IntoInput for [u8; N] {
+    type In = Cursor<Self>;
+
+    fn into_input(self) -> Self::In {
+        Cursor::new(self)
+    }
+}
