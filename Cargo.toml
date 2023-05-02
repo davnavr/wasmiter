@@ -6,6 +6,7 @@ rust-version = "1.64"
 readme = "README.md"
 
 [features]
-default = ["std"]
-std = ["alloc"]
+default = ["backtrace", "std"]
 alloc = []
+std = ["alloc"]
+backtrace = ["std"]
