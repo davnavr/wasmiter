@@ -127,6 +127,8 @@ impl<I: Input> Parser<I> {
     /// Attempts to a parse an unsigned 32-bit integer encoded in
     /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
     pub fn leb128_u32(&mut self) -> Result<u32> {
+        // TODO: less branches variant? have buffer = [0u8; 5] // 0 means end, even if peek does not fill buffer completely
+        // copy-paste code that reads from buffer[0], buffer[1], etc. Only return at the very end?
         self.leb128_unsigned().context("could not parse u32")
     }
 
@@ -143,6 +145,12 @@ impl<I: Input> Parser<I> {
             .context("could not parse length")?;
 
         usize::try_from(length).map_err(|_| parser_bad_format!("length ({length}) is too large"))
+    }
+
+    /// Attempts to a parse an unsigned 64-bit integer encoded in
+    /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
+    pub fn leb128_u64(&mut self) -> Result<u64> {
+        self.leb128_unsigned().context("could not parse u64")
     }
 
     pub(crate) fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
