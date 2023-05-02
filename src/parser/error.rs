@@ -132,6 +132,26 @@ impl Error {
     }
 
     #[inline]
+    pub(crate) fn bad_format() -> Self {
+        Self::new(ErrorKind::InvalidFormat)
+    }
+
+    #[inline]
+    pub(crate) fn context<C: Into<Context>>(&mut self, context: C) {
+        #[cfg(feature = "alloc")]
+        self.inner.context.push(context.into());
+
+        #[cfg(not(feature = "alloc"))]
+        let _ = context;
+    }
+
+    #[inline]
+    pub(crate) fn with_context<C: Into<Context>>(mut self, context: C) -> Self {
+        self.context(context);
+        self
+    }
+
+    #[inline]
     fn context_list(&self) -> &[Context] {
         #[cfg(feature = "alloc")]
         return &self.inner.context;
