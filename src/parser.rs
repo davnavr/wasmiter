@@ -84,9 +84,8 @@ impl<I: Input> Parser<I> {
         self.input.peek(buffer.as_mut())?;
 
         let mut more = true;
-        for (index, byte) in buffer.into_iter().enumerate() {
-            let i = index as u8;
-
+        let mut i = 0u8;
+        for byte in buffer.into_iter() {
             let bits = byte & 0x7F;
             more = byte & 0x80 == 0x80;
 
@@ -107,6 +106,7 @@ impl<I: Input> Parser<I> {
             debug_assert!(shift <= N::BITS);
 
             value |= N::from(bits) << shift;
+            i += 1;
 
             if !more {
                 break;
@@ -120,6 +120,7 @@ impl<I: Input> Parser<I> {
             ));
         }
 
+        self.input.read(u64::from(i))?;
         Ok(value)
     }
 
@@ -142,5 +143,15 @@ impl<I: Input> Parser<I> {
             .context("could not parse length")?;
 
         usize::try_from(length).map_err(|_| parser_bad_format!("length ({length}) is too large"))
+    }
+
+    pub(crate) fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        self.input.take_exact(buffer).map_err(|e| {
+            #[cfg(not(feature = "alloc"))]
+            return Error::from(e);
+
+            #[cfg(feature = "alloc")]
+            return Error::from(e).with_context(format!("expected {} bytes", buffer.len()));
+        })
     }
 }

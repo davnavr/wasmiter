@@ -44,8 +44,7 @@ impl<I: Input> SectionSequence<I> {
             .context("section id byte")?;
 
         let kind = SectionId::new(id_byte);
-
-        //let size = self.parser.leb128_u64;
+        let size = self.parser.leb128_usize().context("section content size")?;
 
         todo!()
     }
