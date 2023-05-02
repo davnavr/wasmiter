@@ -13,6 +13,8 @@ use input::Input;
 /// Result type used when parsing input.
 pub type Result<T> = core::result::Result<T, Error>;
 
+#[macro_export]
+#[doc(hidden)]
 macro_rules! parser_bad_format {
     ($($arg:tt)*) => {{
         let err;

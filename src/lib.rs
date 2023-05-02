@@ -12,16 +12,15 @@ extern crate alloc;
 
 pub mod parser;
 
-/*
 mod sections;
 
-pub use sections::{Section, SectionId, SectionKind, SectionSequence};
+pub use sections::{CustomSectionName, Section, SectionId, SectionKind, SectionSequence};
 
 const MAGIC: [u8; 4] = *b"\0asm";
 
 const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
-fn parse_module_binary<I: parser::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
+fn parse_module_binary<I: parser::input::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
     use parser::{Error, ResultExt};
 
     let mut parser = parser::Parser::new(binary);
@@ -37,9 +36,9 @@ fn parse_module_binary<I: parser::Input>(binary: I) -> parser::Result<SectionSeq
     let version = <[u8; 4]>::try_from(&preamble[4..8]).unwrap();
     if version != VERSION {
         let version_number = u32::from_le_bytes(version);
-        return Err(Error::bad_format().with_context(format!(
-            "unsupported WebAssembly version {version_number} ({version_number:#X})"
-        )));
+        return Err(parser_bad_format!(
+            "unsupported WebAssembly version {version_number} ({version_number:#08X})"
+        ));
     }
 
     // TODO: sections sequence
@@ -49,12 +48,13 @@ fn parse_module_binary<I: parser::Input>(binary: I) -> parser::Result<SectionSeq
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
 #[inline]
-pub fn parse_module_sections<I: parser::IntoInput>(
+pub fn parse_module_sections<I: parser::input::IntoInput>(
     binary: I,
 ) -> parser::Result<SectionSequence<I::In>> {
     parse_module_binary(binary.into_input())
 }
 
+/*
 /// Opens a file containing a
 /// [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html) at the
 /// given [`Path`](std::path::Path).

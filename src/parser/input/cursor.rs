@@ -18,7 +18,7 @@ pub struct Cursor<T> {
 impl<T> Cursor<T> {
     /// Creates a new [`Cursor<T>`] with the specified buffer.
     pub const fn new(buffer: T) -> Self {
-        Self { buffer }
+        Self { buffer, offset: 0 }
     }
 
     /// Returns the underlying buffer.
