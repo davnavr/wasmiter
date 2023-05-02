@@ -88,15 +88,15 @@ impl<I: Input> Parser<I> {
             let bits = byte & 0x7F;
             more = byte & 0x80 == 0x80;
 
-            let amount;
-
+            // Determine how much the shift amount needs to change
+            let shift: u8;
             if i == N::MAX_LENGTH - 1 {
-                amount = N::BITS - (7 * i);
+                shift = N::BITS - (7 * i);
 
-                debug_assert!(amount < 8);
+                debug_assert!(shift < 8);
 
                 let leading_zeroes = bits.leading_zeros() as u8;
-                if leading_zeroes < 8 - amount {
+                if leading_zeroes < 8 - shift {
                     // Overflow, the number of value bits will not fit in the destination
                     return Err(parser_bad_format!(
                         "encoded value requires {} bits, which cannot fit in the destination",
@@ -104,10 +104,10 @@ impl<I: Input> Parser<I> {
                     ));
                 }
             } else {
-                amount = 7u8;
+                shift = 7u8 * i;
             }
 
-            value |= N::from(bits) << amount;
+            value |= N::from(bits) << shift;
 
             if !more {
                 break;

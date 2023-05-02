@@ -6,7 +6,9 @@ mod sealed {
     impl<T, E: Into<crate::parser::Error>> Sealed for core::result::Result<T, E> {}
 }
 
-/// Provides helper methods to add additional context to [`Error`]s.
+/// Provides helper methods to add additional context to [`Error`](crate::parser::Error)s.
+///
+/// If the `std` and `alloc` features are not specified, then these methods do nothing.
 ///
 /// This trait is sealed.
 pub trait ResultExt<T>: sealed::Sealed {

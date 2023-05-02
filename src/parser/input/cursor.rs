@@ -16,6 +16,11 @@ pub struct Cursor<T> {
 
 #[cfg(not(feature = "std"))]
 impl<T> Cursor<T> {
+    /// Creates a new [`Cursor<T>`] with the specified buffer.
+    pub const fn new(buffer: T) -> Self {
+        Self { buffer }
+    }
+
     /// Returns the underlying buffer.
     #[inline]
     pub fn into_inner(self) -> T {
