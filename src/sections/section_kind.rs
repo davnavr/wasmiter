@@ -3,7 +3,7 @@ use alloc::{borrow::Cow, string::String};
 
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
-/// [`Section`].
+/// [`Section`](crate::Section).
 pub type SectionId = core::num::NonZeroU8;
 
 /// A name for a
@@ -89,7 +89,7 @@ impl core::fmt::Display for CustomSectionName {
     }
 }
 
-/// Indicates what kind of contents are contained within a WebAssembly [`Section`].
+/// Indicates what kind of contents are contained within a WebAssembly [`Section`](crate::Section).
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SectionKind {
     /// The section is a known value documented in the

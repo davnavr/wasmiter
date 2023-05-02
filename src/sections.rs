@@ -45,11 +45,14 @@ pub struct SectionSequence<I: Input> {
 }
 
 impl<I: Input> SectionSequence<I> {
+    /// Uses the given [`Parser<I>`] to read a sequence of sections.
+    pub fn new(parser: Parser<I>) -> Self {
+        Self { parser }
+    }
+
     /// Creates a sequence of sections read from the given [`Input`].
-    pub fn new(input: I) -> Self {
-        Self {
-            parser: Parser::new(input),
-        }
+    pub fn from_input(input: I) -> Self {
+        Self::new(Parser::new(input))
     }
 
     fn parse(&mut self) -> Result<Option<Section<I::Fork>>> {

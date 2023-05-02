@@ -41,8 +41,7 @@ fn parse_module_binary<I: parser::input::Input>(binary: I) -> parser::Result<Sec
         ));
     }
 
-    // TODO: sections sequence
-    todo!()
+    Ok(SectionSequence::new(parser))
 }
 
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
