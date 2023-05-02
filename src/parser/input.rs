@@ -26,6 +26,11 @@ pub type Result<T> = core::result::Result<T, Error>;
 /// [`std::io::Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits, but with a
 /// few differences.
 pub trait Input {
+    /// An [`Input`] implementation used to read bytes from an existing [`Input`].
+    ///
+    /// See [`Input::fork`] for more information.
+    type Fork: Input<Fork = Self::Fork>;
+
     /// Moves the reader to a location specified by a byte `offset` from the start of the source.
     fn seek(&mut self, offset: u64) -> Result<()>;
 
@@ -47,7 +52,9 @@ pub trait Input {
     /// Returns the current position of the reader, as a byte offset from the start of the source.
     fn position(&self) -> Result<u64>; // u64?
 
-    //fn fork(&self) -> Result<Self::Fork>;
+    /// Returns a new [`Input`] used to read bytes starting at the current
+    /// [`position`](Input::position).
+    fn fork(&self) -> Result<Self::Fork>;
 
     /// Reads bytes to fill the `buffer`, advancing the reader by the number of bytes that were
     /// read. Returns the number of bytes copied to the `buffer`.

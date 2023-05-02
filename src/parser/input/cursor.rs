@@ -50,7 +50,14 @@ impl<T: AsRef<[u8]>> Cursor<T> {
 }
 
 #[cfg(not(feature = "std"))]
-impl<T: AsRef<[u8]>> Input for Cursor<T> {
+impl<T: AsRef<[u8]> + Clone> Input for Cursor<T> {
+    type Fork = Self;
+
+    #[inline]
+    fn fork(&self) -> Result<Self::Fork> {
+        Ok(self.clone())
+    }
+
     #[inline]
     fn seek(&mut self, offset: u64) -> Result<()> {
         self.offset = offset;
@@ -82,7 +89,14 @@ impl<T: AsRef<[u8]>> Input for Cursor<T> {
 pub use std::io::Cursor;
 
 #[cfg(feature = "std")]
-impl<T: AsRef<[u8]>> Input for Cursor<T> {
+impl<T: AsRef<[u8]> + Clone> Input for Cursor<T> {
+    type Fork = Self;
+
+    #[inline]
+    fn fork(&self) -> Result<Self::Fork> {
+        Ok(self.clone())
+    }
+
     #[inline]
     fn seek(&mut self, offset: u64) -> Result<()> {
         Cursor::set_position(self, offset);
