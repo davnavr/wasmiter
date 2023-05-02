@@ -17,16 +17,34 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[doc(hidden)]
 macro_rules! parser_bad_format {
     ($($arg:tt)*) => {{
+        #[cfg(not(feature = "alloc"))]
         let err;
+        #[cfg(feature = "alloc")]
+        let mut err;
+
+        err = Error::bad_format();
 
         #[cfg(feature = "alloc")]
         {
-            err = Error::bad_format().with_context(alloc::format!($($arg)*));
+            err = err.with_context(alloc::format!($($arg)*));
         }
 
+        err
+    }};
+}
+
+macro_rules! parser_bad_input {
+    ($error:expr, $($arg:tt)*) => {{
         #[cfg(not(feature = "alloc"))]
+        let err;
+        #[cfg(feature = "alloc")]
+        let mut err;
+
+        err = <Error as From<input::Error>>::from($error);
+
+        #[cfg(feature = "alloc")]
         {
-            err = Error::bad_format();
+            err = err.with_context(alloc::format!($($arg)*));
         }
 
         err
@@ -76,6 +94,15 @@ impl<I: Input> Parser<I> {
         Self {
             input: input.into_input(),
         }
+    }
+
+    pub(crate) fn fork(&self) -> Result<Parser<I::Fork>> {
+        Ok(Parser::new(self.input.fork()?))
+    }
+
+    #[inline]
+    pub(crate) fn position(&self) -> Result<u64> {
+        self.input.position().map_err(Error::from)
     }
 
     fn leb128_unsigned<N: IntegerEncoding>(&mut self) -> Result<N> {
@@ -153,13 +180,30 @@ impl<I: Input> Parser<I> {
         self.leb128_unsigned().context("could not parse u64")
     }
 
-    pub(crate) fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
-        self.input.take_exact(buffer).map_err(|e| {
-            #[cfg(not(feature = "alloc"))]
-            return Error::from(e);
+    pub(crate) fn bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
+        self.input
+            .take(buffer)
+            .map_err(|e| parser_bad_input!(e, "could not read {} bytes", buffer.len()))
+    }
 
-            #[cfg(feature = "alloc")]
-            return Error::from(e).with_context(format!("expected {} bytes", buffer.len()));
-        })
+    pub(crate) fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        self.input
+            .take_exact(buffer)
+            .map_err(|e| parser_bad_input!(e, "expected {} bytes", buffer.len()))
+    }
+
+    pub(crate) fn skip_exact(&mut self, amount: u64) -> Result<()> {
+        let actual = self
+            .input
+            .read(amount)
+            .map_err(|e| parser_bad_input!(e, "could not read {amount} bytes"))?;
+
+        if amount != actual {
+            return Err(parser_bad_format!(
+                "attempt to read {amount} bytes, but read {actual} before reaching end of input"
+            ));
+        }
+
+        Ok(())
     }
 }
