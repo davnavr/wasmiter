@@ -5,4 +5,4 @@
 
 mod types;
 
-pub use types::{FuncType, NumType, RefType, ResultType, ValType, VecType};
+pub use types::{FuncType, NumType, RefType, ValType, VecType};
