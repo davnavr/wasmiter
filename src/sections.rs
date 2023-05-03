@@ -44,7 +44,7 @@ impl<I: Input, S: AsRef<str>> Section<I, S> {
 pub struct SectionSequence<I: Input, A: Allocator> {
     parser: Parser<I>,
     allocator: A,
-    buffer: A::Buffer,
+    buffer: A::Buf,
 }
 
 impl<I: Input, A: Allocator> SectionSequence<I, A> {
