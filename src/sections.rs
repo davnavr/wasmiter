@@ -111,6 +111,7 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<I: Input> SectionSequence<I, allocator::Global> {
     /// Uses the given [`Parser<I>`] to read a sequence of sections.
     pub fn new(parser: Parser<I>) -> Self {

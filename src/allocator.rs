@@ -35,7 +35,21 @@ pub trait Allocator {
     fn allocate_string(&self, s: &str) -> Self::String;
 }
 
-/// An [`Allocation`] implementation that uses Rust's heap allocator.
+impl<A: Allocator> Allocator for &A {
+    type Buffer = A::Buffer;
+
+    fn allocate_buffer(&self) -> Self::Buffer {
+        A::allocate_buffer(self)
+    }
+
+    type String = A::String;
+
+    fn allocate_string(&self, s: &str) -> Self::String {
+        A::allocate_string(self, s)
+    }
+}
+
+/// An [`Allocator`] implementation that uses Rust's heap allocator.
 #[derive(Clone, Copy, Debug, Default)]
 #[cfg(feature = "alloc")]
 pub struct Global;
