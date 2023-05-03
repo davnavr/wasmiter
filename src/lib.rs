@@ -10,26 +10,31 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+pub mod allocator;
 pub mod parser;
 
 mod sections;
 
 pub use sections::{CustomSectionName, Section, SectionId, SectionKind, SectionSequence};
 
+use parser::{input, Error, Result, ResultExt as _};
+
+// TODO: parse_module_preamble
 const MAGIC: [u8; 4] = *b"\0asm";
 
 const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
-fn parse_module_binary<I: parser::input::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
-    use parser::{Error, ResultExt};
-
+fn parse_module_binary<I: input::Input, A: allocator::Allocator>(
+    binary: I,
+    allocator: A,
+) -> Result<SectionSequence<I, A>> {
     let mut parser = parser::Parser::new(binary);
     let mut preamble = [0u8; 8];
     parser
         .bytes_exact(&mut preamble)
         .context("expected WebAssembly module preamble")?;
 
-    if &preamble[0..4] != &MAGIC {
+    if preamble[0..4] != MAGIC {
         return Err(Error::bad_format().with_context("not a valid WebAssembly module"));
     }
 
@@ -41,16 +46,27 @@ fn parse_module_binary<I: parser::input::Input>(binary: I) -> parser::Result<Sec
         ));
     }
 
-    Ok(SectionSequence::new(parser))
+    Ok(SectionSequence::new_with_allocator(parser, allocator))
+}
+
+/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html)
+/// with the given [`Allocator`](allocator::Allocator), returning the sequence of sections.
+#[inline]
+pub fn parse_module_sections_with_allocator<I: input::IntoInput, A: allocator::Allocator>(
+    binary: I,
+    allocator: A,
+) -> Result<SectionSequence<I::In, A>> {
+    parse_module_binary(binary.into_input(), allocator)
 }
 
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
 #[inline]
-pub fn parse_module_sections<I: parser::input::IntoInput>(
+#[cfg(feature = "alloc")]
+pub fn parse_module_sections<I: input::IntoInput>(
     binary: I,
-) -> parser::Result<SectionSequence<I::In>> {
-    parse_module_binary(binary.into_input())
+) -> Result<SectionSequence<I::In, allocator::Global>> {
+    parse_module_binary(binary.into_input(), Default::default())
 }
 
 /*
@@ -62,7 +78,7 @@ pub fn parse_module_sections<I: parser::input::IntoInput>(
 #[inline]
 pub fn parse_module_sections_from_path<P: AsRef<std::path::Path>>(
     path: P,
-) -> parser::Result<SectionSequence<parser::FileInput>> {
+) -> Result<SectionSequence<parser::FileInput>> {
     parse_module_binary(parser::FileInput::new(std::fs::File::open(path)?))
 }
 */

@@ -18,17 +18,9 @@ pub type Result<T> = core::result::Result<T, Error>;
 macro_rules! parser_bad_format {
     ($($arg:tt)*) => {{
         #[cfg(not(feature = "alloc"))]
-        let err;
+        let err = Error::bad_format();
         #[cfg(feature = "alloc")]
-        let mut err;
-
-        err = Error::bad_format();
-
-        #[cfg(feature = "alloc")]
-        {
-            err = err.with_context(alloc::format!($($arg)*));
-        }
-
+        let err = Error::bad_format().with_context(alloc::format!($($arg)*));
         err
     }};
 }
@@ -183,13 +175,13 @@ impl<I: Input> Parser<I> {
     pub(crate) fn bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
         self.input
             .take(buffer)
-            .map_err(|e| parser_bad_input!(e, "could not read {} bytes", buffer.len()))
+            .map_err(|_e| parser_bad_input!(_e, "could not read {} bytes", buffer.len()))
     }
 
     pub(crate) fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
         self.input
             .take_exact(buffer)
-            .map_err(|e| parser_bad_input!(e, "expected {} bytes", buffer.len()))
+            .map_err(|_e| parser_bad_input!(_e, "expected {} bytes", buffer.len()))
     }
 
     pub(crate) fn skip_exact(&mut self, amount: u64) -> Result<()> {
@@ -205,5 +197,27 @@ impl<I: Input> Parser<I> {
         }
 
         Ok(())
+    }
+
+    /// Parses an UTF-8 string
+    /// [name](https://webassembly.github.io/spec/core/binary/values.html#names).
+    pub fn name<'b, B: crate::allocator::Buffer>(
+        &mut self,
+        buffer: &'b mut B,
+    ) -> Result<&'b mut str> {
+        let length = self.leb128_usize().context("string length")?;
+        buffer.clear();
+        buffer.grow(length);
+
+        self.bytes_exact(buffer.as_mut())
+            .context("string contents")?;
+
+        #[cfg(not(feature = "alloc"))]
+        let bad_encoding = |_| Error::bad_format();
+
+        #[cfg(feature = "alloc")]
+        let bad_encoding = |e| Error::bad_format().with_context(alloc::format!("{e}"));
+
+        core::str::from_utf8_mut(buffer.as_mut()).map_err(bad_encoding)
     }
 }

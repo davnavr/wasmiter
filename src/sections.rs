@@ -1,4 +1,6 @@
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::allocator::{self, Allocator};
+use crate::parser::input::Input;
+use crate::parser::{Parser, Result, ResultExt};
 
 mod section_kind;
 
@@ -7,18 +9,18 @@ pub use section_kind::{CustomSectionName, SectionId, SectionKind};
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 #[derive(Debug)]
-pub struct Section<I: Input> {
-    kind: SectionKind,
-    length: u32,
+pub struct Section<I: Input, S: AsRef<str>> {
+    kind: SectionKind<S>,
+    length: u64,
     contents: Parser<I>,
 }
 
-impl<I: Input> Section<I> {
+impl<I: Input, S: AsRef<str>> Section<I, S> {
     /// Gets the
     /// [*id* or custom section name](https://webassembly.github.io/spec/core/binary/modules.html#sections)
     /// for this section.
     #[inline]
-    pub fn kind(&self) -> &SectionKind {
+    pub fn kind(&self) -> &SectionKind<S> {
         &self.kind
     }
 
@@ -26,7 +28,7 @@ impl<I: Input> Section<I> {
     ///
     /// Note that for custom sections, this does **not** include the section name.
     #[inline]
-    pub fn length(&self) -> u32 {
+    pub fn length(&self) -> u64 {
         self.length
     }
 
@@ -39,23 +41,28 @@ impl<I: Input> Section<I> {
 /// Represents the
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
 /// in a WebAssembly module.
-#[derive(Debug)]
-pub struct SectionSequence<I: Input> {
+pub struct SectionSequence<I: Input, A: Allocator> {
     parser: Parser<I>,
+    allocator: A,
+    buffer: A::Buffer,
 }
 
-impl<I: Input> SectionSequence<I> {
-    /// Uses the given [`Parser<I>`] to read a sequence of sections.
-    pub fn new(parser: Parser<I>) -> Self {
-        Self { parser }
+impl<I: Input, A: Allocator> SectionSequence<I, A> {
+    /// Uses the given [`Parser<I>`] to read a sequence of sections with the given [`Allocator`].
+    pub fn new_with_allocator(parser: Parser<I>, allocator: A) -> Self {
+        Self {
+            parser,
+            buffer: allocator.allocate_buffer(),
+            allocator,
+        }
     }
 
-    /// Creates a sequence of sections read from the given [`Input`].
-    pub fn from_input(input: I) -> Self {
-        Self::new(Parser::new(input))
+    /// Uses the given [`Input`] to read a sequence of sections with the given [`Allocator`].
+    pub fn from_input_with_allocator(input: I, allocator: A) -> Self {
+        Self::new_with_allocator(Parser::new(input), allocator)
     }
 
-    fn parse(&mut self) -> Result<Option<Section<I::Fork>>> {
+    fn parse(&mut self) -> Result<Option<Section<I::Fork, A::String>>> {
         let mut id_byte = 0u8;
 
         let id_length = self
@@ -68,23 +75,32 @@ impl<I: Input> SectionSequence<I> {
         }
 
         let kind = SectionId::new(id_byte);
-        let /*mut*/ content_length = self.parser.leb128_u32().context("section content size")?;
+        let mut content_length =
+            u64::from(self.parser.leb128_u32().context("section content size")?);
 
         let id = if let Some(id_number) = kind {
             SectionKind::Id(id_number)
         } else {
-            todo!("custom sections not yet supported")
-            // let name_start = self.parser.position()?;
-            // let name = todo!();
-            // let name_end = self.parser.position()?;
-            // content_length -= name_end - name_start;
-            //SectionKind::Custom(todo!())
+            let name_start = self.parser.position()?;
+            let name = self
+                .parser
+                .name(&mut self.buffer)
+                .context("custom section name")?;
+            let name_end = self.parser.position()?;
+            content_length -= name_end - name_start;
+            SectionKind::Custom(
+                if let Some(known) = section_kind::cached_custom_name(name) {
+                    CustomSectionName::WellKnown(known)
+                } else {
+                    CustomSectionName::String(self.allocator.allocate_string(name))
+                },
+            )
         };
 
         let contents = self.parser.fork()?;
 
         self.parser
-            .skip_exact(u64::from(content_length))
+            .skip_exact(content_length)
             .context("section content")?;
 
         Ok(Some(Section {
@@ -95,11 +111,36 @@ impl<I: Input> SectionSequence<I> {
     }
 }
 
-impl<I: Input> Iterator for SectionSequence<I> {
-    type Item = Result<Section<I::Fork>>;
+impl<I: Input> SectionSequence<I, allocator::Global> {
+    /// Uses the given [`Parser<I>`] to read a sequence of sections.
+    pub fn new(parser: Parser<I>) -> Self {
+        Self::new_with_allocator(parser, Default::default())
+    }
+
+    /// Uses the given [`Input`] to read a sequence of sections.
+    pub fn from_input(input: I) -> Self {
+        Self::new(Parser::new(input))
+    }
+}
+
+impl<I: Input, A: Allocator> Iterator for SectionSequence<I, A> {
+    type Item = Result<Section<I::Fork, A::String>>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.parse().transpose()
+    }
+}
+
+impl<I, A> core::fmt::Debug for SectionSequence<I, A>
+where
+    I: Input + core::fmt::Debug,
+    A: Allocator + core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("SectionSequence")
+            .field("parser", &self.parser)
+            .field("allocator", &self.allocator)
+            .finish()
     }
 }
