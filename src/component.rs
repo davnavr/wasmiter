@@ -4,3 +4,5 @@
 //! [sections in the binary format](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 
 mod types;
+
+pub use types::{FuncType, NumType, RefType, ResultType, ValType, VecType};

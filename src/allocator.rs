@@ -58,29 +58,42 @@ pub trait Allocator {
     /// Allocates an empty vector with the given `capacity`.
     #[inline]
     fn allocate_vector_with_capacity<T>(&self, capacity: usize) -> Self::Vec<T> {
+        let _ = capacity;
         self.allocate_vector()
+    }
+
+    /// Allocates a vector from the given slice.
+    #[inline]
+    fn allocate_vector_from_slice<T: Clone>(&self, items: &[T]) -> Self::Vec<T> {
+        let mut vec = self.allocate_vector_with_capacity(items.len());
+        vec.extend(items.iter().cloned());
+        vec
     }
 }
 
 impl<A: Allocator> Allocator for &A {
     type Buf = A::Buf;
 
+    #[inline]
     fn allocate_buffer(&self) -> Self::Buf {
         A::allocate_buffer(self)
     }
 
     type String = A::String;
 
+    #[inline]
     fn allocate_string(&self, s: &str) -> Self::String {
         A::allocate_string(self, s)
     }
 
     type Vec<T> = A::Vec<T>;
 
+    #[inline]
     fn allocate_vector<T>(&self) -> Self::Vec<T> {
         A::allocate_vector(&self)
     }
 
+    #[inline]
     fn allocate_vector_with_capacity<T>(&self, capacity: usize) -> Self::Vec<T> {
         A::allocate_vector_with_capacity(&self, capacity)
     }
@@ -95,23 +108,32 @@ pub struct Global;
 impl Allocator for Global {
     type Buf = alloc::vec::Vec<u8>;
 
+    #[inline]
     fn allocate_buffer(&self) -> Self::Buf {
         Default::default()
     }
 
     type String = alloc::string::String;
 
+    #[inline]
     fn allocate_string(&self, s: &str) -> Self::String {
         alloc::string::ToString::to_string(s)
     }
 
     type Vec<T> = alloc::vec::Vec<T>;
 
+    #[inline]
     fn allocate_vector<T>(&self) -> Self::Vec<T> {
         Default::default()
     }
 
+    #[inline]
     fn allocate_vector_with_capacity<T>(&self, capacity: usize) -> Self::Vec<T> {
         alloc::vec::Vec::with_capacity(capacity)
+    }
+
+    #[inline]
+    fn allocate_vector_from_slice<T: Clone>(&self, items: &[T]) -> Self::Vec<T> {
+        alloc::vec::Vec::from(items)
     }
 }
