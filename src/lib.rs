@@ -19,16 +19,10 @@ pub use sections::{CustomSectionName, Section, SectionId, SectionKind, SectionSe
 
 use parser::{input, Error, Result, ResultExt as _};
 
-// TODO: parse_module_preamble
-const MAGIC: [u8; 4] = *b"\0asm";
+fn parse_module_preamble<I: input::Input>(parser: &mut parser::Parser<I>) -> Result<()> {
+    const MAGIC: [u8; 4] = *b"\0asm";
+    const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
-const VERSION: [u8; 4] = u32::to_le_bytes(1);
-
-fn parse_module_binary<I: input::Input, A: allocator::Allocator>(
-    binary: I,
-    allocator: A,
-) -> Result<SectionSequence<I, A>> {
-    let mut parser = parser::Parser::new(binary);
     let mut preamble = [0u8; 8];
     parser
         .bytes_exact(&mut preamble)
@@ -46,6 +40,15 @@ fn parse_module_binary<I: input::Input, A: allocator::Allocator>(
         ));
     }
 
+    Ok(())
+}
+
+fn parse_module_binary<I: input::Input, A: allocator::Allocator>(
+    binary: I,
+    allocator: A,
+) -> Result<SectionSequence<I, A>> {
+    let mut parser = parser::Parser::new(binary);
+    parse_module_preamble(&mut parser)?;
     Ok(SectionSequence::new_with_allocator(parser, allocator))
 }
 
