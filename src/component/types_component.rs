@@ -1,4 +1,4 @@
-use crate::allocator::{Allocator, Vector};
+use crate::allocator::{self, Allocator, Vector};
 use crate::component::{FuncType, ValType};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
@@ -39,7 +39,7 @@ fn parse_result_type(
 
 /// Represents the
 /// [`types` component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a
-/// WebAssembly module, stored and parsed from the
+/// WebAssembly module, stored in and parsed from the
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 pub struct TypesComponent<I: Input, A: Allocator> {
     count: usize,
@@ -97,6 +97,15 @@ impl<I: Input, A: Allocator> TypesComponent<I, A> {
 
         self.count -= 1;
         Ok(Some(func_type))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<I: Input> TypesComponent<I, allocator::Global> {
+    /// Uses a [`Parser<I>`] to read the contents of the *type section* of a module.
+    #[inline]
+    pub fn new(parser: Parser<I>) -> Result<Self> {
+        Self::with_allocator(parser, allocator::Global)
     }
 }
 
