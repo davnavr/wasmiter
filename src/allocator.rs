@@ -22,16 +22,41 @@ impl Buffer for alloc::vec::Vec<u8> {
 
 /// Trait for a growable array.
 pub trait Vector<T>: AsRef<[T]> + core::iter::Extend<T> {
+    /// Removes all items from the vector.
+    fn clear(&mut self);
+
     /// Appends an item to the end of the vector.
     fn push(&mut self, item: T) {
         self.extend(core::iter::once(item))
+    }
+
+    /// Reserves space for `additional` instances of `T`, possibly reserving extra space.
+    fn reserve(&mut self, additional: usize) {
+        let _ = additional;
+    }
+
+    /// Reserves the minimum amount of space for `additional` instances of `T`.
+    fn reserve_exact(&mut self, additional: usize) {
+        self.reserve(additional)
     }
 }
 
 #[cfg(feature = "alloc")]
 impl<T> Vector<T> for alloc::vec::Vec<T> {
+    fn clear(&mut self) {
+        alloc::vec::Vec::clear(self)
+    }
+
     fn push(&mut self, item: T) {
         alloc::vec::Vec::push(self, item)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        alloc::vec::Vec::reserve(self, additional)
+    }
+
+    fn reserve_exact(&mut self, additional: usize) {
+        alloc::vec::Vec::reserve_exact(self, additional)
     }
 }
 
@@ -90,12 +115,12 @@ impl<A: Allocator> Allocator for &A {
 
     #[inline]
     fn allocate_vector<T>(&self) -> Self::Vec<T> {
-        A::allocate_vector(&self)
+        A::allocate_vector(self)
     }
 
     #[inline]
     fn allocate_vector_with_capacity<T>(&self, capacity: usize) -> Self::Vec<T> {
-        A::allocate_vector_with_capacity(&self, capacity)
+        A::allocate_vector_with_capacity(self, capacity)
     }
 }
 

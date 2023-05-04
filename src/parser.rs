@@ -18,9 +18,9 @@ pub type Result<T> = core::result::Result<T, Error>;
 macro_rules! parser_bad_format {
     ($($arg:tt)*) => {{
         #[cfg(not(feature = "alloc"))]
-        let err = Error::bad_format();
+        let err = crate::parser::Error::bad_format();
         #[cfg(feature = "alloc")]
-        let err = Error::bad_format().with_context(alloc::format!($($arg)*));
+        let err = crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
         err
     }};
 }
