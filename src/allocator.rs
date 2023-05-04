@@ -1,5 +1,9 @@
 //! Types and traits for handling allocations during WebAssembly parsing.
 
+mod string_pool;
+
+pub use string_pool::StringPool;
+
 /// Trait for byte buffers.
 pub trait Buffer: AsRef<[u8]> + AsMut<[u8]> {
     /// Sets the buffer's length to zero.
