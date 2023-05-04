@@ -38,7 +38,7 @@ fn parse_result_type(
 }
 
 /// Represents the
-/// [`types` component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a
+/// [**types** component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 pub struct TypesComponent<I: Input, A: Allocator> {

@@ -30,3 +30,16 @@ where
         }
     }
 }
+
+/// A [`StringPool`] implementation that does not actually intern strings.
+#[cfg(feature = "alloc")]
+#[derive(Debug, Default)]
+pub struct FakeStringPool;
+
+impl StringPool for FakeStringPool {
+    type Interned = alloc::string::String;
+
+    fn get(&mut self, s: &str) -> Self::Interned {
+        alloc::string::ToString::to_string(s)
+    }
+}

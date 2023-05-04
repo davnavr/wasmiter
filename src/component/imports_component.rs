@@ -1,0 +1,128 @@
+use crate::allocator::{self, Allocator, Buffer, OwnOrRef, StringPool};
+use crate::parser::input::Input;
+use crate::parser::{Parser, Result, ResultExt};
+use core::fmt::Debug;
+
+fn cached_module_name(name: &str) -> Option<&'static str> {
+    macro_rules! names {
+        ($($name:literal,)*) => {
+            Some(match name {
+                $($name => $name,)*
+                _ => return None,
+            })
+        };
+    }
+
+    names!["env", "wasi_snapshot_preview1",]
+}
+
+/// Describes what kind of entity is specified by an [`Import`].
+#[derive(Clone, Debug)]
+pub enum ImportKind {
+    //Function(),
+    //Table(),
+    //Memory(),
+    //Global(),
+}
+
+/// Represents a
+/// [WebAssembly import](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
+#[derive(Clone)]
+pub struct Import<S: AsRef<str>> {
+    module: OwnOrRef<'static, str, S>,
+    name: S,
+    kind: ImportKind,
+}
+
+impl<S: AsRef<str>> Debug for Import<S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Import")
+            .field("module", &self.module.as_ref())
+            .field("name", &self.name.as_ref())
+            .field("kind", &self.kind)
+            .finish()
+    }
+}
+
+/// Represents the
+/// [**imports** component](https://webassembly.github.io/spec/core/syntax/modules.html#imports) of
+/// a WebAssembly module, stored in and parsed from the
+/// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
+pub struct ImportsComponent<I, S, A>
+where
+    I: Input,
+    S: StringPool,
+    A: Allocator<String = S::Interned>,
+{
+    count: usize,
+    parser: Parser<I>,
+    string_cache: S,
+    name_buffer: A::Buf,
+    allocator: A,
+}
+
+impl<I, S, A> ImportsComponent<I, S, A>
+where
+    I: Input,
+    S: StringPool,
+    A: Allocator<String = S::Interned>,
+{
+    /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module, with the
+    /// given [`StringPool`] used to intern module names and [`Allocator`].
+    pub fn with_string_cache_and_buffer(
+        mut parser: Parser<I>,
+        string_cache: S,
+        allocator: A,
+    ) -> Result<Self> {
+        Ok(Self {
+            count: parser.leb128_usize().context("import section count")?,
+            parser,
+            string_cache,
+            name_buffer: allocator.allocate_buffer(),
+            allocator,
+        })
+    }
+
+    fn parse_next(&mut self) -> Result<Option<Import<S::Interned>>> {
+        let module_name = self
+            .parser
+            .name(&mut self.name_buffer)
+            .context("module name")?;
+
+        let module = if let Some(cached) = cached_module_name(module_name) {
+            OwnOrRef::Reference(cached)
+        } else {
+            OwnOrRef::Owned(self.string_cache.get(module_name))
+        };
+
+        let name = self.string_cache.get(
+            self.parser
+                .name(&mut self.name_buffer)
+                .context("import name")?,
+        );
+
+        todo!()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<I: Input> ImportsComponent<I, allocator::FakeStringPool, allocator::Global> {
+    /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module.
+    pub fn new(parser: Parser<I>) -> Result<Self> {
+        Self::with_string_cache_and_buffer(parser, allocator::FakeStringPool, allocator::Global)
+    }
+}
+
+impl<I, S, A> Debug for ImportsComponent<I, S, A>
+where
+    I: Input + Debug,
+    S: StringPool,
+    A: Allocator<String = S::Interned>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("TypesComponent")
+            .field("count", &self.count)
+            .field("parser", &self.parser)
+            .finish_non_exhaustive()
+    }
+}

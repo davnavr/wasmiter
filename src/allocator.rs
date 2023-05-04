@@ -4,7 +4,7 @@ mod own_or_ref;
 mod string_pool;
 
 pub use own_or_ref::OwnOrRef;
-pub use string_pool::StringPool;
+pub use string_pool::{FakeStringPool, StringPool};
 
 /// Trait for byte buffers.
 pub trait Buffer: AsRef<[u8]> + AsMut<[u8]> {

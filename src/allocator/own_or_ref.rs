@@ -8,6 +8,7 @@ use alloc::borrow::{Cow, ToOwned};
 /// This is essentially a version of
 /// [`Cow<'a, B>`](https://doc.rust-lang.org/alloc/borrow/enum.Cow.html) without requring `B`
 /// to implement [`ToOwned`](https://doc.rust-lang.org/alloc/borrow/trait.ToOwned.html).
+#[derive(Debug)]
 pub enum OwnOrRef<'a, B: ?Sized, O: AsRef<B>> {
     /// A reference to a value.
     Reference(&'a B),
@@ -37,13 +38,6 @@ impl<B: ?Sized, O: AsRef<B>> core::borrow::Borrow<B> for OwnOrRef<'_, B, O> {
     #[inline]
     fn borrow(&self) -> &B {
         self
-    }
-}
-
-impl<B: ?Sized + core::fmt::Debug, O: AsRef<B>> core::fmt::Debug for OwnOrRef<'_, B, O> {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        <B as core::fmt::Debug>::fmt(self, f)
     }
 }
 
