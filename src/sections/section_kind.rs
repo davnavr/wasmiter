@@ -1,90 +1,9 @@
-#[cfg(feature = "alloc")]
-use alloc::{borrow::Cow, string::String};
+use crate::allocator::OwnOrRef;
 
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
 /// [`Section`](crate::Section).
 pub type SectionId = core::num::NonZeroU8;
-
-/// A name for a
-/// [custom section](https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec).
-#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum CustomSectionName<S: AsRef<str>> {
-    /// A well-known custom section name.
-    WellKnown(&'static str),
-    /// An allocated custom section name.
-    String(S),
-}
-
-impl<S: AsRef<str>> core::ops::Deref for CustomSectionName<S> {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        match self {
-            Self::WellKnown(name) => name,
-            Self::String(name) => name.as_ref(),
-        }
-    }
-}
-
-impl<S: AsRef<str>> AsRef<str> for CustomSectionName<S> {
-    fn as_ref(&self) -> &str {
-        self
-    }
-}
-
-impl<S: AsRef<str>> core::borrow::Borrow<str> for CustomSectionName<S> {
-    fn borrow(&self) -> &str {
-        self
-    }
-}
-
-impl<S: AsRef<str>> From<&'static str> for CustomSectionName<S> {
-    #[inline]
-    fn from(name: &'static str) -> Self {
-        CustomSectionName::WellKnown(name)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl From<String> for CustomSectionName<String> {
-    #[inline]
-    fn from(name: String) -> Self {
-        CustomSectionName::String(name)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl From<Cow<'static, str>> for CustomSectionName<String> {
-    fn from(name: Cow<'static, str>) -> Self {
-        match name {
-            Cow::Borrowed(borrowed) => Self::WellKnown(borrowed),
-            Cow::Owned(owned) => Self::String(owned),
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl From<CustomSectionName<String>> for Cow<'static, str> {
-    fn from(name: CustomSectionName<String>) -> Self {
-        match name {
-            CustomSectionName::WellKnown(known) => Cow::Borrowed(known),
-            CustomSectionName::String(owned) => Cow::Owned(owned),
-        }
-    }
-}
-
-impl<S: AsRef<str>> core::fmt::Debug for CustomSectionName<S> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        <str as core::fmt::Debug>::fmt(self.as_ref(), f)
-    }
-}
-
-impl<S: AsRef<str>> core::fmt::Display for CustomSectionName<S> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        <str as core::fmt::Display>::fmt(self.as_ref(), f)
-    }
-}
 
 /// Indicates what kind of contents are contained within a WebAssembly [`Section`](crate::Section).
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -95,7 +14,7 @@ pub enum SectionKind<S: AsRef<str>> {
     /// The section is a
     /// [custom section](https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec)
     /// with the given name.
-    Custom(CustomSectionName<S>),
+    Custom(OwnOrRef<'static, str, S>),
 }
 
 macro_rules! known_ids {
@@ -164,17 +83,10 @@ macro_rules! known_custom_ids {
             }
         }
 
-        impl<S: AsRef<str>> CustomSectionName<S> {
-            $(
-                $(#[$meta])*
-                pub const $name: Self = CustomSectionName::WellKnown($value);
-            )*
-        }
-
         impl<S: AsRef<str>> SectionKind<S> {
             $(
                 $(#[$meta])*
-                pub const $name: Self = Self::Custom(CustomSectionName::<S>::$name);
+                pub const $name: Self = Self::Custom(OwnOrRef::Reference($value));
             )*
         }
     };

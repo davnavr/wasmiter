@@ -1,10 +1,10 @@
-use crate::allocator::{self, Allocator};
+use crate::allocator::{self, Allocator, OwnOrRef};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
 
 mod section_kind;
 
-pub use section_kind::{CustomSectionName, SectionId, SectionKind};
+pub use section_kind::{SectionId, SectionKind};
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
@@ -90,9 +90,9 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
             content_length -= name_end - name_start;
             SectionKind::Custom(
                 if let Some(known) = section_kind::cached_custom_name(name) {
-                    CustomSectionName::WellKnown(known)
+                    OwnOrRef::Reference(known)
                 } else {
-                    CustomSectionName::String(self.allocator.allocate_string(name))
+                    OwnOrRef::Owned(self.allocator.allocate_string(name))
                 },
             )
         };

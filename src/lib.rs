@@ -16,7 +16,7 @@ pub mod parser;
 
 mod sections;
 
-pub use sections::{CustomSectionName, Section, SectionId, SectionKind, SectionSequence};
+pub use sections::{Section, SectionId, SectionKind, SectionSequence};
 
 use parser::{input, Error, Result, ResultExt as _};
 
