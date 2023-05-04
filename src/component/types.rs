@@ -231,3 +231,19 @@ impl<S: Vector<ValType>> Default for FuncType<S> {
         }
     }
 }
+
+impl<S: Vector<ValType>> core::cmp::PartialEq for FuncType<S> {
+    fn eq(&self, other: &Self) -> bool {
+        self.parameter_types() == other.parameter_types()
+            && self.result_types() == other.result_types()
+    }
+}
+
+impl<S: Vector<ValType>> core::cmp::Eq for FuncType<S> {}
+
+impl<S: Vector<ValType>> core::hash::Hash for FuncType<S> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        core::hash::Hash::hash(self.parameter_types(), state);
+        core::hash::Hash::hash(self.result_types(), state);
+    }
+}
