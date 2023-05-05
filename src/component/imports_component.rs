@@ -1,4 +1,5 @@
 use crate::allocator::{self, Allocator, Buffer, OwnOrRef, StringPool};
+use crate::component::{self, Index};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
 use core::fmt::Debug;
@@ -19,10 +20,14 @@ fn cached_module_name(name: &str) -> Option<&'static str> {
 /// Describes what kind of entity is specified by an [`Import`].
 #[derive(Clone, Debug)]
 pub enum ImportKind {
-    //Function(),
-    //Table(),
-    //Memory(),
-    //Global(),
+    /// An imported function with the specified signature.
+    Function(component::TypeIdx),
+    // /// An imported table with the specified limits and element type.
+    // Table(component::TableType),
+    // /// An imported table with the specified limits.
+    // Memory(component::Limits),
+    // /// An imported global with the specified type.
+    // Global(component::GlobalType),
 }
 
 /// Represents a
@@ -84,6 +89,10 @@ where
     }
 
     fn parse_next(&mut self) -> Result<Option<Import<S::Interned>>> {
+        if self.count == 0 {
+            return Ok(None);
+        }
+
         let module_name = self
             .parser
             .name(&mut self.name_buffer)
@@ -101,7 +110,26 @@ where
                 .context("import name")?,
         );
 
-        todo!()
+        let mut kind_tag = 0u8;
+        self.parser
+            .bytes_exact(core::slice::from_mut(&mut kind_tag))
+            .context("import kind")?;
+
+        let kind = match kind_tag {
+            0 => ImportKind::Function(
+                component::TypeIdx::parse(&mut self.parser).context("function import type")?,
+            ),
+            _ => {
+                return Err(crate::parser_bad_format!(
+                    "{kind_tag:#02X} is not a known import kind"
+                ))
+            }
+        };
+
+        let import = Import { module, name, kind };
+
+        self.count -= 1;
+        Ok(Some(import))
     }
 }
 
@@ -110,6 +138,42 @@ impl<I: Input> ImportsComponent<I, allocator::FakeStringPool, allocator::Global>
     /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module.
     pub fn new(parser: Parser<I>) -> Result<Self> {
         Self::with_string_cache_and_buffer(parser, allocator::FakeStringPool, allocator::Global)
+    }
+}
+
+impl<I, S, A> core::iter::Iterator for ImportsComponent<I, S, A>
+where
+    I: Input,
+    S: StringPool,
+    A: Allocator<String = S::Interned>,
+{
+    type Item = Result<Import<S::Interned>>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse_next().transpose()
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.count
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.count, Some(self.count))
+    }
+}
+
+// count is correct, since errors are returned if there are too few elements
+impl<I, S, A> core::iter::ExactSizeIterator for ImportsComponent<I, S, A>
+where
+    I: Input,
+    S: StringPool,
+    A: Allocator<String = S::Interned>,
+{
+    fn len(&self) -> usize {
+        self.count
     }
 }
 

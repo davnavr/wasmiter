@@ -1,11 +1,11 @@
-use crate::parser::{Parser, Result, input::Input, ResultExt};
+use crate::parser::{input::Input, Parser, Result, ResultExt};
 use core::fmt::Debug;
 
 /// A [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
 pub trait Index: From<u8> + From<u16> + Debug + Eq + core::hash::Hash + Copy + Ord
 where
     usize: From<Self>,
-    u32: From<Self>
+    u32: From<Self>,
 {
     /// Parses an encoded [`Index`] value.
     fn parse<I: Input>(parser: &mut Parser<I>) -> Result<Self>;
