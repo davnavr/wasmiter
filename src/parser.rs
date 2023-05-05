@@ -60,6 +60,11 @@ trait IntegerEncoding:
     ///
     /// Should have a length equal to `MAX_LENGTH`.
     type Buffer: AsRef<[u8]> + AsMut<[u8]> + Default + IntoIterator<Item = u8>;
+
+    #[inline]
+    fn buffer_overflowed() -> Error {
+        parser_bad_format!("integer can only be encoded in {} bytes", Self::MAX_LENGTH)
+    }
 }
 
 impl IntegerEncoding for u32 {
@@ -73,6 +78,24 @@ impl IntegerEncoding for u64 {
     const BITS: u8 = 64;
     type Buffer = [u8; Self::MAX_LENGTH as usize];
 }
+
+trait SignedInteger: IntegerEncoding + core::ops::ShrAssign<u8> {}
+
+impl IntegerEncoding for i32 {
+    const MAX_LENGTH: u8 = 5;
+    const BITS: u8 = 32;
+    type Buffer = [u8; Self::MAX_LENGTH as usize];
+}
+
+impl SignedInteger for i32 {}
+
+impl IntegerEncoding for i64 {
+    const MAX_LENGTH: u8 = 10;
+    const BITS: u8 = 64;
+    type Buffer = [u8; Self::MAX_LENGTH as usize];
+}
+
+impl SignedInteger for i64 {}
 
 /// Parses a stream of bytes.
 #[derive(Debug)]
@@ -100,11 +123,12 @@ impl<I: Input> Parser<I> {
     fn leb128_unsigned<N: IntegerEncoding>(&mut self) -> Result<N> {
         let mut buffer = N::Buffer::default();
         let mut value = N::default();
-        self.input.peek(buffer.as_mut())?;
+        let count = self.input.peek(buffer.as_mut())?;
+        let input = &buffer.as_ref()[0..count];
 
         let mut more = true;
-        let mut i = 0u8;
-        for byte in buffer.into_iter() {
+        let mut i: u8 = 0u8;
+        for byte in input.iter().copied() {
             let bits = byte & 0x7F;
             more = byte & 0x80 == 0x80;
 
@@ -133,10 +157,7 @@ impl<I: Input> Parser<I> {
         }
 
         if more {
-            return Err(parser_bad_format!(
-                "integer can only be encoded in {} bytes",
-                N::MAX_LENGTH
-            ));
+            return Err(N::buffer_overflowed());
         }
 
         self.input.read(u64::from(i))?;
@@ -170,6 +191,78 @@ impl<I: Input> Parser<I> {
     /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
     pub fn leb128_u64(&mut self) -> Result<u64> {
         self.leb128_unsigned().context("could not parse u64")
+    }
+
+    fn leb128_signed<N: SignedInteger>(&mut self) -> Result<N> {
+        let mut buffer = N::Buffer::default();
+        let mut value = N::default();
+        let count = self.input.peek(buffer.as_mut())?;
+        let input = &buffer.as_ref()[0..count];
+
+        let mut more = true;
+        let mut i = 0u8;
+        let mut has_sign = false;
+        // Duplicated code from leb128_unsigned
+        for byte in input.iter().copied() {
+            let bits = byte & 0x7F;
+            more = byte & 0x80 == 0x80;
+
+            let shift = 7u8 * i;
+
+            // Check for overflowing bits in last byte
+            if i == N::MAX_LENGTH - 1 {
+                // TODO: Fix, may not handle bytes w/ sign bit correctly
+                let leading_zeroes = (bits & 0x3F).leading_zeros() as u8;
+                if leading_zeroes < 8 - (N::BITS - shift) {
+                    // Overflow, the number of value bits will not fit in the destination
+                    return Err(parser_bad_format!(
+                        "encoded value requires {} bits, which cannot fit in the destination",
+                        shift + (8 - leading_zeroes)
+                    ));
+                }
+
+                has_sign = bits & 0x40 == 0x40;
+            }
+
+            debug_assert!(shift <= N::BITS);
+
+            value |= N::from(bits & 0x7F) << shift;
+            i += 1;
+
+            if !more {
+                break;
+            }
+        }
+
+        if more {
+            return Err(N::buffer_overflowed());
+        }
+
+        if has_sign {
+            let mut sign_mask = N::from(1u8) << (N::BITS - 1);
+
+            if i < N::MAX_LENGTH {
+                // Right shift fills with sign
+                sign_mask >>= N::BITS - (i * 7) - 1;
+            }
+
+            value |= sign_mask;
+        }
+
+        self.input.read(u64::from(i))?;
+        Ok(value)
+    }
+
+    /// Attempts to parse a signed 32-bit integer encoded in
+    /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
+    pub fn leb128_s32(&mut self) -> Result<i32> {
+        self.leb128_signed().context("could not parse s32")
+    }
+
+    /// Attempts to parse a signed 64-bit integer encoded in
+    /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
+    pub fn leb128_s64(&mut self) -> Result<i64> {
+        self.leb128_signed().context("could not parse s64")
     }
 
     pub(crate) fn bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {

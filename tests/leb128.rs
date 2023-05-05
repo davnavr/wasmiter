@@ -22,3 +22,20 @@ fn examples_u32() {
     assert_eq_decoded!(0x10000000, &[0x80, 0x80, 0x80, 0x80, 1]);
     assert_eq_decoded!(u32::MAX, &[0xFF, 0xFF, 0xFF, 0xFF, 0x0F]);
 }
+
+#[test]
+fn examples_s32() {
+    macro_rules! assert_eq_decoded {
+        ($expected:expr, $actual:expr) => {{
+            let mut parser = Parser::new(AsRef::<[u8]>::as_ref($actual));
+            assert_eq!($expected, parser.leb128_s32().unwrap());
+        }};
+    }
+
+    assert_eq_decoded!(0, &[0]);
+    assert_eq_decoded!(-2, &[0x7E]);
+    assert_eq_decoded!(63, &[0x3F]);
+    assert_eq_decoded!(-64, &[0x40]);
+    assert_eq_decoded!(64, &[0xC0, 0]);
+    assert_eq_decoded!(128, &[0x80, 1]);
+}
