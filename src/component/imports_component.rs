@@ -24,8 +24,8 @@ pub enum ImportKind {
     Function(component::TypeIdx),
     // /// An imported table with the specified limits and element type.
     // Table(component::TableType),
-    // /// An imported table with the specified limits.
-    // Memory(component::Limits),
+    /// An imported table with the specified limits.
+    Memory(component::MemType),
     // /// An imported global with the specified type.
     // Global(component::GlobalType),
 }
@@ -118,6 +118,9 @@ where
         let kind = match kind_tag {
             0 => ImportKind::Function(
                 component::TypeIdx::parse(&mut self.parser).context("function import type")?,
+            ),
+            2 => ImportKind::Memory(
+                component::MemType::parse(&mut self.parser).context("memory import type")?,
             ),
             _ => {
                 return Err(crate::parser_bad_format!(
