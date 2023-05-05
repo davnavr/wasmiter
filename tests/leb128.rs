@@ -33,9 +33,11 @@ fn examples_s32() {
     }
 
     assert_eq_decoded!(0, &[0]);
-    assert_eq_decoded!(-2, &[0x7E]);
+    //assert_eq_decoded!(-1, &[0]);
     assert_eq_decoded!(63, &[0x3F]);
     assert_eq_decoded!(-64, &[0x40]);
+    assert_eq_decoded!(-2, &[0x7E]);
     assert_eq_decoded!(64, &[0xC0, 0]);
+    assert_eq_decoded!(-2, &[0xFE, 0x7F]);
     assert_eq_decoded!(128, &[0x80, 1]);
 }

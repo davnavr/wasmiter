@@ -206,6 +206,7 @@ impl<I: Input> Parser<I> {
         for byte in input.iter().copied() {
             let bits = byte & 0x7F;
             more = byte & 0x80 == 0x80;
+            has_sign = bits & 0x40 == 0x40;
 
             let shift = 7u8 * i;
 
@@ -220,8 +221,6 @@ impl<I: Input> Parser<I> {
                         shift + (8 - leading_zeroes)
                     ));
                 }
-
-                has_sign = bits & 0x40 == 0x40;
             }
 
             debug_assert!(shift <= N::BITS);
