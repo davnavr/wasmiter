@@ -10,11 +10,14 @@ pub enum KnownSection<I: Input, A: Allocator, S: StringPool> {
     /// [*types section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
     Types(component::TypesComponent<I, A>),
     /// The contents of
-    /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
+    /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
     Imports(component::ImportsComponent<I, S, A::Buf>),
     /// The
     /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section)
     Functions(component::FunctionSection<I>),
+    /// The contents of
+    /// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
+    Tables(component::TablesComponent<I>),
 }
 
 impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
@@ -36,6 +39,12 @@ impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
                     string_pool,
                 )
                 .map(Self::from),
+                section_id::FUNC => {
+                    component::FunctionSection::new(section.into_contents()).map(Self::from)
+                }
+                section_id::TABLE => {
+                    component::TablesComponent::new(section.into_contents()).map(Self::from)
+                }
                 _ => return Err(section),
             })
         } else {
@@ -68,5 +77,14 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::FunctionSection<I>>
     #[inline]
     fn from(functions: component::FunctionSection<I>) -> Self {
         Self::Functions(functions)
+    }
+}
+
+impl<I: Input, A: Allocator, S: StringPool> From<component::TablesComponent<I>>
+    for KnownSection<I, A, S>
+{
+    #[inline]
+    fn from(tables: component::TablesComponent<I>) -> Self {
+        Self::Tables(tables)
     }
 }
