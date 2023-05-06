@@ -72,6 +72,15 @@ impl<I: Input, A: Allocator> TypesComponent<I, A> {
         self.count -= 1;
         Ok(Some(func_type))
     }
+
+    fn try_clone(&self) -> Result<TypesComponent<I::Fork, &A>> {
+        Ok(TypesComponent {
+            count: self.count,
+            parser: self.parser.fork()?,
+            buffer: self.allocator.allocate_vector(),
+            allocator: &self.allocator,
+        })
+    }
 }
 
 #[cfg(feature = "alloc")]
@@ -109,11 +118,13 @@ impl<I: Input, A: Allocator> core::iter::ExactSizeIterator for TypesComponent<I,
     }
 }
 
-impl<I: Input + core::fmt::Debug, A: Allocator> core::fmt::Debug for TypesComponent<I, A> {
+impl<I: Input, A: Allocator> core::fmt::Debug for TypesComponent<I, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("TypesComponent")
-            .field("count", &self.count)
-            .field("parser", &self.parser)
-            .finish_non_exhaustive()
+        let mut list = f.debug_list();
+        match self.try_clone() {
+            Ok(fork) => list.entries(fork),
+            Err(failed) => list.entries(core::iter::once(Result::<()>::Err(failed))),
+        }
+        .finish()
     }
 }

@@ -7,12 +7,20 @@ pub struct FunctionSection<I: Input> {
     count: usize,
     parser: Parser<I>,
 }
+
 impl<I: Input> FunctionSection<I> {
     /// Uses the given [`Parser<I>`] to read the contents of the *function section* of a module.
     pub fn new(mut parser: Parser<I>) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("function section count")?,
             parser,
+        })
+    }
+
+    fn try_clone(&self) -> Result<FunctionSection<I::Fork>> {
+        Ok(FunctionSection {
+            count: self.count,
+            parser: self.parser.fork()?,
         })
     }
 }
@@ -50,18 +58,11 @@ impl<I: Input> core::iter::ExactSizeIterator for FunctionSection<I> {
 
 impl<I: Input> core::fmt::Debug for FunctionSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self.parser.fork() {
-            Ok(fork) => f
-                .debug_list()
-                .entries(FunctionSection {
-                    count: self.count,
-                    parser: fork,
-                })
-                .finish(),
-            Err(failed) => f
-                .debug_list()
-                .entries(core::iter::once(Result::<()>::Err(failed)))
-                .finish(),
+        let mut list = f.debug_list();
+        match self.try_clone() {
+            Ok(fork) => list.entries(fork),
+            Err(failed) => list.entries(core::iter::once(Result::<()>::Err(failed))),
         }
+        .finish()
     }
 }
