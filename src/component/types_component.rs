@@ -1,5 +1,5 @@
 use crate::allocator::{self, Allocator, Vector};
-use crate::component::{type_parser, FuncType, ValType};
+use crate::component::{FuncType, ValType};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
 
@@ -10,7 +10,7 @@ fn parse_result_type(
 ) -> Result<()> {
     buffer.reserve_exact(count);
     for _ in 0..count {
-        buffer.push(type_parser::parse_val_type(parser)?);
+        buffer.push(parser.val_type()?);
     }
     Ok(())
 }

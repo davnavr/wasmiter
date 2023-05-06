@@ -119,13 +119,8 @@ where
             0 => ImportKind::Function(
                 component::TypeIdx::parse(&mut self.parser).context("function import type")?,
             ),
-            1 => ImportKind::Table(
-                component::type_parser::parse_table_type(&mut self.parser)
-                    .context("table import type")?,
-            ),
-            2 => ImportKind::Memory(
-                component::MemType::parse(&mut self.parser).context("memory import type")?,
-            ),
+            1 => ImportKind::Table(self.parser.table_type().context("table import type")?),
+            2 => ImportKind::Memory(self.parser.mem_type().context("memory import type")?),
             _ => {
                 return Err(crate::parser_bad_format!(
                     "{kind_tag:#02X} is not a known import kind"
