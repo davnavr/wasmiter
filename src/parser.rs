@@ -49,6 +49,13 @@ macro_rules! parser_bad_input {
             err = err.with_context(alloc::format!($($arg)*));
         }
 
+        #[cfg(not(feature = "alloc"))]
+        {
+            // Disable warning for unused expression $error
+            let _ = $error;
+            let _ = |f: &mut core::fmt::Formatter| core::write!(f, $($arg)*);
+        }
+
         err
     }};
 }
@@ -277,13 +284,13 @@ impl<I: Input> Parser<I> {
     pub(crate) fn bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
         self.input
             .take(buffer)
-            .map_err(|_e| parser_bad_input!(_e, "could not read {} bytes", buffer.len()))
+            .map_err(|e| parser_bad_input!(e, "could not read {} bytes", buffer.len()))
     }
 
     pub(crate) fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
         self.input
             .take_exact(buffer)
-            .map_err(|_e| parser_bad_input!(_e, "expected {} bytes", buffer.len()))
+            .map_err(|e| parser_bad_input!(e, "expected {} bytes", buffer.len()))
     }
 
     pub(crate) fn one_byte(&mut self) -> Result<Option<u8>> {
@@ -329,12 +336,6 @@ impl<I: Input> Parser<I> {
         self.bytes_exact(buffer.as_mut())
             .context("string contents")?;
 
-        #[cfg(not(feature = "alloc"))]
-        let bad_encoding = |_| Error::bad_format();
-
-        #[cfg(feature = "alloc")]
-        let bad_encoding = |e| Error::bad_format().with_context(alloc::format!("{e}"));
-
-        core::str::from_utf8_mut(buffer.as_mut()).map_err(bad_encoding)
+        core::str::from_utf8_mut(buffer.as_mut()).map_err(|e| crate::parser_bad_format!("{e}"))
     }
 }
