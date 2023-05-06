@@ -1,28 +1,43 @@
 use crate::allocator::{self, Allocator, Vector};
-use crate::component::{FuncType, ValType};
+use crate::component::{BlockType, FuncType, ValType};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
 
-fn parse_val_type(parser: &mut Parser<impl Input>) -> Result<ValType> {
-    // TODO: parsed signed integer
-    let mut type_byte = 0u8;
-    parser
-        .bytes_exact(core::slice::from_mut(&mut type_byte))
-        .context("valtype byte")?;
-    Ok(match type_byte {
-        0x7F => ValType::I32,
-        0x7E => ValType::I64,
-        0x7D => ValType::F32,
-        0x7C => ValType::F64,
-        0x7B => ValType::V128,
-        0x70 => ValType::FuncRef,
-        0x6F => ValType::ExternRef,
-        bad => {
+pub(in crate::component) fn parse_block_type<I: Input>(
+    parser: &mut Parser<I>,
+) -> Result<BlockType> {
+    let value = parser.leb128_s64().context("block type tag or index")?;
+    Ok(match value {
+        -64 => BlockType::Empty,
+        -1 => BlockType::from(ValType::I32),
+        -2 => BlockType::from(ValType::I64),
+        -3 => BlockType::from(ValType::F32),
+        -4 => BlockType::from(ValType::F64),
+        -5 => BlockType::from(ValType::V128),
+        -16 => BlockType::from(ValType::FuncRef),
+        -17 => BlockType::from(ValType::ExternRef),
+        _ if value < 0 => {
             return Err(crate::parser_bad_format!(
-                "{bad:#02X} is not a known valtype"
+                "{value} is not a valid value type or block type"
             ))
         }
+        _ => BlockType::from(
+            u32::try_from(value)
+                .ok()
+                .and_then(|index| crate::component::TypeIdx::from_u32(index))
+                .ok_or_else(|| {
+                    crate::parser_bad_format!("{value} is too large to be a valid type index")
+                })?,
+        ),
     })
+}
+
+fn parse_val_type(parser: &mut Parser<impl Input>) -> Result<ValType> {
+    match parse_block_type(parser)? {
+        BlockType::Empty => Err(crate::parser::Error::bad_format().with_context("empty type is not allowed here")),
+        BlockType::Index(index) => Err(crate::parser_bad_format!("expected value type but got type index {index:?}")),
+        BlockType::Inline(value_type) => Ok(value_type)
+    }
 }
 
 fn parse_result_type(
