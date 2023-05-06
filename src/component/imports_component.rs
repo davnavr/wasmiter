@@ -1,5 +1,5 @@
 use crate::allocator::{self, Allocator, OwnOrRef, StringPool};
-use crate::component::{self, Index};
+use crate::component;
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
 use core::fmt::Debug;
@@ -116,9 +116,7 @@ where
             .context("import kind")?;
 
         let kind = match kind_tag {
-            0 => ImportKind::Function(
-                component::TypeIdx::parse(&mut self.parser).context("function import type")?,
-            ),
+            0 => ImportKind::Function(self.parser.index().context("function import type")?),
             1 => ImportKind::Table(self.parser.table_type().context("table import type")?),
             2 => ImportKind::Memory(self.parser.mem_type().context("memory import type")?),
             _ => {

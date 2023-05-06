@@ -1,4 +1,4 @@
-use crate::component::{self, BlockType, TypeIdx, ValType};
+use crate::component::{self, BlockType, ValType};
 use crate::parser::{self, Error, Parser, Result, ResultExt};
 
 impl<I: parser::input::Input> Parser<I> {
@@ -19,14 +19,7 @@ impl<I: parser::input::Input> Parser<I> {
                     "{value} is not a valid value type or block type"
                 ))
             }
-            _ => BlockType::from(
-                u32::try_from(value)
-                    .ok()
-                    .and_then(TypeIdx::from_u32)
-                    .ok_or_else(|| {
-                        crate::parser_bad_format!("{value} is too large to be a valid type index")
-                    })?,
-            ),
+            _ => BlockType::from(component::TypeIdx::try_from(value as u64)?),
         })
     }
 

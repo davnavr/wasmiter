@@ -1,14 +1,29 @@
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::parser::{self, ResultExt as _};
 use core::fmt::Debug;
 
 /// A [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
-pub trait Index: From<u8> + From<u16> + Debug + Eq + core::hash::Hash + Copy + Ord
-where
-    usize: From<Self>,
-    u32: From<Self>,
+pub trait Index:
+    From<u8>
+    + From<u16>
+    + Into<u32>
+    + Into<usize>
+    + TryFrom<u32, Error = parser::Error>
+    + Debug
+    + Eq
+    + core::hash::Hash
+    + Copy
+    + Ord
 {
-    /// Parses an encoded [`Index`] value.
-    fn parse<I: Input>(parser: &mut Parser<I>) -> Result<Self>;
+    /// A human readable string that indicates what this [`Index`] refers to.
+    const NAME: &'static str;
+}
+
+impl<I: parser::input::Input> parser::Parser<I> {
+    /// Parses a
+    /// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
+    pub fn index<N: Index>(&mut self) -> parser::Result<N> {
+        self.leb128_u32().context(N::NAME).and_then(N::try_from)
+    }
 }
 
 macro_rules! indices {
@@ -22,10 +37,9 @@ macro_rules! indices {
         pub struct $name(u32);
 
         impl $name {
-            #[allow(unused)]
-            pub(crate) fn from_u32(index: u32) -> Option<Self> {
-                usize::try_from(index).ok()?;
-                Some(Self(index))
+            #[inline]
+            fn error_too_large(index: impl core::fmt::Display) -> parser::Error {
+                crate::parser_bad_format!("{} {index} is too large", $descriptor)
             }
         }
 
@@ -63,15 +77,33 @@ macro_rules! indices {
             }
         }
 
-        impl Index for $name {
-            fn parse<I: Input>(parser: &mut Parser<I>) -> Result<Self> {
-                let index = parser.leb128_u32().context($descriptor)?;
+        impl TryFrom<u32> for $name {
+            type Error = parser::Error;
+
+            fn try_from(index: u32) -> parser::Result<Self> {
                 if usize::try_from(index).is_ok() {
                     Ok(Self(index))
                 } else {
-                    Err(crate::parser_bad_format!("{} {index} is too large", $descriptor))
+                    Err(Self::error_too_large(index))
                 }
             }
+        }
+
+        impl TryFrom<u64> for $name {
+            type Error = parser::Error;
+
+            fn try_from(index: u64) -> parser::Result<Self> {
+                match u32::try_from(index) {
+                    Ok(actual_index) if usize::try_from(index).is_ok() => {
+                        Ok(Self(actual_index))
+                    }
+                    _ => Err(Self::error_too_large(index)),
+                }
+            }
+        }
+
+        impl Index for $name {
+            const NAME: &'static str = $descriptor;
         }
     )*};
 }
