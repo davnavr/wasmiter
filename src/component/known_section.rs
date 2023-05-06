@@ -6,12 +6,15 @@ use crate::{section_id, Section, SectionKind};
 /// Represents a well-known WebAssembly [`Section`].
 #[derive(Debug)]
 pub enum KnownSection<I: Input, A: Allocator, S: StringPool> {
-    /// The
+    /// The contents of
     /// [*types section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
     Types(component::TypesComponent<I, A>),
-    /// The
+    /// The contents of
     /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
     Imports(component::ImportsComponent<I, S, A::Buf>),
+    /// The
+    /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section)
+    Functions(component::FunctionSection<I>),
 }
 
 impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
@@ -56,5 +59,14 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::ImportsComponent<I, 
     #[inline]
     fn from(imports: component::ImportsComponent<I, S, A::Buf>) -> Self {
         Self::Imports(imports)
+    }
+}
+
+impl<I: Input, A: Allocator, S: StringPool> From<component::FunctionSection<I>>
+    for KnownSection<I, A, S>
+{
+    #[inline]
+    fn from(functions: component::FunctionSection<I>) -> Self {
+        Self::Functions(functions)
     }
 }
