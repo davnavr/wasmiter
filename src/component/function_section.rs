@@ -26,11 +26,7 @@ impl<I: Input> core::iter::Iterator for FunctionSection<I> {
         }
 
         let result = self.parser.index().context("index in function section");
-
-        if result.is_ok() {
-            self.count -= 1;
-        }
-
+        self.count -= 1;
         Some(result)
     }
 
