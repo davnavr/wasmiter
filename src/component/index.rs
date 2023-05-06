@@ -21,6 +21,13 @@ macro_rules! indices {
         #[repr(transparent)]
         pub struct $name(u32);
 
+        impl $name {
+            pub(crate) fn from_u32(index: u32) -> Option<Self> {
+                usize::try_from(index).ok()?;
+                Some(Self(index))
+            }
+        }
+
         impl Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 Debug::fmt(&self.0, f)
@@ -91,7 +98,6 @@ indices! {
     /// or a memory defined in the
     /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
     struct MemIdx = "memory index";
-    /// https://webassembly.github.io/spec/core/binary/modules.html#binary-globalsec
     /// A [`globalidx`](https://webassembly.github.io/spec/core/binary/modules.html#binary-globalidx)
     /// refers to an
     /// [imported global](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-importdesc)

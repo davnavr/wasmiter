@@ -1,5 +1,9 @@
 use crate::allocator::{Allocator, Vector};
 
+mod block_type;
+
+pub use block_type::BlockType;
+
 /// Represents a
 /// [WebAssembly number type](https://webassembly.github.io/spec/core/syntax/types.html#number-types).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
