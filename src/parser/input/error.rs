@@ -33,45 +33,6 @@ impl ConstantError {
     }
 }
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-enum ErrorMessage {
-    Message(&'static str),
-    Boxed(alloc::boxed::Box<dyn Display + Send + Sync>),
-}
-
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-impl Debug for ErrorMessage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        Display::fmt(&self, f)
-    }
-}
-
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-impl Display for ErrorMessage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Message(message) => Display::fmt(message, f),
-            Self::Boxed(boxed) => Display::fmt(&boxed, f),
-        }
-    }
-}
-
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-struct ErrorInner {
-    kind: ErrorKind,
-    message: ErrorMessage,
-}
-
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-impl ErrorInner {
-    const fn from_const(error: ConstantError) -> Self {
-        Self {
-            kind: error.kind,
-            message: ErrorMessage::Message(error.message),
-        }
-    }
-}
-
 /// Error type used when an operation with an [`Input`](crate::parser::input::Input) fails.
 ///
 /// This type is meant to be a mirror of
@@ -83,7 +44,7 @@ pub struct Error {
     #[cfg(not(any(feature = "std", feature = "alloc")))]
     inner: &'static ConstantError,
     #[cfg(all(not(feature = "std"), feature = "alloc"))]
-    inner: alloc::boxed::Box<ErrorInner>,
+    inner: alloc::boxed::Box<ConstantError>,
 }
 
 impl Error {
@@ -97,7 +58,7 @@ impl Error {
         {
             #[cfg(feature = "alloc")]
             return Self {
-                inner: alloc::boxed::Box::new(ErrorInner::from_const(*error)),
+                inner: alloc::boxed::Box::new(*error),
             };
 
             #[cfg(not(feature = "alloc"))]
