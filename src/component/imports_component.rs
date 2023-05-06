@@ -1,4 +1,4 @@
-use crate::allocator::{self, Allocator, OwnOrRef, StringPool};
+use crate::allocator::{self, Buffer, OwnOrRef, StringPool};
 use crate::component;
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
@@ -53,38 +53,26 @@ impl<S: AsRef<str>> Debug for Import<S> {
 /// [**imports** component](https://webassembly.github.io/spec/core/syntax/modules.html#imports) of
 /// a WebAssembly module, stored in and parsed from the
 /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-pub struct ImportsComponent<I, S, A>
-where
-    I: Input,
-    S: StringPool,
-    A: Allocator<String = S::Interned>,
-{
+pub struct ImportsComponent<I: Input, S: StringPool, B: Buffer> {
     count: usize,
     parser: Parser<I>,
     string_cache: S,
-    name_buffer: A::Buf,
-    allocator: A,
+    name_buffer: B,
 }
 
-impl<I, S, A> ImportsComponent<I, S, A>
-where
-    I: Input,
-    S: StringPool,
-    A: Allocator<String = S::Interned>,
-{
+impl<I: Input, S: StringPool, B: Buffer> ImportsComponent<I, S, B> {
     /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module, with the
-    /// given [`StringPool`] used to intern module names and [`Allocator`].
+    /// given [`StringPool`] used to intern module names and [`Buffer`].
     pub fn with_string_cache_and_buffer(
         mut parser: Parser<I>,
+        name_buffer: B,
         string_cache: S,
-        allocator: A,
     ) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("import section count")?,
             parser,
             string_cache,
-            name_buffer: allocator.allocate_buffer(),
-            allocator,
+            name_buffer,
         })
     }
 
@@ -135,19 +123,14 @@ where
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> ImportsComponent<I, allocator::FakeStringPool, allocator::Global> {
+impl<I: Input> ImportsComponent<I, allocator::FakeStringPool, alloc::vec::Vec<u8>> {
     /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module.
     pub fn new(parser: Parser<I>) -> Result<Self> {
-        Self::with_string_cache_and_buffer(parser, allocator::FakeStringPool, allocator::Global)
+        Self::with_string_cache_and_buffer(parser, Default::default(), allocator::FakeStringPool)
     }
 }
 
-impl<I, S, A> core::iter::Iterator for ImportsComponent<I, S, A>
-where
-    I: Input,
-    S: StringPool,
-    A: Allocator<String = S::Interned>,
-{
+impl<I: Input, S: StringPool, B: Buffer> core::iter::Iterator for ImportsComponent<I, S, B> {
     type Item = Result<Import<S::Interned>>;
 
     #[inline]
@@ -167,23 +150,15 @@ where
 }
 
 // count is correct, since errors are returned if there are too few elements
-impl<I, S, A> core::iter::ExactSizeIterator for ImportsComponent<I, S, A>
-where
-    I: Input,
-    S: StringPool,
-    A: Allocator<String = S::Interned>,
+impl<I: Input, S: StringPool, B: Buffer> core::iter::ExactSizeIterator
+    for ImportsComponent<I, S, B>
 {
     fn len(&self) -> usize {
         self.count
     }
 }
 
-impl<I, S, A> Debug for ImportsComponent<I, S, A>
-where
-    I: Input + Debug,
-    S: StringPool,
-    A: Allocator<String = S::Interned>,
-{
+impl<I: Input + Debug, S: StringPool, B: Buffer> Debug for ImportsComponent<I, S, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TypesComponent")
             .field("count", &self.count)
