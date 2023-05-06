@@ -1,8 +1,12 @@
+use core::fmt::{Display, Formatter};
+
 mod block_type;
 mod func_type;
+mod table_type;
 
 pub use block_type::BlockType;
 pub use func_type::FuncType;
+pub use table_type::TableType;
 
 /// Represents a
 /// [WebAssembly number type](https://webassembly.github.io/spec/core/syntax/types.html#number-types).
@@ -57,6 +61,16 @@ pub enum ValType {
     V128,
 }
 
+impl ValType {
+    pub(crate) fn try_to_ref_type(self) -> Option<RefType> {
+        match self {
+            Self::FuncRef => Some(RefType::Func),
+            Self::ExternRef => Some(RefType::Extern),
+            _ => None,
+        }
+    }
+}
+
 impl From<NumType> for ValType {
     fn from(ty: NumType) -> Self {
         match ty {
@@ -82,6 +96,20 @@ impl From<VecType> for ValType {
         match ty {
             VecType::V128 => Self::V128,
         }
+    }
+}
+
+impl Display for ValType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
+            Self::FuncRef => "funcref",
+            Self::ExternRef => "externref",
+            Self::V128 => "v128",
+        })
     }
 }
 

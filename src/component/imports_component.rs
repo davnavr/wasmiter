@@ -1,4 +1,4 @@
-use crate::allocator::{self, Allocator, Buffer, OwnOrRef, StringPool};
+use crate::allocator::{self, Allocator, OwnOrRef, StringPool};
 use crate::component::{self, Index};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
@@ -22,8 +22,8 @@ fn cached_module_name(name: &str) -> Option<&'static str> {
 pub enum ImportKind {
     /// An imported function with the specified signature.
     Function(component::TypeIdx),
-    // /// An imported table with the specified limits and element type.
-    // Table(component::TableType),
+    /// An imported table with the specified limits and element type.
+    Table(component::TableType),
     /// An imported table with the specified limits.
     Memory(component::MemType),
     // /// An imported global with the specified type.
@@ -118,6 +118,10 @@ where
         let kind = match kind_tag {
             0 => ImportKind::Function(
                 component::TypeIdx::parse(&mut self.parser).context("function import type")?,
+            ),
+            1 => ImportKind::Table(
+                component::type_parser::parse_table_type(&mut self.parser)
+                    .context("table import type")?,
             ),
             2 => ImportKind::Memory(
                 component::MemType::parse(&mut self.parser).context("memory import type")?,

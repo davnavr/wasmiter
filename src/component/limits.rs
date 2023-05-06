@@ -1,7 +1,7 @@
 use crate::parser::{input::Input, Parser, Result, ResultExt};
 
 /// Describes the minimum and maximum number of pages in a memory or elements in a table.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Limits {
     minimum: u32,
     maximum: Option<u32>,

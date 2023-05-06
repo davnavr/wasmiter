@@ -22,6 +22,7 @@ macro_rules! indices {
         pub struct $name(u32);
 
         impl $name {
+            #[allow(unused)]
             pub(crate) fn from_u32(index: u32) -> Option<Self> {
                 usize::try_from(index).ok()?;
                 Some(Self(index))

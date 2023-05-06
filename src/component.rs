@@ -15,5 +15,5 @@ pub use index::{
     DataIdx, ElemIdx, FuncIdx, GlobalIdx, Index, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
 };
 pub use limits::{Limits, MemType};
-pub use types::{BlockType, FuncType, NumType, RefType, ValType, VecType};
+pub use types::{BlockType, FuncType, NumType, RefType, TableType, ValType, VecType};
 pub use types_component::TypesComponent;
