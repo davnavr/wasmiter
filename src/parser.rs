@@ -286,6 +286,21 @@ impl<I: Input> Parser<I> {
             .map_err(|_e| parser_bad_input!(_e, "expected {} bytes", buffer.len()))
     }
 
+    pub(crate) fn one_byte(&mut self) -> Result<Option<u8>> {
+        let mut value = 0u8;
+        Ok(if self.bytes(core::slice::from_mut(&mut value))? == 0 {
+            None
+        } else {
+            Some(value)
+        })
+    }
+
+    pub(crate) fn one_byte_exact(&mut self) -> Result<u8> {
+        let mut value = 0u8;
+        self.bytes_exact(core::slice::from_mut(&mut value))?;
+        Ok(value)
+    }
+
     pub(crate) fn skip_exact(&mut self, amount: u64) -> Result<()> {
         let actual = self
             .input

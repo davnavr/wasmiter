@@ -59,15 +59,11 @@ impl<I: parser::input::Input> Parser<I> {
 
     /// Parses a global [`mut`](https://webassembly.github.io/spec/core/binary/types.html#binary-mut) value.
     pub fn global_mutability(&mut self) -> Result<component::GlobalMutability> {
-        let mut flag = 0u8;
-        self.bytes_exact(core::slice::from_mut(&mut flag))
-            .context("global mutability flag")?;
-
-        match flag {
+        match self.one_byte_exact().context("global mutability flag")? {
             0 => Ok(component::GlobalMutability::Constant),
             1 => Ok(component::GlobalMutability::Variable),
-            _ => Err(crate::parser_bad_format!(
-                "{flag:#02X} is not a valid global mutability flag"
+            bad => Err(crate::parser_bad_format!(
+                "{bad:#02X} is not a valid global mutability flag"
             )),
         }
     }
@@ -87,9 +83,7 @@ impl<I: parser::input::Input> Parser<I> {
 
     /// Parses [`Limits`](component::Limits).
     pub fn limits(&mut self) -> Result<component::Limits> {
-        let mut flag = 0u8;
-        self.bytes_exact(core::slice::from_mut(&mut flag))
-            .context("limit flag")?;
+        let flag = self.one_byte_exact().context("limit flag")?;
         let minimum = self.leb128_u32().context("limit minimum")?;
         let maximum = match flag {
             0 => None,

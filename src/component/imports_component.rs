@@ -98,19 +98,14 @@ impl<I: Input, S: StringPool, B: Buffer> ImportsComponent<I, S, B> {
                 .context("import name")?,
         );
 
-        let mut kind_tag = 0u8;
-        self.parser
-            .bytes_exact(core::slice::from_mut(&mut kind_tag))
-            .context("import kind")?;
-
-        let kind = match kind_tag {
+        let kind = match self.parser.one_byte_exact().context("import kind")? {
             0 => ImportKind::Function(self.parser.index().context("function import type")?),
             1 => ImportKind::Table(self.parser.table_type().context("table import type")?),
             2 => ImportKind::Memory(self.parser.mem_type().context("memory import type")?),
             3 => ImportKind::Global(self.parser.global_type().context("global import type")?),
-            _ => {
+            bad => {
                 return Err(crate::parser_bad_format!(
-                    "{kind_tag:#02X} is not a known import kind"
+                    "{bad:#02X} is not a known import kind"
                 ))
             }
         };

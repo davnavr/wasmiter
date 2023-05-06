@@ -63,16 +63,11 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
     }
 
     fn parse(&mut self) -> Result<Option<Section<I::Fork, A::String>>> {
-        let mut id_byte = 0u8;
-
-        let id_length = self
-            .parser
-            .bytes(core::slice::from_mut(&mut id_byte))
-            .context("section id byte")?;
-
-        if id_length == 0 {
+        let id_byte = if let Some(byte) = self.parser.one_byte()? {
+            byte
+        } else {
             return Ok(None);
-        }
+        };
 
         let kind = SectionId::new(id_byte);
         let mut content_length =

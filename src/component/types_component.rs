@@ -49,11 +49,7 @@ impl<I: Input, A: Allocator> TypesComponent<I, A> {
             return Ok(None);
         }
 
-        let mut tag_byte = 0u8;
-        self.parser
-            .bytes_exact(core::slice::from_mut(&mut tag_byte))
-            .context("functype tag")?;
-
+        let tag_byte = self.parser.one_byte_exact().context("functype tag")?;
         if tag_byte != 0x60 {
             return Err(crate::parser_bad_format!(
                 "expected functype (0x60) but got {tag_byte:#02X}"
