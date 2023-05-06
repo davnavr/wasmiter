@@ -10,10 +10,15 @@ mod type_parser;
 mod types;
 mod types_component;
 
-pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use index::{
     DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
 };
+
+pub use types::{
+    BlockType, FuncType, GlobalMutability, GlobalType, NumType, RefType, TableType, ValType,
+    VecType,
+};
+
+pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use limits::{Limits, MemType};
-pub use types::{BlockType, FuncType, NumType, RefType, TableType, ValType, VecType};
 pub use types_component::TypesComponent;
