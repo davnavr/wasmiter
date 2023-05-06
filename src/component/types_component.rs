@@ -1,4 +1,4 @@
-use crate::allocator::{self, Allocator, Vector};
+use crate::allocator::{Allocator, Vector};
 use crate::component::{FuncType, ValType};
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
@@ -79,11 +79,11 @@ impl<I: Input, A: Allocator> TypesComponent<I, A> {
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> TypesComponent<I, allocator::Global> {
+impl<I: Input> TypesComponent<I, crate::allocator::Global> {
     /// Uses a [`Parser<I>`] to read the contents of the *type section* of a module.
     #[inline]
     pub fn new(parser: Parser<I>) -> Result<Self> {
-        Self::with_allocator(parser, allocator::Global)
+        Self::with_allocator(parser, Default::default())
     }
 }
 

@@ -17,10 +17,20 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[doc(hidden)]
 macro_rules! parser_bad_format {
     ($($arg:tt)*) => {{
+        let err: $crate::parser::Error;
+
         #[cfg(not(feature = "alloc"))]
-        let err = $crate::parser::Error::bad_format();
+        {
+            // Disable warnings for unused variables
+            let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
+            err = $crate::parser::Error::bad_format();
+        }
+
         #[cfg(feature = "alloc")]
-        let err = $crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
+        {
+            err = $crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
+        }
+
         err
     }};
 }

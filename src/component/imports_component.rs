@@ -1,4 +1,4 @@
-use crate::allocator::{self, Buffer, OwnOrRef, StringPool};
+use crate::allocator::{Buffer, OwnOrRef, StringPool};
 use crate::component;
 use crate::parser::input::Input;
 use crate::parser::{Parser, Result, ResultExt};
@@ -123,10 +123,10 @@ impl<I: Input, S: StringPool, B: Buffer> ImportsComponent<I, S, B> {
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> ImportsComponent<I, allocator::FakeStringPool, alloc::vec::Vec<u8>> {
+impl<I: Input> ImportsComponent<I, crate::allocator::FakeStringPool, alloc::vec::Vec<u8>> {
     /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module.
     pub fn new(parser: Parser<I>) -> Result<Self> {
-        Self::with_string_cache_and_buffer(parser, Default::default(), allocator::FakeStringPool)
+        Self::with_string_cache_and_buffer(parser, Default::default(), Default::default())
     }
 }
 

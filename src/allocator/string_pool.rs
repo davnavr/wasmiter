@@ -36,6 +36,7 @@ where
 #[derive(Debug, Default)]
 pub struct FakeStringPool;
 
+#[cfg(feature = "alloc")]
 impl StringPool for FakeStringPool {
     type Interned = alloc::string::String;
 
