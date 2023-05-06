@@ -28,3 +28,15 @@ pub use known_section::KnownSection;
 pub use limits::{Limits, MemType};
 pub use tables_component::TablesComponent;
 pub use types_component::TypesComponent;
+
+pub(self) fn debug_section_contents<T: core::fmt::Debug>(
+    iterator: crate::parser::Result<impl core::iter::Iterator<Item = crate::parser::Result<T>>>,
+    f: &mut core::fmt::Formatter,
+) -> core::fmt::Result {
+    let mut list = f.debug_list();
+    match iterator {
+        Ok(items) => list.entries(items),
+        Err(e) => list.entries(core::iter::once(crate::parser::Result::<()>::Err(e))),
+    }
+    .finish()
+}

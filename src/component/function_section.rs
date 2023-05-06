@@ -58,11 +58,6 @@ impl<I: Input> core::iter::ExactSizeIterator for FunctionSection<I> {
 
 impl<I: Input> core::fmt::Debug for FunctionSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        match self.try_clone() {
-            Ok(fork) => list.entries(fork),
-            Err(failed) => list.entries(core::iter::once(Result::<()>::Err(failed))),
-        }
-        .finish()
+        crate::component::debug_section_contents(self.try_clone(), f)
     }
 }

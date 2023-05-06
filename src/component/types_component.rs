@@ -120,11 +120,6 @@ impl<I: Input, A: Allocator> core::iter::ExactSizeIterator for TypesComponent<I,
 
 impl<I: Input, A: Allocator> core::fmt::Debug for TypesComponent<I, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        match self.try_clone() {
-            Ok(fork) => list.entries(fork),
-            Err(failed) => list.entries(core::iter::once(Result::<()>::Err(failed))),
-        }
-        .finish()
+        crate::component::debug_section_contents(self.try_clone(), f)
     }
 }
