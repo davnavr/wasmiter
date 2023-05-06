@@ -26,8 +26,8 @@ pub enum ImportKind {
     Table(component::TableType),
     /// An imported table with the specified limits.
     Memory(component::MemType),
-    // /// An imported global with the specified type.
-    // Global(component::GlobalType),
+    /// An imported global with the specified type.
+    Global(component::GlobalType),
 }
 
 /// Represents a
@@ -119,6 +119,7 @@ where
             0 => ImportKind::Function(self.parser.index().context("function import type")?),
             1 => ImportKind::Table(self.parser.table_type().context("table import type")?),
             2 => ImportKind::Memory(self.parser.mem_type().context("memory import type")?),
+            3 => ImportKind::Global(self.parser.global_type().context("global import type")?),
             _ => {
                 return Err(crate::parser_bad_format!(
                     "{kind_tag:#02X} is not a known import kind"

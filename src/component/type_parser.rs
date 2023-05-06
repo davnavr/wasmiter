@@ -57,6 +57,28 @@ impl<I: parser::input::Input> Parser<I> {
         ))
     }
 
+    /// Parses a global [`mut`](https://webassembly.github.io/spec/core/binary/types.html#binary-mut) value.
+    pub fn global_mutability(&mut self) -> Result<component::GlobalMutability> {
+        let mut flag = 0u8;
+        self.bytes_exact(core::slice::from_mut(&mut flag))
+            .context("global mutability flag")?;
+
+        match flag {
+            0 => Ok(component::GlobalMutability::Constant),
+            1 => Ok(component::GlobalMutability::Variable),
+            _ => Err(crate::parser_bad_format!(
+                "{flag:#02X} is not a valid global mutability flag"
+            )),
+        }
+    }
+
+    /// Parses a [`GlobalType`](component::GlobalType)
+    pub fn global_type(&mut self) -> Result<component::GlobalType> {
+        let value_type = self.val_type().context("global type")?;
+        let mutability = self.global_mutability()?;
+        Ok(component::GlobalType::new(mutability, value_type))
+    }
+
     /// Parses a [`MemType`](component::MemType).
     #[inline]
     pub fn mem_type(&mut self) -> Result<component::MemType> {
