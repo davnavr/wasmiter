@@ -5,6 +5,7 @@
 
 mod imports_component;
 mod index;
+mod known_section;
 mod limits;
 mod type_parser;
 mod types;
@@ -20,5 +21,6 @@ pub use types::{
 };
 
 pub use imports_component::{Import, ImportKind, ImportsComponent};
+pub use known_section::KnownSection;
 pub use limits::{Limits, MemType};
 pub use types_component::TypesComponent;

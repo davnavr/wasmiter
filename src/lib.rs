@@ -18,6 +18,8 @@ mod sections;
 
 pub use sections::{Section, SectionId, SectionKind, SectionSequence};
 
+pub(crate) use sections::section_id;
+
 use parser::{input, Error, Result, ResultExt as _};
 
 fn parse_module_preamble<I: input::Input>(parser: &mut parser::Parser<I>) -> Result<()> {

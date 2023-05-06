@@ -6,6 +6,8 @@ mod section_kind;
 
 pub use section_kind::{SectionId, SectionKind};
 
+pub(crate) use section_kind::section_id;
+
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 #[derive(Debug)]

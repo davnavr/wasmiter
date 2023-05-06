@@ -22,15 +22,23 @@ macro_rules! known_ids {
         $(#[$meta:meta])*
         $name:ident = $value:literal;
     )*) => {
-        impl<S: AsRef<str>> SectionKind<S> {
+        pub(crate) mod section_id {
+            use crate::SectionId;
+
             $(
-                $(#[$meta])*
-                pub const $name: Self = Self::Id({
+                pub(crate) const $name: SectionId = {
                     // Safety: value should not be zero
                     unsafe {
                         core::num::NonZeroU8::new_unchecked($value)
                     }
-                });
+                };
+            )*
+        }
+
+        impl<S: AsRef<str>> SectionKind<S> {
+            $(
+                $(#[$meta])*
+                pub const $name: Self = Self::Id(section_id::$name);
             )*
         }
     };
