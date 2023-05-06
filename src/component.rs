@@ -6,6 +6,7 @@
 mod imports_component;
 mod index;
 mod limits;
+mod type_parser;
 mod types;
 mod types_component;
 
