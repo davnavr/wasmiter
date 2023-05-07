@@ -12,6 +12,7 @@ extern crate alloc;
 
 pub mod allocator;
 pub mod component;
+pub mod instruction_set;
 pub mod parser;
 
 mod sections;
