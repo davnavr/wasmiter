@@ -1,5 +1,3 @@
-use crate::parser::Error;
-
 /// Error type used when a byte value is not a known [`Opcode`].
 #[derive(Clone, Debug)]
 #[repr(transparent)]
@@ -14,7 +12,7 @@ impl core::fmt::Display for InvalidOpcode {
 #[cfg(feature = "std")]
 impl std::error::Error for InvalidOpcode {}
 
-impl From<InvalidOpcode> for Error {
+impl From<InvalidOpcode> for crate::parser::Error {
     fn from(error: InvalidOpcode) -> Self {
         crate::parser_bad_format!("{error}")
     }
@@ -152,7 +150,7 @@ opcodes! {
     F64Gt = 0x64,
     F64Le = 0x65,
     F64Ge = 0x66,
-    
+
     I32Clz = 0x67,
     I32Ctz = 0x68,
     I32Popcnt = 0x69,
@@ -171,7 +169,7 @@ opcodes! {
     I32ShrU = 0x76,
     I32Rotl = 0x77,
     I32Rotr = 0x78,
-    
+
     I64Clz = 0x79,
     I64Ctz = 0x7A,
     I64Popcnt = 0x7B,
@@ -257,6 +255,9 @@ opcodes! {
     RefIsNull = 0xD1,
     RefFunc = 0xD2,
 
+    /// A special instruction whose actual opcode is stored in a `u32` value following the prefix byte `0xFC`.
+    ///
+    /// See [`FCPrefixedOpcode`](crate::instruction_set::FCPrefixedOpcode) for more information.
     PrefixFC = 0xFC,
     /// Prefix for fixed-width 128-bit vector instructions (`v128.`).
     PrefixV128 = 0xFD,
