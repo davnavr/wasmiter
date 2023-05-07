@@ -21,6 +21,9 @@ pub enum KnownSection<I: Input, A: Allocator, S: StringPool> {
     /// The
     /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
     Memory(component::MemsComponent<I>),
+    /// The
+    /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section)
+    Global(component::GlobalsComponent<I>),
 }
 
 impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
@@ -50,6 +53,9 @@ impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
                 }
                 section_id::MEMORY => {
                     component::MemsComponent::new(section.into_contents()).map(Self::from)
+                }
+                section_id::GLOBAL => {
+                    component::GlobalsComponent::new(section.into_contents()).map(Self::from)
                 }
                 _ => return Err(section),
             })
@@ -101,5 +107,14 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::MemsComponent<I>>
     #[inline]
     fn from(memories: component::MemsComponent<I>) -> Self {
         Self::Memory(memories)
+    }
+}
+
+impl<I: Input, A: Allocator, S: StringPool> From<component::GlobalsComponent<I>>
+    for KnownSection<I, A, S>
+{
+    #[inline]
+    fn from(globals: component::GlobalsComponent<I>) -> Self {
+        Self::Global(globals)
     }
 }

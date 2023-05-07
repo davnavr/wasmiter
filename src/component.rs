@@ -4,6 +4,7 @@
 //! [sections in the binary format](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 
 mod function_section;
+mod globals_component;
 mod imports_component;
 mod index;
 mod known_section;
@@ -24,6 +25,7 @@ pub use types::{
 };
 
 pub use function_section::FunctionSection;
+pub use globals_component::{Global, GlobalsComponent};
 pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use known_section::KnownSection;
 pub use limits::{Limits, MemType};
