@@ -1,5 +1,5 @@
 use crate::component::GlobalType;
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, ResultExt};
 
 /// Represents a
 /// [WebAssembly global](https://webassembly.github.io/spec/core/syntax/modules.html#globals).
@@ -22,12 +22,12 @@ impl Global {
 /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
 pub struct GlobalsComponent<I: Input> {
     count: usize,
-    parser: Parser<I>,
+    parser: Decoder<I>,
 }
 
 impl<I: Input> GlobalsComponent<I> {
-    /// Uses the given [`Parser<I>`] to read the contents of the *global section* of a module.
-    pub fn new(mut parser: Parser<I>) -> Result<Self> {
+    /// Uses the given [`Decoder<I>`] to read the contents of the *global section* of a module.
+    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("global section count")?,
             parser,

@@ -1,8 +1,8 @@
 use crate::allocator::{Allocator, Vector};
 use crate::instruction_set::{Instruction, Opcode};
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, ResultExt};
 
-impl<I: Input> Parser<I> {
+impl<I: Input> Decoder<I> {
     /// Parses a WebAssembly [`Instruction`].
     pub fn instruction<A: Allocator>(&mut self, allocator: &A) -> Result<Instruction<A>> {
         let opcode = Opcode::try_from(self.one_byte_exact().context("opcode byte")?)?;
@@ -32,14 +32,14 @@ impl<I: Input> Parser<I> {
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
 pub struct InstructionSequence<I: Input, A: Allocator> {
     blocks: u32,
-    parser: Parser<I>,
+    parser: Decoder<I>,
     current: Option<Instruction<A>>,
     allocator: A,
 }
 
 impl<I: Input, A: Allocator> InstructionSequence<I, A> {
-    /// Uses the given [`Parser`] to read a sequence of instructions, with the [`Allocator`].
-    pub fn with_allocator(parser: Parser<I>, allocator: A) -> Self {
+    /// Uses the given [`Decoder`] to read a sequence of instructions, with the [`Allocator`].
+    pub fn with_allocator(parser: Decoder<I>, allocator: A) -> Self {
         Self {
             blocks: 1,
             parser,

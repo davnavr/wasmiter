@@ -1,6 +1,6 @@
 use crate::allocator::{Allocator, OwnOrRef};
 use crate::parser::input::Input;
-use crate::parser::{Parser, Result, ResultExt};
+use crate::parser::{Decoder, Result, ResultExt};
 
 mod section_kind;
 
@@ -14,7 +14,7 @@ pub(crate) use section_kind::section_id;
 pub struct Section<I: Input, S: AsRef<str>> {
     kind: SectionKind<S>,
     length: u64,
-    contents: Parser<I>,
+    contents: Decoder<I>,
 }
 
 impl<I: Input, S: AsRef<str>> Section<I, S> {
@@ -34,8 +34,8 @@ impl<I: Input, S: AsRef<str>> Section<I, S> {
         self.length
     }
 
-    /// Consumes the section, returning a [`Parser<I>`] used to read its contents.
-    pub fn into_contents(self) -> Parser<I> {
+    /// Consumes the section, returning a [`Decoder<I>`] used to read its contents.
+    pub fn into_contents(self) -> Decoder<I> {
         self.contents
     }
 }
@@ -44,14 +44,14 @@ impl<I: Input, S: AsRef<str>> Section<I, S> {
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
 /// in a WebAssembly module.
 pub struct SectionSequence<I: Input, A: Allocator> {
-    parser: Parser<I>,
+    parser: Decoder<I>,
     allocator: A,
     buffer: A::Buf,
 }
 
 impl<I: Input, A: Allocator> SectionSequence<I, A> {
-    /// Uses the given [`Parser<I>`] to read a sequence of sections with the given [`Allocator`].
-    pub fn new_with_allocator(parser: Parser<I>, allocator: A) -> Self {
+    /// Uses the given [`Decoder<I>`] to read a sequence of sections with the given [`Allocator`].
+    pub fn new_with_allocator(parser: Decoder<I>, allocator: A) -> Self {
         Self {
             parser,
             buffer: allocator.allocate_buffer(),
@@ -61,7 +61,7 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
 
     /// Uses the given [`Input`] to read a sequence of sections with the given [`Allocator`].
     pub fn from_input_with_allocator(input: I, allocator: A) -> Self {
-        Self::new_with_allocator(Parser::new(input), allocator)
+        Self::new_with_allocator(Decoder::new(input), allocator)
     }
 
     fn parse(&mut self) -> Result<Option<Section<I::Fork, A::String>>> {
@@ -110,14 +110,14 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
 
 #[cfg(feature = "alloc")]
 impl<I: Input> SectionSequence<I, crate::allocator::Global> {
-    /// Uses the given [`Parser<I>`] to read a sequence of sections.
-    pub fn new(parser: Parser<I>) -> Self {
+    /// Uses the given [`Decoder<I>`] to read a sequence of sections.
+    pub fn new(parser: Decoder<I>) -> Self {
         Self::new_with_allocator(parser, Default::default())
     }
 
     /// Uses the given [`Input`] to read a sequence of sections.
     pub fn from_input(input: I) -> Self {
-        Self::new(Parser::new(input))
+        Self::new(Decoder::new(input))
     }
 }
 

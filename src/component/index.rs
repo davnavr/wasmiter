@@ -18,7 +18,7 @@ pub trait Index:
     const NAME: &'static str;
 }
 
-impl<I: parser::input::Input> parser::Parser<I> {
+impl<I: parser::input::Input> parser::Decoder<I> {
     /// Parses a
     /// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
     pub fn index<N: Index>(&mut self) -> parser::Result<N> {

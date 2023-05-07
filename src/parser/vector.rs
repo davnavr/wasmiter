@@ -1,16 +1,16 @@
-use crate::parser::{input::Input, Parser, Result};
+use crate::parser::{input::Input, Decoder, Result};
 
 use super::ResultExt;
 
 /// Parses a sequence of elements prefixed by a `u32` length.
 pub struct Vector<I: Input, P> {
     count: u32,
-    source: Parser<I>,
+    source: Decoder<I>,
     parser: P,
 }
 
 impl<I: Input, P> Vector<I, P> {
-    pub fn new(mut source: Parser<I>, parser: P) -> Result<Self> {
+    pub fn new(mut source: Decoder<I>, parser: P) -> Result<Self> {
         Ok(Self {
             count: source.leb128_u32().context("vector length")?,
             source,
@@ -19,7 +19,7 @@ impl<I: Input, P> Vector<I, P> {
     }
 }
 
-impl<I: Input> Parser<I> {
+impl<I: Input> Decoder<I> {
     //P: FnMut(&mut Parser<&mut I>) -> T
     pub fn vector<P>(&mut self, parser: P) -> Result<Vector<&mut I, P>> {
         todo!()

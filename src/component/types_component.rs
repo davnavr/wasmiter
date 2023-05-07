@@ -1,10 +1,10 @@
 use crate::allocator::{Allocator, Vector};
 use crate::component::{FuncType, ValType};
 use crate::parser::input::Input;
-use crate::parser::{Parser, Result, ResultExt};
+use crate::parser::{Decoder, Result, ResultExt};
 
 fn parse_result_type(
-    parser: &mut Parser<impl Input>,
+    parser: &mut Decoder<impl Input>,
     count: usize,
     buffer: &mut impl Vector<ValType>,
 ) -> Result<()> {
@@ -21,15 +21,15 @@ fn parse_result_type(
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 pub struct TypesComponent<I: Input, A: Allocator> {
     count: usize,
-    parser: Parser<I>,
+    parser: Decoder<I>,
     buffer: A::Vec<ValType>,
     allocator: A,
 }
 
 impl<I: Input, A: Allocator> TypesComponent<I, A> {
-    /// Uses a [`Parser<I>`] to read the contents of the *type section* of a module, using the
+    /// Uses a [`Decoder<I>`] to read the contents of the *type section* of a module, using the
     /// [`Allocator`] as a buffer when reading types.
-    pub fn with_allocator(mut parser: Parser<I>, allocator: A) -> Result<Self> {
+    pub fn with_allocator(mut parser: Decoder<I>, allocator: A) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("type section count")?,
             parser,
@@ -85,9 +85,9 @@ impl<I: Input, A: Allocator> TypesComponent<I, A> {
 
 #[cfg(feature = "alloc")]
 impl<I: Input> TypesComponent<I, crate::allocator::Global> {
-    /// Uses a [`Parser<I>`] to read the contents of the *type section* of a module.
+    /// Uses a [`Decoder<I>`] to read the contents of the *type section* of a module.
     #[inline]
-    pub fn new(parser: Parser<I>) -> Result<Self> {
+    pub fn new(parser: Decoder<I>) -> Result<Self> {
         Self::with_allocator(parser, Default::default())
     }
 }

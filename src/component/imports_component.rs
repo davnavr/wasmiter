@@ -1,7 +1,6 @@
 use crate::allocator::{Buffer, OwnOrRef, StringPool};
 use crate::component;
-use crate::parser::input::Input;
-use crate::parser::{Parser, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, ResultExt};
 use core::fmt::Debug;
 
 fn cached_module_name(name: &str) -> Option<&'static str> {
@@ -55,16 +54,16 @@ impl<S: AsRef<str>> Debug for Import<S> {
 /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
 pub struct ImportsComponent<I: Input, S: StringPool, B: Buffer> {
     count: usize,
-    parser: Parser<I>,
+    parser: Decoder<I>,
     string_cache: S,
     name_buffer: B,
 }
 
 impl<I: Input, S: StringPool, B: Buffer> ImportsComponent<I, S, B> {
-    /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module, with the
+    /// Uses a [`Decoder<I>`] to read the contents of the *imports section* of a module, with the
     /// given [`StringPool`] used to intern module names and [`Buffer`].
     pub fn with_string_cache_and_buffer(
-        mut parser: Parser<I>,
+        mut parser: Decoder<I>,
         name_buffer: B,
         string_cache: S,
     ) -> Result<Self> {
@@ -119,8 +118,8 @@ impl<I: Input, S: StringPool, B: Buffer> ImportsComponent<I, S, B> {
 
 #[cfg(feature = "alloc")]
 impl<I: Input> ImportsComponent<I, crate::allocator::FakeStringPool, alloc::vec::Vec<u8>> {
-    /// Uses a [`Parser<I>`] to read the contents of the *imports section* of a module.
-    pub fn new(parser: Parser<I>) -> Result<Self> {
+    /// Uses a [`Decoder<I>`] to read the contents of the *imports section* of a module.
+    pub fn new(parser: Decoder<I>) -> Result<Self> {
         Self::with_string_cache_and_buffer(parser, Default::default(), Default::default())
     }
 }

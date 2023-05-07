@@ -1,4 +1,4 @@
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, ResultExt};
 
 /// Represents the
 /// [**mems** component](https://webassembly.github.io/spec/core/syntax/modules.html#memories) of a
@@ -6,12 +6,12 @@ use crate::parser::{input::Input, Parser, Result, ResultExt};
 /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
 pub struct MemsComponent<I: Input> {
     count: usize,
-    parser: Parser<I>,
+    parser: Decoder<I>,
 }
 
 impl<I: Input> MemsComponent<I> {
-    /// Uses the given [`Parser<I>`] to read the contents of the *memory section* of a module.
-    pub fn new(mut parser: Parser<I>) -> Result<Self> {
+    /// Uses the given [`Decoder<I>`] to read the contents of the *memory section* of a module.
+    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("memory section count")?,
             parser,

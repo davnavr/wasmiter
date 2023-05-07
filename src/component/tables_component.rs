@@ -1,5 +1,5 @@
 use crate::component::TableType;
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, ResultExt};
 
 /// Represents the
 /// [**tables** component](https://webassembly.github.io/spec/core/syntax/modules.html#tables) of a
@@ -7,12 +7,12 @@ use crate::parser::{input::Input, Parser, Result, ResultExt};
 /// [*tables section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
 pub struct TablesComponent<I: Input> {
     count: usize,
-    parser: Parser<I>,
+    parser: Decoder<I>,
 }
 
 impl<I: Input> TablesComponent<I> {
-    /// Uses the given [`Parser<I>`] to read the contents of the *table section* of a module.
-    pub fn new(mut parser: Parser<I>) -> Result<Self> {
+    /// Uses the given [`Decoder<I>`] to read the contents of the *table section* of a module.
+    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("table section count")?,
             parser,

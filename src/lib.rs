@@ -23,7 +23,7 @@ pub(crate) use sections::section_id;
 
 use parser::{input, Error, Result, ResultExt as _};
 
-fn parse_module_preamble<I: input::Input>(parser: &mut parser::Parser<I>) -> Result<()> {
+fn parse_module_preamble<I: input::Input>(parser: &mut parser::Decoder<I>) -> Result<()> {
     const MAGIC: [u8; 4] = *b"\0asm";
     const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
@@ -51,7 +51,7 @@ fn parse_module_binary<I: input::Input, A: allocator::Allocator>(
     binary: I,
     allocator: A,
 ) -> Result<SectionSequence<I, A>> {
-    let mut parser = parser::Parser::new(binary);
+    let mut parser = parser::Decoder::new(binary);
     parse_module_preamble(&mut parser)?;
     Ok(SectionSequence::new_with_allocator(parser, allocator))
 }

@@ -1,5 +1,5 @@
 use crate::component::FuncIdx;
-use crate::parser::{input::Input, Parser, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, ResultExt};
 
 /// Represents the
 /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section),
@@ -10,12 +10,12 @@ use crate::parser::{input::Input, Parser, Result, ResultExt};
 /// of a WebAssembly module.
 pub struct FunctionSection<I: Input> {
     count: usize,
-    parser: Parser<I>,
+    parser: Decoder<I>,
 }
 
 impl<I: Input> FunctionSection<I> {
-    /// Uses the given [`Parser<I>`] to read the contents of the *function section* of a module.
-    pub fn new(mut parser: Parser<I>) -> Result<Self> {
+    /// Uses the given [`Decoder<I>`] to read the contents of the *function section* of a module.
+    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
         Ok(Self {
             count: parser.leb128_usize().context("function section count")?,
             parser,

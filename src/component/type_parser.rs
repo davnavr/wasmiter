@@ -1,7 +1,7 @@
 use crate::component::{self, BlockType, ValType};
-use crate::parser::{self, Error, Parser, Result, ResultExt};
+use crate::parser::{self, Error, Decoder, Result, ResultExt};
 
-impl<I: parser::input::Input> Parser<I> {
+impl<I: parser::input::Input> Decoder<I> {
     /// Parses a [`BlockType`].
     pub fn block_type(&mut self) -> Result<BlockType> {
         let value = self.leb128_s64().context("block type tag or index")?;
