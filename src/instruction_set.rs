@@ -8,7 +8,7 @@ mod prefix_fc;
 mod vector_opcode;
 
 #[doc(no_inline)]
-pub use crate::component::BlockType;
+pub use crate::component::{BlockType, LabelIdx, LocalIdx};
 pub use instruction::Instruction;
 pub use instruction_sequence::InstructionSequence;
 pub use opcode::{InvalidOpcode, Opcode};

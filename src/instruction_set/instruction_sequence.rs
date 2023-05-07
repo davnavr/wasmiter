@@ -1,13 +1,27 @@
+use crate::allocator::{Allocator, Vector};
 use crate::instruction_set::{Instruction, Opcode};
 use crate::parser::{input::Input, Parser, Result, ResultExt};
 
 impl<I: Input> Parser<I> {
     /// Parses a WebAssembly [`Instruction`].
-    pub fn instruction(&mut self) -> Result<Instruction> {
+    pub fn instruction<A: Allocator>(&mut self, allocator: &A) -> Result<Instruction<A>> {
         let opcode = Opcode::try_from(self.one_byte_exact().context("opcode byte")?)?;
         Ok(match opcode {
             Opcode::Unreachable => Instruction::Unreachable,
             Opcode::Nop => Instruction::Nop,
+            Opcode::Block => Instruction::Block(self.block_type()?),
+            Opcode::Loop => Instruction::Loop(self.block_type().context("loop block type")?),
+            Opcode::If => Instruction::If(self.block_type().context("if block type")?),
+            Opcode::Br => Instruction::Br(self.index().context("branch label")?),
+            Opcode::BrIf => Instruction::BrIf(self.index().context("branch label")?),
+            Opcode::Return => Instruction::Return,
+            Opcode::Call => Instruction::Call(self.index().context("call target")?),
+            Opcode::CallIndirect => Instruction::CallIndirect(
+                self.index().context("indirect call signature")?,
+                self.index().context("indirect call target")?,
+            ),
+            Opcode::Else => Instruction::Else,
+            Opcode::End => Instruction::End,
             _ => todo!("{opcode:?} not implemented"),
         })
     }
@@ -16,29 +30,47 @@ impl<I: Input> Parser<I> {
 /// Represents an expression or
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
-pub struct InstructionSequence<I: Input> {
+pub struct InstructionSequence<I: Input, A: Allocator> {
     blocks: u32,
     parser: Parser<I>,
-    current: Option<Instruction>,
+    current: Option<Instruction<A>>,
+    allocator: A,
 }
 
-impl<I: Input> InstructionSequence<I> {
-    /// Uses the given [`Parser`] to read a sequence of instructions.
-    pub fn new(parser: Parser<I>) -> Self {
+impl<I: Input, A: Allocator> InstructionSequence<I, A> {
+    /// Uses the given [`Parser`] to read a sequence of instructions, with the [`Allocator`].
+    pub fn with_allocator(parser: Parser<I>, allocator: A) -> Self {
         Self {
             blocks: 1,
             parser,
             current: None,
+            allocator,
         }
     }
 
     /// Fetches the next [`Instruction`] in the sequence.
-    pub fn next(&mut self) -> Result<Option<&Instruction>> {
+    pub fn next(&mut self) -> Result<Option<&Instruction<A>>> {
         if self.blocks == 0 {
             return Ok(None);
         }
 
-        let instruction = self.current.insert(self.parser.instruction()?);
+        let instruction = self
+            .current
+            .insert(self.parser.instruction(&self.allocator)?);
+
+        match instruction {
+            Instruction::Block(_) | Instruction::Loop(_) | Instruction::If(_) => {
+                self.blocks = self
+                    .blocks
+                    .checked_add(1)
+                    .ok_or_else(|| crate::parser_bad_format!("block nesting counter overflowed"))?;
+            }
+            Instruction::End => {
+                // Won't underflow, check for self.blocks == 0 ensures None is returned early
+                self.blocks -= 1;
+            }
+            _ => {}
+        }
 
         Ok(Some(instruction))
     }
@@ -61,17 +93,18 @@ impl<I: Input> InstructionSequence<I> {
         }
     }
 
-    fn try_clone(&self) -> Result<InstructionSequence<I::Fork>> {
+    fn try_clone(&self) -> Result<InstructionSequence<I::Fork, &A>> {
         Ok(InstructionSequence {
             blocks: self.blocks,
             parser: self.parser.fork()?,
-            current: self.current.clone(),
+            current: todo!(), //self.current.clone(),
+            allocator: &self.allocator,
         })
     }
 }
 
-impl<I: Input> Iterator for InstructionSequence<I> {
-    type Item = Result<Instruction>;
+impl<I: Input, A: Allocator> Iterator for InstructionSequence<I, A> {
+    type Item = Result<Instruction<A>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next() {
@@ -81,8 +114,9 @@ impl<I: Input> Iterator for InstructionSequence<I> {
     }
 }
 
-impl<I: Input> core::fmt::Debug for InstructionSequence<I> {
+impl<I: Input, A: Allocator> core::fmt::Debug for InstructionSequence<I, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        crate::component::debug_section_contents(self.try_clone(), f)
+        f.debug_struct("InstructionSequence")
+            .finish_non_exhaustive()
     }
 }
