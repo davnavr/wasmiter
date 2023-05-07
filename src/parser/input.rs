@@ -100,6 +100,51 @@ pub trait Input {
     }
 
     // TODO: functions to help with caches/buffers, no-op default impl
+
+    /// Uses the [`Input`] as a mutable reference.
+    #[inline]
+    fn by_ref(&mut self) -> &mut Self {
+        self
+    }
+}
+
+impl<I: Input> Input for &mut I {
+    #[inline]
+    fn seek(&mut self, offset: u64) -> Result<()> {
+        I::seek(self, offset)
+    }
+
+    #[inline]
+    fn peek(&mut self, buffer: &mut [u8]) -> Result<usize> {
+        I::peek(self, buffer)
+    }
+
+    #[inline]
+    fn read(&mut self, amount: u64) -> Result<u64> {
+        I::read(self, amount)
+    }
+
+    #[inline]
+    fn position(&self) -> Result<u64> {
+        I::position(self)
+    }
+
+    type Fork = I::Fork;
+
+    #[inline]
+    fn fork(&self) -> Result<Self::Fork> {
+        I::fork(&self)
+    }
+
+    #[inline]
+    fn take(&mut self, buffer: &mut [u8]) -> Result<usize> {
+        I::take(self, buffer)
+    }
+
+    #[inline]
+    fn take_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
+        I::take_exact(self, buffer)
+    }
 }
 
 /// Trait for conversion into an [`Input`].

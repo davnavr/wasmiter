@@ -2,11 +2,13 @@
 
 mod error;
 mod result_ext;
+mod vector;
 
 pub mod input;
 
 pub use error::{Context, Error, ErrorKind};
 pub use result_ext::ResultExt;
+pub use vector::Vector;
 
 use input::Input;
 
@@ -130,6 +132,12 @@ impl<I: Input> Parser<I> {
 
     pub(crate) fn fork(&self) -> Result<Parser<I::Fork>> {
         Ok(Parser::new(self.input.fork()?))
+    }
+
+    pub(crate) fn by_ref(&mut self) -> Parser<&mut I> {
+        Parser {
+            input: &mut self.input,
+        }
     }
 
     #[inline]
