@@ -27,6 +27,7 @@ macro_rules! opcodes {
         /// [WebAssembly opcode](https://webassembly.github.io/spec/core/binary/instructions.html#instructions)
         /// is a byte value that encodes the instruction.
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        #[non_exhaustive]
         #[repr(u8)]
         pub enum Opcode {
             $(
@@ -260,6 +261,8 @@ opcodes! {
     /// See [`FCPrefixedOpcode`](crate::instruction_set::FCPrefixedOpcode) for more information.
     PrefixFC = 0xFC,
     /// Prefix for fixed-width 128-bit vector instructions (`v128.`).
+    ///
+    /// See [`VectorOpcode`](crate::instruction_set::VectorOpcode) for more information.
     PrefixV128 = 0xFD,
 }
 

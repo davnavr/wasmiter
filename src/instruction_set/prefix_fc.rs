@@ -3,6 +3,7 @@ macro_rules! opcodes {
         /// An opcode value for an instruction prefixed by a
         /// [`0xFC` opcode](crate::instruction_set::Opcode::PrefixFC).
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        #[non_exhaustive]
         #[repr(u8)]
         pub enum FCPrefixedOpcode {
             $(

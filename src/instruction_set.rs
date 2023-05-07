@@ -3,9 +3,11 @@
 
 mod opcode;
 mod prefix_fc;
+mod vector_opcode;
 
 pub use opcode::{InvalidOpcode, Opcode};
 pub use prefix_fc::FCPrefixedOpcode;
+pub use vector_opcode::VectorOpcode;
 
 /// Error type used when an encoded `u32` value is not a valid prefixed opcode.
 #[derive(Clone, Debug)]
