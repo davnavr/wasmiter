@@ -33,7 +33,7 @@ pub use mems_component::MemsComponent;
 pub use tables_component::TablesComponent;
 pub use types_component::TypesComponent;
 
-pub(self) fn debug_section_contents<T: core::fmt::Debug>(
+pub(crate) fn debug_section_contents<T: core::fmt::Debug>(
     iterator: crate::parser::Result<impl core::iter::Iterator<Item = crate::parser::Result<T>>>,
     f: &mut core::fmt::Formatter,
 ) -> core::fmt::Result {

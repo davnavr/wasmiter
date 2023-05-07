@@ -1,10 +1,16 @@
 //! Model of the
 //! [WebAssembly instruction set](https://webassembly.github.io/spec/core/syntax/instructions.html).
 
+mod instruction;
+mod instruction_sequence;
 mod opcode;
 mod prefix_fc;
 mod vector_opcode;
 
+#[doc(no_inline)]
+pub use crate::component::BlockType;
+pub use instruction::Instruction;
+pub use instruction_sequence::InstructionSequence;
 pub use opcode::{InvalidOpcode, Opcode};
 pub use prefix_fc::FCPrefixedOpcode;
 pub use vector_opcode::VectorOpcode;
@@ -35,5 +41,3 @@ impl<const P: u8> From<InvalidPrefixedOpcode<P>> for crate::parser::Error {
         crate::parser_bad_format!("{error}")
     }
 }
-
-//pub struct Expression<I> // parser that keeps track of nesting state
