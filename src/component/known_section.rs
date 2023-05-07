@@ -6,18 +6,21 @@ use crate::{section_id, Section, SectionKind};
 /// Represents a well-known WebAssembly [`Section`].
 #[derive(Debug)]
 pub enum KnownSection<I: Input, A: Allocator, S: StringPool> {
-    /// The contents of
-    /// [*types section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
-    Types(component::TypesComponent<I, A>),
-    /// The contents of
+    /// The
+    /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
+    Type(component::TypesComponent<I, A>),
+    /// The
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-    Imports(component::ImportsComponent<I, S, A::Buf>),
+    Import(component::ImportsComponent<I, S, A::Buf>),
     /// The
     /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section)
-    Functions(component::FunctionSection<I>),
-    /// The contents of
+    Function(component::FunctionSection<I>),
+    /// The
     /// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
-    Tables(component::TablesComponent<I>),
+    Table(component::TablesComponent<I>),
+    /// The
+    /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
+    Memory(component::MemsComponent<I>),
 }
 
 impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
@@ -45,6 +48,9 @@ impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
                 section_id::TABLE => {
                     component::TablesComponent::new(section.into_contents()).map(Self::from)
                 }
+                section_id::MEMORY => {
+                    component::MemsComponent::new(section.into_contents()).map(Self::from)
+                }
                 _ => return Err(section),
             })
         } else {
@@ -58,7 +64,7 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::TypesComponent<I, A>
 {
     #[inline]
     fn from(types: component::TypesComponent<I, A>) -> Self {
-        Self::Types(types)
+        Self::Type(types)
     }
 }
 
@@ -67,7 +73,7 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::ImportsComponent<I, 
 {
     #[inline]
     fn from(imports: component::ImportsComponent<I, S, A::Buf>) -> Self {
-        Self::Imports(imports)
+        Self::Import(imports)
     }
 }
 
@@ -76,7 +82,7 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::FunctionSection<I>>
 {
     #[inline]
     fn from(functions: component::FunctionSection<I>) -> Self {
-        Self::Functions(functions)
+        Self::Function(functions)
     }
 }
 
@@ -85,6 +91,15 @@ impl<I: Input, A: Allocator, S: StringPool> From<component::TablesComponent<I>>
 {
     #[inline]
     fn from(tables: component::TablesComponent<I>) -> Self {
-        Self::Tables(tables)
+        Self::Table(tables)
+    }
+}
+
+impl<I: Input, A: Allocator, S: StringPool> From<component::MemsComponent<I>>
+    for KnownSection<I, A, S>
+{
+    #[inline]
+    fn from(memories: component::MemsComponent<I>) -> Self {
+        Self::Memory(memories)
     }
 }

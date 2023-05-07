@@ -2,7 +2,12 @@ use crate::component::FuncIdx;
 use crate::parser::{input::Input, Parser, Result, ResultExt};
 
 /// Represents the
-/// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section).
+/// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section),
+/// which corresponds to the
+/// [**type**](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func) of each
+/// function in the
+/// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
+/// of a WebAssembly module.
 pub struct FunctionSection<I: Input> {
     count: usize,
     parser: Parser<I>,
