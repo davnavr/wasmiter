@@ -14,3 +14,12 @@ pub use vector::Vector;
 
 /// Result type used when parsing input.
 pub type Result<T> = core::result::Result<T, Error>;
+
+/// Trait for parsing structures from bytes.
+pub trait Parser: Clone {
+    /// The result of the parser.
+    type Output;
+
+    /// Parses the given input.
+    fn parse<I: input::Input>(&mut self, input: &mut Decoder<I>) -> Result<Self::Output>;
+}
