@@ -2,14 +2,19 @@
 
 mod cursor;
 mod error;
+mod window;
 
 pub use cursor::Cursor;
 pub use error::{Error, ErrorKind};
+pub use window::Window;
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! const_input_error {
     ($kind:expr, $message:literal) => {{
-        const ERROR: &error::ConstantError = &error::ConstantError::new($kind, $message);
-        Error::from_const(ERROR)
+        const ERROR: &$crate::parser::input::error::ConstantError =
+            &$crate::parser::input::error::ConstantError::new($kind, $message);
+        crate::parser::input::Error::from_const(ERROR)
     }};
 }
 
