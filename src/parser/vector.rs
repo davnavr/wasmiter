@@ -22,6 +22,12 @@ impl<P: Parse> Sequence<P> {
     pub fn count(&self) -> u32 {
         self.count
     }
+
+    /// Parses the remaining elements in the sequence, discarding the results.
+    pub fn finish<I: Input>(mut self, input: &mut Decoder<I>) -> Result<()> {
+        while let Some(_) = self.parse(input)? {}
+        Ok(())
+    }
 }
 
 impl<P: Parse> Parse for Sequence<P> {
