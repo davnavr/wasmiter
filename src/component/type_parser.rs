@@ -144,4 +144,5 @@ macro_rules! type_parse_impls {
 type_parse_impls! {
     ValType => val_type,
     component::TableType => table_type,
+    component::Limits => limits,
 }
