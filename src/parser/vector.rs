@@ -91,13 +91,6 @@ impl<I: Input, P: Parse> Vector<I, P> {
     pub fn finish(mut self) -> Result<()> {
         self.sequence.finish(&mut self.decoder)
     }
-
-    fn try_clone(&self) -> Result<Vector<I::Fork, P>> {
-        Ok(Vector {
-            decoder: self.decoder.fork()?,
-            sequence: self.sequence.clone(),
-        })
-    }
 }
 
 impl<I: Input, P: Parse> Iterator for Vector<I, P> {
@@ -108,14 +101,18 @@ impl<I: Input, P: Parse> Iterator for Vector<I, P> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, usize::try_from(self.sequence.count).ok())
+        (
+            core::cmp::min(1, usize::try_from(self.sequence.count).unwrap_or(1)),
+            usize::try_from(self.sequence.count).ok(),
+        )
     }
 }
 
 impl<I: Input, P: Parse> core::fmt::Debug for Vector<I, P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Vector")
+        return f
+            .debug_struct("Vector")
             .field("count", &self.len())
-            .finish_non_exhaustive()
+            .finish_non_exhaustive();
     }
 }

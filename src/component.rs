@@ -25,7 +25,7 @@ pub use types::{
 
 pub use function_section::FunctionSection;
 pub use globals_component::{Global, GlobalsComponent};
-pub use imports_component::{Import, ImportKind, ImportsComponent};
+pub use imports_component::{Import, ImportKind, ImportParser, ImportsComponent};
 pub use known_section::KnownSection;
 pub use limits::{Limits, MemType};
 pub use mems_component::MemsComponent;
