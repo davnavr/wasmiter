@@ -27,7 +27,7 @@ impl<I: Input> TypesComponent<I> {
 
     /// Gets the expected remaining number of types that have yet to be parsed.
     #[inline]
-    pub fn count(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.count
     }
 
@@ -67,7 +67,7 @@ fn allocate_result_type<I: Input>(
     vector: &mut alloc::vec::Vec<ValType>,
 ) -> impl FnOnce(&mut ResultType<&mut I>) -> Result<()> + '_ {
     |parser| {
-        vector.reserve_exact(usize::try_from(parser.count()).unwrap_or_default());
+        vector.reserve_exact(usize::try_from(parser.len()).unwrap_or_default());
         for ty in parser {
             vector.push(ty?);
         }

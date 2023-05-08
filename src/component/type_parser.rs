@@ -112,6 +112,13 @@ impl<I: Input> Decoder<I> {
         P: FnOnce(&mut component::ResultType<&mut I>) -> Result<()>,
         R: FnOnce(&mut component::ResultType<&mut I>) -> Result<()>,
     {
+        let tag = self.one_byte_exact().context("function type")?;
+        if tag != 0x60 {
+            return Err(crate::parser_bad_format!(
+                "expected function type (0x60) but got {tag:#02X}"
+            ));
+        }
+
         let mut parameters = component::ResultType::new(self.by_ref(), Default::default())?;
         parameter_types(&mut parameters)?;
         parameters.finish()?;

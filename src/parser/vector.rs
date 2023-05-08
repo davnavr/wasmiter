@@ -16,13 +16,13 @@ impl<P: Parse> Sequence<P> {
     }
 
     /// Gets the remaining number of elements in the sequence.
-    pub fn count(&self) -> u32 {
+    pub fn len(&self) -> u32 {
         self.count
     }
 
     /// Parses the remaining elements in the sequence, discarding the results.
     pub fn finish<I: Input>(mut self, input: &mut Decoder<I>) -> Result<()> {
-        while let Some(_) = self.parse(input)? {}
+        while self.parse(input)?.is_some() {}
         Ok(())
     }
 }
@@ -83,8 +83,8 @@ impl<I: Input, P: Parse> Vector<I, P> {
 
     /// Gets the remaining number of elements in the vector.
     #[inline]
-    pub fn count(&self) -> u32 {
-        self.sequence.count()
+    pub fn len(&self) -> u32 {
+        self.sequence.len()
     }
 
     /// Parses the remaining elements in the vector, discarding the results.

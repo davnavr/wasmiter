@@ -14,7 +14,7 @@ fn basic_type() {
 
     let mut types = TypesComponent::new(Decoder::new(bytes)).unwrap();
 
-    assert_eq!(TypesComponent::count(&types), 1);
+    assert_eq!(types.len(), 1);
     let type_1 = Iterator::next(&mut types).unwrap().unwrap();
     assert_eq!(type_1.0, &[ValType::I32]);
     assert_eq!(type_1.1, &[ValType::I64]);
