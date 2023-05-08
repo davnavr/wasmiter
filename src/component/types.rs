@@ -1,12 +1,10 @@
 use core::fmt::{Display, Formatter};
 
 mod block_type;
-mod func_type;
 mod global_type;
 mod table_type;
 
 pub use block_type::BlockType;
-pub use func_type::FuncType;
 pub use global_type::{GlobalMutability, GlobalType};
 pub use table_type::TableType;
 

@@ -1,7 +1,21 @@
-use crate::allocator::{Allocator, Vector};
-use crate::component::{FuncType, ValType};
+use crate::component::ValType;
+use crate::allocator::Allocator;
 use crate::parser::input::Input;
-use crate::parser::{Decoder, Result, ResultExt};
+use crate::parser::{self, Decoder, Result, ResultExt};
+
+/// Parser for a
+/// [WebAssembly result type](https://webassembly.github.io/spec/core/binary/types.html#result-types).
+pub type ResultType<I: Input> = parser::Vector<I, parser::SimpleParse<ValType>>;
+
+//pub struct
+
+/*
+struct FuncType
+
+impl FuncType {
+    fn some_parse_function<P, R>(&mut self, parameters: P, results: R)
+}
+*/
 
 fn parse_result_type(
     parser: &mut Decoder<impl Input>,

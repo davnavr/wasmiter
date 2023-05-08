@@ -103,6 +103,22 @@ impl<I: Input> Decoder<I> {
             )
         })
     }
+
+    /// Parses a
+    /// [WebAssembly function type](https://webassembly.github.io/spec/core/syntax/types.html#function-types),
+    /// which specifies the parameter and result types of a function.
+    pub fn func_type<P, R>(&mut self, parameter_types: P, result_types: R) -> Result<()>
+    where
+        P: FnOnce(&mut component::ResultType<&mut I>) -> Result<()>,
+        R: FnOnce(&mut component::ResultType<&mut I>) -> Result<()>,
+    {
+        let mut parameters = component::ResultType::new(self.by_ref(), Default::default())?;
+        parameter_types(&mut parameters);
+        parameters.finish()?;
+        let mut results = component::ResultType::new(self.by_ref(), Default::default())?;
+        result_types(&mut results);
+        results.finish()
+    }
 }
 
 macro_rules! type_parse_impls {
