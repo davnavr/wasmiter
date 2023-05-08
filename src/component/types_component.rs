@@ -27,7 +27,7 @@ impl<I: Input> TypesComponent<I> {
 
     /// Gets the expected remaining number of types that have yet to be parsed.
     #[inline]
-    pub fn count(&mut self) -> usize {
+    pub fn count(&self) -> usize {
         self.count
     }
 

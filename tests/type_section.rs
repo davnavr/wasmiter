@@ -14,9 +14,9 @@ fn basic_type() {
 
     let mut types = TypesComponent::new(Decoder::new(bytes)).unwrap();
 
-    assert_eq!(types.len(), 1);
-    let type_1 = types.next().unwrap().unwrap();
-    assert_eq!(type_1.parameter_types(), &[ValType::I32]);
-    assert_eq!(type_1.result_types(), &[ValType::I64]);
-    assert!(types.next().is_none());
+    assert_eq!(TypesComponent::count(&types), 1);
+    let type_1 = Iterator::next(&mut types).unwrap().unwrap();
+    assert_eq!(type_1.0, &[ValType::I32]);
+    assert_eq!(type_1.1, &[ValType::I64]);
+    assert!(Iterator::next(&mut types).is_none());
 }
