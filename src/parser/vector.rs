@@ -12,10 +12,7 @@ pub struct Sequence<P: Parse> {
 impl<P: Parse> Sequence<P> {
     /// Creates a new `Sequence` with the given `count`.
     pub const fn new(count: u32, parser: P) -> Self {
-        Self {
-            count,
-            parser,
-        }
+        Self { count, parser }
     }
 
     /// Gets the remaining number of elements in the sequence.
@@ -52,7 +49,11 @@ impl<P: Parse> Parse for Sequence<P> {
 
 impl<I: Input> Decoder<I> {
     /// Parses a sequence of elements prefixed by a `u32` length.
-    pub fn vector<P: Parse, F: FnMut(P::Output) -> bool>(&mut self, parser: P, mut f: F) -> Result<()> {
+    pub fn vector<P: Parse, F: FnMut(P::Output) -> bool>(
+        &mut self,
+        parser: P,
+        mut f: F,
+    ) -> Result<()> {
         let count = self.leb128_u32().context("vector length")?;
         let mut sequence = Sequence::new(count, parser);
         while let Some(item) = sequence.parse(self)? {
@@ -61,5 +62,45 @@ impl<I: Input> Decoder<I> {
             }
         }
         Ok(())
+    }
+}
+
+/// Represents a sequence of elements prefixed by a `u32` count.
+pub struct Vector<I: Input, P: Parse> {
+    decoder: Decoder<I>,
+    sequence: Sequence<P>,
+}
+
+impl<I: Input, P: Parse> Vector<I, P> {
+    /// Creates a new [`Vector`] from the given `input`.
+    pub fn new(mut input: Decoder<I>, parser: P) -> Result<Self> {
+        let count = input.leb128_u32().context("vector element count")?;
+        Ok(Self {
+            decoder: input,
+            sequence: Sequence::new(count, parser),
+        })
+    }
+
+    /// Parses the remaining elements in the vector, discarding the results.
+    pub fn finish(mut self) -> Result<()> {
+        self.sequence.finish(&mut self.decoder)
+    }
+}
+
+impl<I: Input, P: Parse> Iterator for Vector<I, P> {
+    type Item = Result<P::Output>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.sequence.parse(&mut self.decoder).transpose()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, usize::try_from(self.sequence.count).ok())
+    }
+}
+
+impl<I: Input, P: Parse> core::fmt::Debug for Vector<I, P> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Vector").finish_non_exhaustive()
     }
 }

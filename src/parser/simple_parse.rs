@@ -7,6 +7,8 @@ pub struct SimpleParse<T> {
 impl<T> Default for SimpleParse<T> {
     #[inline]
     fn default() -> Self {
-        Self { _phantom: core::marker::PhantomData }
+        Self {
+            _phantom: core::marker::PhantomData,
+        }
     }
 }
