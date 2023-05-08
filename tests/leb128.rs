@@ -1,10 +1,10 @@
-use wasmiter::parser::Parser;
+use wasmiter::parser::Decoder;
 
 #[test]
 fn examples_u32() {
     macro_rules! assert_eq_decoded {
         ($expected:expr, $actual:expr) => {{
-            let mut parser = Parser::new(AsRef::<[u8]>::as_ref($actual));
+            let mut parser = Decoder::new(AsRef::<[u8]>::as_ref($actual));
             assert_eq!($expected, parser.leb128_u32().unwrap());
         }};
     }
@@ -27,7 +27,7 @@ fn examples_u32() {
 fn examples_s32() {
     macro_rules! assert_eq_decoded {
         ($expected:expr, $actual:expr) => {{
-            let mut parser = Parser::new(AsRef::<[u8]>::as_ref($actual));
+            let mut parser = Decoder::new(AsRef::<[u8]>::as_ref($actual));
             assert_eq!($expected, parser.leb128_s32().unwrap());
         }};
     }

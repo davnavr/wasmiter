@@ -1,5 +1,5 @@
 use wasmiter::component::{TypesComponent, ValType};
-use wasmiter::parser::Parser;
+use wasmiter::parser::Decoder;
 
 #[test]
 fn basic_type() {
@@ -12,7 +12,7 @@ fn basic_type() {
         0x7E, // i64
     ];
 
-    let mut types = TypesComponent::new(Parser::new(bytes)).unwrap();
+    let mut types = TypesComponent::new(Decoder::new(bytes)).unwrap();
 
     assert_eq!(types.len(), 1);
     let type_1 = types.next().unwrap().unwrap();
