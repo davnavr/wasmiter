@@ -1,5 +1,5 @@
 use crate::allocator::{Allocator, OwnOrRef};
-use crate::parser::input::Input;
+use crate::parser::input::{Input, Window};
 use crate::parser::{Decoder, Result, ResultExt};
 
 mod section_kind;
@@ -14,7 +14,7 @@ pub(crate) use section_kind::section_id;
 pub struct Section<I: Input, S: AsRef<str>> {
     kind: SectionKind<S>,
     length: u64,
-    contents: Decoder<I>,
+    contents: Decoder<Window<I>>,
 }
 
 impl<I: Input, S: AsRef<str>> Section<I, S> {
@@ -35,7 +35,7 @@ impl<I: Input, S: AsRef<str>> Section<I, S> {
     }
 
     /// Consumes the section, returning a [`Decoder<I>`] used to read its contents.
-    pub fn into_contents(self) -> Decoder<I> {
+    pub fn into_contents(self) -> Decoder<Window<I>> {
         self.contents
     }
 }
@@ -94,7 +94,7 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
             )
         };
 
-        let contents = self.parser.fork()?;
+        let contents = self.parser.windowed(content_length)?;
 
         self.parser
             .skip_exact(content_length)

@@ -1,5 +1,5 @@
-use crate::parser::{Error, Result, ResultExt};
 use crate::parser::input::{self, Input};
+use crate::parser::{Error, Result, ResultExt};
 
 #[macro_export]
 #[doc(hidden)]
@@ -116,14 +116,19 @@ impl<I: Input> Decoder<I> {
         }
     }
 
+    #[inline]
     pub(crate) fn fork(&self) -> Result<Decoder<I::Fork>> {
         Ok(Decoder::new(self.input.fork()?))
     }
 
+    #[inline]
     pub(crate) fn by_ref(&mut self) -> Decoder<&mut I> {
-        Decoder {
-            input: &mut self.input,
-        }
+        Decoder::new(&mut self.input)
+    }
+
+    #[inline]
+    pub(crate) fn windowed(&mut self, length: u64) -> Result<Decoder<input::Window<I::Fork>>> {
+        Ok(Decoder::new(self.input.windowed(length)?))
     }
 
     #[inline]

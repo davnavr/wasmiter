@@ -111,6 +111,14 @@ pub trait Input {
     fn by_ref(&mut self) -> &mut Self {
         self
     }
+
+    /// Returns a [`Window`] over a [`Fork`](Input::Fork) of the reader, used to read `length`
+    /// bytes from the current reader.
+    fn windowed(&mut self, length: u64) -> Result<Window<Self::Fork>> {
+        let fork = self.fork()?;
+        let offset = fork.position()?;
+        Ok(Window::new(fork, offset, length))
+    }
 }
 
 impl<I: Input> Input for &mut I {

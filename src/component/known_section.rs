@@ -1,6 +1,7 @@
 use crate::allocator::{Allocator, StringPool};
 use crate::component;
-use crate::parser::{self, input::Input};
+use crate::parser;
+use crate::parser::input::{Input, Window};
 use crate::{section_id, Section, SectionKind};
 
 /// Represents a well-known WebAssembly [`Section`].
@@ -26,7 +27,7 @@ pub enum KnownSection<I: Input, A: Allocator, S: StringPool> {
     Global(component::GlobalsComponent<I>),
 }
 
-impl<I: Input, A: Allocator, S: StringPool> KnownSection<I, A, S> {
+impl<I: Input, A: Allocator, S: StringPool> KnownSection<Window<I>, A, S> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
     pub fn with_allocator<N: AsRef<str>>(
         section: Section<I, N>,
