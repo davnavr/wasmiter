@@ -1,5 +1,5 @@
 use crate::component::FuncIdx;
-use crate::parser::{input::Input, Decoder, Result, SimpleParse, Vector};
+use crate::parser::{input::Input, Decoder, Result, ResultExt, SimpleParse, Vector};
 
 /// Represents the
 /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section),
@@ -32,7 +32,7 @@ impl<I: Input> Iterator for FunctionSection<I> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.indices.next()
+        self.indices.next().map(|r| r.context("function section"))
     }
 
     #[inline]

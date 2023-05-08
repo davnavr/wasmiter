@@ -172,7 +172,7 @@ where
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.imports.next()
+        self.imports.next().map(|r| r.context("import section"))
     }
 
     #[inline]
