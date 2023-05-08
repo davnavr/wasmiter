@@ -9,7 +9,7 @@ use crate::{section_id, Section, SectionKind};
 pub enum KnownSection<I: Input, A: Allocator, S: StringPool> {
     /// The
     /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
-    Type(component::TypesComponent<I, A>),
+    Type(component::TypesComponent<I>),
     /// The
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
     Import(component::ImportsComponent<I, S, A::Buf>),
@@ -37,7 +37,7 @@ impl<I: Input, A: Allocator, S: StringPool> KnownSection<Window<I>, A, S> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
                 section_id::TYPE => {
-                    component::TypesComponent::with_allocator(section.into_contents(), allocator)
+                    component::TypesComponent::new(section.into_contents())
                         .map(Self::from)
                 }
                 section_id::IMPORT => component::ImportsComponent::with_string_cache_and_buffer(
@@ -66,11 +66,11 @@ impl<I: Input, A: Allocator, S: StringPool> KnownSection<Window<I>, A, S> {
     }
 }
 
-impl<I: Input, A: Allocator, S: StringPool> From<component::TypesComponent<I, A>>
+impl<I: Input, A: Allocator, S: StringPool> From<component::TypesComponent<I>>
     for KnownSection<I, A, S>
 {
     #[inline]
-    fn from(types: component::TypesComponent<I, A>) -> Self {
+    fn from(types: component::TypesComponent<I>) -> Self {
         Self::Type(types)
     }
 }
