@@ -3,7 +3,7 @@ use crate::parser::{input::Input, Decoder, Parse, Result};
 use super::ResultExt;
 
 /// Parser for a sequence of elements.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Sequence<P: Parse> {
     count: u32,
     parser: P,

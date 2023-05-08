@@ -1,7 +1,8 @@
 use crate::component::{self, BlockType, ValType};
-use crate::parser::{self, Error, Decoder, Result, ResultExt};
+use crate::parser::input::Input;
+use crate::parser::{self, Decoder, Error, Result, ResultExt};
 
-impl<I: parser::input::Input> Decoder<I> {
+impl<I: Input> Decoder<I> {
     /// Parses a [`BlockType`].
     pub fn block_type(&mut self) -> Result<BlockType> {
         let value = self.leb128_s64().context("block type tag or index")?;
@@ -102,4 +103,21 @@ impl<I: parser::input::Input> Decoder<I> {
             )
         })
     }
+}
+
+macro_rules! type_parse_impls {
+    ($($ty:ty => $name:ident,)*) => {$(
+        impl parser::Parse for parser::SimpleParse<$ty> {
+            type Output = $ty;
+
+            #[inline]
+            fn parse<I: Input>(&mut self, input: &mut Decoder<I>) -> Result<$ty> {
+                input.$name()
+            }
+        }
+    )*};
+}
+
+type_parse_impls! {
+    ValType => val_type,
 }

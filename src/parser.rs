@@ -3,6 +3,7 @@
 mod decoder;
 mod error;
 mod result_ext;
+mod simple_parse;
 mod vector;
 
 pub mod input;
@@ -10,6 +11,7 @@ pub mod input;
 pub use decoder::Decoder;
 pub use error::{Context, Error, ErrorKind};
 pub use result_ext::ResultExt;
+pub use simple_parse::SimpleParse;
 pub use vector::Sequence;
 
 /// Result type used when parsing input.
