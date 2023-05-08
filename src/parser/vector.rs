@@ -81,6 +81,12 @@ impl<I: Input, P: Parse> Vector<I, P> {
         })
     }
 
+    /// Gets the remaining number of elements in the vector.
+    #[inline]
+    pub fn count(&self) -> u32 {
+        self.sequence.count()
+    }
+
     /// Parses the remaining elements in the vector, discarding the results.
     pub fn finish(mut self) -> Result<()> {
         self.sequence.finish(&mut self.decoder)

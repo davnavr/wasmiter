@@ -37,8 +37,7 @@ impl<I: Input, A: Allocator, S: StringPool> KnownSection<Window<I>, A, S> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
                 section_id::TYPE => {
-                    component::TypesComponent::new(section.into_contents())
-                        .map(Self::from)
+                    component::TypesComponent::new(section.into_contents()).map(Self::from)
                 }
                 section_id::IMPORT => component::ImportsComponent::with_string_cache_and_buffer(
                     section.into_contents(),

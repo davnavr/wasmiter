@@ -4,13 +4,13 @@ use crate::parser::{self, Decoder, Result, ResultExt};
 
 /// Parser for a
 /// [WebAssembly result type](https://webassembly.github.io/spec/core/binary/types.html#result-types).
-pub type ResultType<I: Input> = parser::Vector<I, parser::SimpleParse<ValType>>;
+pub type ResultType<I> = parser::Vector<I, parser::SimpleParse<ValType>>;
 
 /// Represents the
 /// [**types** component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
-#[derive(Debug)]
+#[cfg_attr(not(feature = "alloc"), derive(Debug))]
 pub struct TypesComponent<I: Input> {
     count: usize,
     parser: Decoder<I>,
@@ -59,5 +59,49 @@ impl<I: Input> TypesComponent<I> {
             count: self.count,
             parser: self.parser.fork()?,
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+fn allocate_result_type<I: Input>(
+    vector: &mut alloc::vec::Vec<ValType>,
+) -> impl FnOnce(&mut ResultType<&mut I>) -> Result<()> + '_ {
+    |parser| {
+        vector.reserve_exact(usize::try_from(parser.count()).unwrap_or_default());
+        for ty in parser {
+            vector.push(ty?);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<I: Input> Iterator for TypesComponent<I> {
+    type Item = Result<(alloc::vec::Vec<ValType>, alloc::vec::Vec<ValType>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut parameters = alloc::vec::Vec::new();
+        let mut results = alloc::vec::Vec::new();
+        let more = self.next(
+            allocate_result_type(&mut parameters),
+            allocate_result_type(&mut results),
+        );
+        match more {
+            Ok(true) => Some(Ok((parameters, results))),
+            Ok(false) => None,
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<I: Input> core::fmt::Debug for TypesComponent<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut list = f.debug_list();
+        match self.try_clone() {
+            Ok(fork) => list.entries(fork),
+            Err(e) => list.entry(&Result::<()>::Err(e)),
+        }
+        .finish()
     }
 }

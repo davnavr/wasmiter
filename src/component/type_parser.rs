@@ -113,10 +113,10 @@ impl<I: Input> Decoder<I> {
         R: FnOnce(&mut component::ResultType<&mut I>) -> Result<()>,
     {
         let mut parameters = component::ResultType::new(self.by_ref(), Default::default())?;
-        parameter_types(&mut parameters);
+        parameter_types(&mut parameters)?;
         parameters.finish()?;
         let mut results = component::ResultType::new(self.by_ref(), Default::default())?;
-        result_types(&mut results);
+        result_types(&mut results)?;
         results.finish()
     }
 }
