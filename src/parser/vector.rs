@@ -93,6 +93,15 @@ impl<I: Input, P: Parse> Vector<I, P> {
     }
 }
 
+impl<I: Input, P: Parse + Clone> Vector<I, P> {
+    pub(crate) fn try_clone(&self) -> Result<Vector<I::Fork, P>> {
+        Ok(Vector {
+            decoder: self.decoder.fork()?,
+            sequence: self.sequence.clone(),
+        })
+    }
+}
+
 impl<I: Input, P: Parse> Iterator for Vector<I, P> {
     type Item = Result<P::Output>;
 

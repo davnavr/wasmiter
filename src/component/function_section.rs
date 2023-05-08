@@ -1,5 +1,5 @@
 use crate::component::FuncIdx;
-use crate::parser::{input::Input, Decoder, Result, ResultExt};
+use crate::parser::{input::Input, Decoder, Result, SimpleParse, Vector};
 
 /// Represents the
 /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section),
@@ -9,60 +9,40 @@ use crate::parser::{input::Input, Decoder, Result, ResultExt};
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
 pub struct FunctionSection<I: Input> {
-    count: usize,
-    parser: Decoder<I>,
+    indices: Vector<I, SimpleParse<FuncIdx>>,
+}
+
+impl<I: Input> From<Vector<I, SimpleParse<FuncIdx>>> for FunctionSection<I> {
+    #[inline]
+    fn from(indices: Vector<I, SimpleParse<FuncIdx>>) -> Self {
+        Self { indices }
+    }
 }
 
 impl<I: Input> FunctionSection<I> {
     /// Uses the given [`Decoder<I>`] to read the contents of the *function section* of a module.
-    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
-        Ok(Self {
-            count: parser.leb128_usize().context("function section count")?,
-            parser,
-        })
-    }
-
-    fn try_clone(&self) -> Result<FunctionSection<I::Fork>> {
-        Ok(FunctionSection {
-            count: self.count,
-            parser: self.parser.fork()?,
-        })
+    #[inline]
+    pub fn new(input: Decoder<I>) -> Result<Self> {
+        Vector::new(input, Default::default()).map(Self::from)
     }
 }
 
-impl<I: Input> core::iter::Iterator for FunctionSection<I> {
+impl<I: Input> Iterator for FunctionSection<I> {
     type Item = Result<FuncIdx>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.count == 0 {
-            return None;
-        }
-
-        let result = self.parser.index().context("index in function section");
-        self.count -= 1;
-        Some(result)
-    }
-
     #[inline]
-    fn count(self) -> usize {
-        self.count
+    fn next(&mut self) -> Option<Self::Item> {
+        self.indices.next()
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.count, Some(self.count))
-    }
-}
-
-// count is correct, since errors are returned if there are too few elements
-impl<I: Input> core::iter::ExactSizeIterator for FunctionSection<I> {
-    fn len(&self) -> usize {
-        self.count
+        self.indices.size_hint()
     }
 }
 
 impl<I: Input> core::fmt::Debug for FunctionSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        crate::component::debug_section_contents(self.try_clone(), f)
+        crate::component::debug_section_contents(self.indices.try_clone(), f)
     }
 }

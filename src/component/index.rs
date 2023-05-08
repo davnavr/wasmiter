@@ -105,6 +105,14 @@ macro_rules! indices {
         impl Index for $name {
             const NAME: &'static str = $descriptor;
         }
+
+        impl parser::Parse for parser::SimpleParse<$name> {
+            type Output = $name;
+
+            fn parse<I: parser::input::Input>(&mut self, input: &mut parser::Decoder<I>) -> parser::Result<$name> {
+                input.index::<$name>()
+            }
+        }
     )*};
 }
 
