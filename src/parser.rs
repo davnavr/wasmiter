@@ -10,13 +10,13 @@ pub mod input;
 pub use decoder::Decoder;
 pub use error::{Context, Error, ErrorKind};
 pub use result_ext::ResultExt;
-pub use vector::Vector;
+pub use vector::Sequence;
 
 /// Result type used when parsing input.
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// Trait for parsing structures from bytes.
-pub trait Parser: Clone {
+/// Trait for parsers.
+pub trait Parse: Clone {
     /// The result of the parser.
     type Output;
 

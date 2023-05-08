@@ -1,87 +1,59 @@
-use crate::parser::{input::Input, Parser, Decoder, Result};
+use crate::parser::{input::Input, Decoder, Parse, Result};
 
 use super::ResultExt;
 
-/// Parses a sequence of elements prefixed by a `u32` length.
-pub struct Vector<I: Input, P: Parser> {
-    count: usize,
-    source: Decoder<I>,
+/// Parser for a sequence of elements.
+#[derive(Clone, Debug)]
+pub struct Sequence<P: Parse> {
+    count: u32,
     parser: P,
 }
 
-impl<I: Input, P: Parser> Vector<I, P> {
-    /// Uses the given [`Parser`] to decode a sequence of elements.
-    pub fn new(mut source: Decoder<I>, parser: P) -> Result<Self> {
-        Ok(Self {
-            count: source.leb128_usize().context("vector length")?,
-            source,
+impl<P: Parse> Sequence<P> {
+    /// Creates a new `Sequence` with the given `count`.
+    pub const fn new(count: u32, parser: P) -> Self {
+        Self {
+            count,
             parser,
-        })
-    }
-
-    fn fork(&self) -> Result<Vector<I::Fork, P>> {
-        Ok(Vector {
-            count: self.count,
-            source: self.source.fork()?,
-            parser: self.parser.clone(),
-        })
-    }
-}
-
-impl<I: Input> Decoder<I> {
-    /// Reads a [`Vector`] of elements.
-    ///
-    /// See [`Vector::new`] for more information.
-    pub fn vector<'a, P: Parser>(&'a mut self, parser: P) -> Result<Vector<&'a mut I, P>> {
-        Vector::new(self.by_ref(), parser)
-    }
-}
-
-impl<I: Input, P: Parser> Iterator for Vector<I, P> {
-    type Item = Result<P::Output>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.count == 0 {
-            return None;
         }
-
-        let mut output = self.parser.parse(&mut self.source);
-
-        self.count -= 1;
-
-        #[cfg(feature = "alloc")]
-        if output.is_err() {
-            output = output.context(alloc::format!("{} elements remain", self.count));
-        }
-
-        Some(output)
     }
 
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.count, Some(self.count))
-    }
-}
-
-impl<I: Input, P: Parser> ExactSizeIterator for Vector<I, P> {
-    #[inline]
-    fn len(&self) -> usize {
+    /// Gets the remaining number of elements in the sequence.
+    pub fn count(&self) -> u32 {
         self.count
     }
 }
 
-impl<I, P> core::fmt::Debug for Vector<I, P>
-where
-    I: Input,
-    P: Parser,
-    P::Output: core::fmt::Debug,
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        match self.fork() {
-            Ok(forked) => list.entries(forked),
-            Err(e) => list.entries(core::iter::once(Result::<()>::Err(e))),
+impl<P: Parse> Parse for Sequence<P> {
+    type Output = Option<P::Output>;
+
+    fn parse<I: Input>(&mut self, input: &mut Decoder<I>) -> Result<Self::Output> {
+        if self.count == 0 {
+            return Ok(None);
         }
-        .finish()
+
+        let result = self.parser.parse(input);
+
+        if result.is_ok() {
+            self.count -= 1;
+        } else {
+            self.count = 0;
+        }
+
+        result.map(Some)
+    }
+}
+
+impl<I: Input> Decoder<I> {
+    /// Parses a sequence of elements prefixed by a `u32` length.
+    pub fn vector<P: Parse, F: FnMut(P::Output) -> bool>(&mut self, parser: P, mut f: F) -> Result<()> {
+        let count = self.leb128_u32().context("vector length")?;
+        let mut sequence = Sequence::new(count, parser);
+        while let Some(item) = sequence.parse(self)? {
+            if !f(item) {
+                break;
+            }
+        }
+        Ok(())
     }
 }
