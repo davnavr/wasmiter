@@ -18,7 +18,7 @@ pub use vector::{Sequence, Vector};
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Trait for parsers.
-pub trait Parse: Clone {
+pub trait Parse {
     /// The result of the parser.
     type Output;
 

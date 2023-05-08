@@ -112,18 +112,10 @@ impl<I: Input, P: Parse> Iterator for Vector<I, P> {
     }
 }
 
-impl<I, P> core::fmt::Debug for Vector<I, P>
-where
-    I: Input,
-    P: Parse,
-    P::Output: core::fmt::Debug,
-{
+impl<I: Input, P: Parse> core::fmt::Debug for Vector<I, P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        match self.try_clone() {
-            Ok(fork) => list.entries(fork),
-            Err(e) => list.entries(core::iter::once(Result::<()>::Err(e))),
-        }
-        .finish()
+        f.debug_struct("Vector")
+            .field("count", &self.len())
+            .finish_non_exhaustive()
     }
 }
