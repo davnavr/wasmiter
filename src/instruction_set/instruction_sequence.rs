@@ -14,8 +14,8 @@ impl<I: Input> Decoder<I> {
             Opcode::Block => Instruction::Block(self.block_type()?),
             Opcode::Loop => Instruction::Loop(self.block_type().context("loop block type")?),
             Opcode::If => Instruction::If(self.block_type().context("if block type")?),
-            Opcode::Br => Instruction::Br(self.index().context("branch label")?),
-            Opcode::BrIf => Instruction::BrIf(self.index().context("conditional branch label")?),
+            Opcode::Br => Instruction::Br(self.index()?),
+            Opcode::BrIf => Instruction::BrIf(self.index()?),
             Opcode::BrTable => Instruction::BrTable(
                 Vector::new(self.by_ref(), Default::default()).context("branch table")?,
             ),
@@ -27,8 +27,13 @@ impl<I: Input> Decoder<I> {
             ),
             Opcode::Else => Instruction::Else,
             Opcode::End => Instruction::End,
+            Opcode::LocalGet => Instruction::LocalGet(self.index()?),
+            Opcode::LocalSet => Instruction::LocalSet(self.index()?),
+            Opcode::LocalTee => Instruction::LocalTee(self.index()?),
+            Opcode::GlobalGet => Instruction::GlobalGet(self.index()?),
+            Opcode::GlobalSet => Instruction::GlobalSet(self.index()?),
             _ => todo!("{opcode:?} not implemented"),
-        })
+        }) //.context() // the opcode name
     }
 }
 
@@ -78,7 +83,8 @@ impl<I: Input> InstructionSequence<I> {
     }
 
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
-    pub fn next<'a, F>(&'a mut self, f: F) -> Option<Result<()>> // TODO: Fix, caller can "replace" current instruction
+    pub fn next<'a, F>(&'a mut self, f: F) -> Option<Result<()>>
+    // TODO: Fix, caller can "replace" current instruction
     where
         F: FnOnce(&mut Instruction<&'a mut I>) -> Result<()>,
     {
@@ -113,12 +119,12 @@ impl<I: Input> InstructionSequence<I> {
         }
     }
 
-    fn try_clone(&self) -> Result<InstructionSequence<I::Fork>> {
-        Ok(InstructionSequence {
-            blocks: self.blocks,
-            parser: self.parser.fork()?,
-        })
-    }
+    // fn try_clone(&self) -> Result<InstructionSequence<I::Fork>> {
+    //     Ok(InstructionSequence {
+    //         blocks: self.blocks,
+    //         parser: self.parser.fork()?,
+    //     })
+    // }
 }
 
 impl<I: Input> core::fmt::Debug for InstructionSequence<I> {

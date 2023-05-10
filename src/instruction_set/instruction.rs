@@ -6,6 +6,7 @@ use crate::parser::{input::Input, Result, ResultExt, SimpleParse, Vector};
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Instruction<I: Input> {
+    // Control Instructions
     /// The
     /// [**nop**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// instruction does nothing.
@@ -69,6 +70,29 @@ pub enum Instruction<I: Input> {
     /// [expression](https://webassembly.github.io/spec/core/syntax/instructions.html#expressions)
     /// or a block.
     End,
+
+    // Variable Instructions
+    /// The
+    /// [**local.get**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
+    /// instruction loads the value of a local variable onto the stack.
+    LocalGet(LocalIdx),
+    /// The
+    /// [**local.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
+    /// instruction pops a value from the stack and stores it into a local variable.
+    LocalSet(LocalIdx),
+    /// The
+    /// [**local.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
+    /// instruction pops a value from the stack and stores it into a local variable, pushing the
+    /// previous value onto the stack.
+    LocalTee(LocalIdx),
+    /// The
+    /// [**global.get**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
+    /// instruction loads the value of a global variable onto the stack.
+    GlobalGet(component::GlobalIdx),
+    /// The
+    /// [**global.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
+    /// instruction pops a value from the stack and stores it into a global variable.
+    GlobalSet(LocalIdx),
 }
 
 impl<I: Input> Instruction<I> {
