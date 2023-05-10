@@ -1,11 +1,11 @@
-use crate::allocator::Allocator;
 use crate::component::{self, BlockType, LabelIdx, LocalIdx};
+use crate::parser::{input::Input, Result, ResultExt, SimpleParse, Vector};
 
 /// Represents a
 /// [WebAssembly instruction](https://webassembly.github.io/spec/core/syntax/instructions.html).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Debug)]
 #[non_exhaustive]
-pub enum Instruction<A: Allocator> {
+pub enum Instruction<I: Input> {
     /// The
     /// [**nop**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// instruction does nothing.
@@ -40,12 +40,12 @@ pub enum Instruction<A: Allocator> {
     BrIf(LabelIdx),
     /// The
     /// [**br_table**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
-    /// instruction performs an indirect branch, with the target being determined by an index.
-    #[allow(missing_docs)]
-    BrTable {
-        targets: A::Vec<LabelIdx>, // Have parser instead? No allocations?
-        default_target: LabelIdx,
-    },
+    /// instruction performs an indirect branch, with the target being determined by an index into
+    /// a table of labels.
+    ///
+    /// The table of labels is encoded as a [`Vector`] containing **at least one** [`LabelIdx`],
+    /// with the last label specifies the default target.
+    BrTable(Vector<I, SimpleParse<LabelIdx>>),
     /// The
     /// [**return**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// instruction transfers control flow back to the calling function.
@@ -69,4 +69,14 @@ pub enum Instruction<A: Allocator> {
     /// [expression](https://webassembly.github.io/spec/core/syntax/instructions.html#expressions)
     /// or a block.
     End,
+}
+
+impl<I: Input> Instruction<I> {
+    /// Completely parses the [`Instruction`] and any of its required arguments.
+    pub fn finish(self) -> Result<()> {
+        match self {
+            Self::BrTable(indices) => indices.finish().context("branch label table"),
+            _ => Ok(()),
+        }
+    }
 }
