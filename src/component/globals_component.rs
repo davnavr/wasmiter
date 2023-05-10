@@ -31,6 +31,8 @@ impl<I: Input> GlobalsComponent<I> {
         Ok(result)
     }
 
+    /// Parses a
+    /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
     pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&mut I>) -> Result<T>,
@@ -50,12 +52,12 @@ impl<I: Input> GlobalsComponent<I> {
         result.map(Some)
     }
 
-    fn try_clone(&self) -> Result<GlobalsComponent<I::Fork>> {
-        Ok(GlobalsComponent {
-            count: self.count,
-            decoder: self.decoder.fork()?,
-        })
-    }
+    // fn try_clone(&self) -> Result<GlobalsComponent<I::Fork>> {
+    //     Ok(GlobalsComponent {
+    //         count: self.count,
+    //         decoder: self.decoder.fork()?,
+    //     })
+    // }
 }
 
 impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
