@@ -16,8 +16,15 @@ impl<P: Parse> Sequence<P> {
     }
 
     /// Gets the remaining number of elements in the sequence.
+    #[inline]
     pub fn len(&self) -> u32 {
         self.count
+    }
+
+    /// Returns a value indicating if sequence of elements is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Parses the remaining elements in the sequence, discarding the results.
@@ -85,6 +92,12 @@ impl<I: Input, P: Parse> Vector<I, P> {
     #[inline]
     pub fn len(&self) -> u32 {
         self.sequence.len()
+    }
+
+    /// Returns a value indicating if the vector does not have any elements.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.sequence.is_empty()
     }
 
     /// Parses the remaining elements in the vector, discarding the results.

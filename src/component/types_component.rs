@@ -31,6 +31,12 @@ impl<I: Input> TypesComponent<I> {
         self.count
     }
 
+    /// Returns a value indicating if the type section is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Gets the next function type in the section. Returns `Ok(true)` if a type was parsed; or
     /// `Ok(false)` if there are no more types remaining.
     #[inline]

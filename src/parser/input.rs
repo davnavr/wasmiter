@@ -14,7 +14,7 @@ macro_rules! const_input_error {
     ($kind:expr, $message:literal) => {{
         const ERROR: &$crate::parser::input::error::ConstantError =
             &$crate::parser::input::error::ConstantError::new($kind, $message);
-        crate::parser::input::Error::from_const(ERROR)
+        $crate::parser::input::Error::from_const(ERROR)
     }};
 }
 
@@ -146,7 +146,7 @@ impl<I: Input> Input for &mut I {
 
     #[inline]
     fn fork(&self) -> Result<Self::Fork> {
-        I::fork(&self)
+        I::fork(self)
     }
 
     #[inline]
