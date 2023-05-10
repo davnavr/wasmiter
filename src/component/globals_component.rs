@@ -1,20 +1,6 @@
 use crate::component::GlobalType;
+use crate::instruction_set::InstructionSequence;
 use crate::parser::{input::Input, Decoder, Result, ResultExt};
-
-/// Represents a
-/// [WebAssembly global](https://webassembly.github.io/spec/core/syntax/modules.html#globals).
-#[derive(Debug)]
-pub struct Global {
-    r#type: GlobalType,
-    //expression: Expression<I>,
-}
-
-impl Global {
-    /// Gets the type of the value stored in the global.
-    pub fn value_type(&self) -> &GlobalType {
-        &self.r#type
-    }
-}
 
 /// Represents the
 /// [**globals** component](https://webassembly.github.io/spec/core/syntax/modules.html#globals) of
@@ -22,60 +8,58 @@ impl Global {
 /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
 pub struct GlobalsComponent<I: Input> {
     count: usize,
-    parser: Decoder<I>,
+    decoder: Decoder<I>,
 }
 
 impl<I: Input> GlobalsComponent<I> {
     /// Uses the given [`Decoder<I>`] to read the contents of the *global section* of a module.
-    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
+    pub fn new(mut decoder: Decoder<I>) -> Result<Self> {
         Ok(Self {
-            count: parser.leb128_usize().context("global section count")?,
-            parser,
+            count: decoder.leb128_usize().context("global section count")?,
+            decoder,
         })
+    }
+
+    fn next_inner<T, F>(&mut self, f: F) -> Result<T>
+    where
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut I>) -> Result<T>,
+    {
+        let global_type = self.decoder.global_type()?;
+        let mut expression = InstructionSequence::new(self.decoder.by_ref());
+        let result = f(global_type, &mut expression).context("global expression")?;
+        expression.finish().context("global expression")?;
+        Ok(result)
+    }
+
+    pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
+    where
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut I>) -> Result<T>,
+    {
+        if self.count == 0 {
+            return Ok(None);
+        }
+
+        let result = self.next_inner(f);
+
+        if result.is_ok() {
+            self.count -= 1;
+        } else {
+            self.count = 0;
+        }
+
+        result.map(Some)
     }
 
     fn try_clone(&self) -> Result<GlobalsComponent<I::Fork>> {
         Ok(GlobalsComponent {
             count: self.count,
-            parser: self.parser.fork()?,
+            decoder: self.decoder.fork()?,
         })
-    }
-}
-
-impl<I: Input> core::iter::Iterator for GlobalsComponent<I> {
-    type Item = Result<Global>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.count == 0 {
-            return None;
-        }
-
-        let global = todo!("parse expr");
-
-        self.count -= 1;
-        Some(global)
-    }
-
-    #[inline]
-    fn count(self) -> usize {
-        self.count
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.count, Some(self.count))
-    }
-}
-
-// count is correct, since errors are returned if there are too few elements
-impl<I: Input> core::iter::ExactSizeIterator for GlobalsComponent<I> {
-    fn len(&self) -> usize {
-        self.count
     }
 }
 
 impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        crate::component::debug_section_contents(self.try_clone(), f)
+        f.debug_struct("GlobalsComponent").finish_non_exhaustive()
     }
 }
