@@ -60,7 +60,9 @@ impl<B: Bytes> Reader<B> {
 
     #[inline]
     fn advance(&mut self, amount: usize) -> Result<()> {
-        let new_offset = u64::try_from(amount).ok().and_then(|amt| self.offset.checked_add(amt));
+        let new_offset = u64::try_from(amount)
+            .ok()
+            .and_then(|amt| self.offset.checked_add(amt));
         self.offset = new_offset.unwrap_or(u64::MAX);
         if new_offset.is_some() {
             Ok(())
@@ -113,10 +115,10 @@ impl<B: Bytes> std::io::Seek for Reader<B> {
             std::io::SeekFrom::Start(offset) => {
                 self.offset = offset;
                 Ok(offset)
-            },
+            }
             std::io::SeekFrom::Current(amount) => {
                 todo!("from current u64 + i64")
-            },
+            }
             std::io::SeekFrom::End(amount) => {
                 //self.bytes.length_at(0)
                 todo!("from end u64 - i64")

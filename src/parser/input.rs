@@ -3,8 +3,12 @@
 mod error;
 mod reader;
 
+#[cfg(feature = "std")]
+mod shared_bytes;
+
 pub use error::{Error, ErrorKind};
 pub use reader::Reader;
+pub use shared_bytes::{SharedBytes, SharedInput};
 
 mod cursor;
 mod window;
@@ -202,7 +206,7 @@ impl<const N: usize> IntoInput for [u8; N] {
 /// This trait is essentially a version of the
 /// [`std::io::Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits, but with methods
 /// modified to accept buffers to write bytes into.
-pub trait Bytes: Clone {
+pub trait Bytes {
     /// Reads bytes starting at the given `offset`, copying them into the `buffer`. Returns the
     /// portion of the `buffer` that was actually copied to.
     ///
