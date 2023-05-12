@@ -1,22 +1,16 @@
 //! Traits and type definitions for reading bytes from a source.
 
-mod cursor;
 mod error;
+mod reader;
+
+pub use error::{Error, ErrorKind};
+pub use reader::Reader;
+
+mod cursor;
 mod window;
 
 pub use cursor::Cursor;
-pub use error::{Error, ErrorKind};
 pub use window::Window;
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! const_input_error {
-    ($kind:expr, $message:literal) => {{
-        const ERROR: &$crate::parser::input::error::ConstantError =
-            &$crate::parser::input::error::ConstantError::new($kind, $message);
-        $crate::parser::input::Error::from_const(ERROR)
-    }};
-}
 
 /// Result type used when an operation with an [`Input`] fails.
 ///
@@ -95,7 +89,7 @@ pub trait Input {
         let amount = self.take(buffer)?;
 
         if amount != buffer.len() {
-            return Err(const_input_error!(
+            return Err(crate::const_input_error!(
                 ErrorKind::UnexpectedEof,
                 "buffer could not be completely filled"
             ));
@@ -208,7 +202,7 @@ impl<const N: usize> IntoInput for [u8; N] {
 /// This trait is essentially a version of the
 /// [`std::io::Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits, but with methods
 /// modified to accept buffers to write bytes into.
-pub trait Bytes {
+pub trait Bytes: Clone {
     /// Reads bytes starting at the given `offset`, copying them into the `buffer`. Returns the
     /// portion of the `buffer` that was actually copied to.
     ///
@@ -244,7 +238,7 @@ pub trait Bytes {
         let copied = self.read_at(offset, buffer)?;
 
         if copied.len() != buffer_length {
-            return Err(const_input_error!(
+            return Err(crate::const_input_error!(
                 ErrorKind::UnexpectedEof,
                 "buffer could not be completely filled"
             ));

@@ -77,6 +77,16 @@ impl Error {
     }
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! const_input_error {
+    ($kind:expr, $message:literal) => {{
+        const ERROR: &$crate::parser::input::error::ConstantError =
+            &$crate::parser::input::error::ConstantError::new($kind, $message);
+        $crate::parser::input::Error::from_const(ERROR)
+    }};
+}
+
 #[cfg(feature = "std")]
 impl From<std::io::Error> for Error {
     #[inline]
