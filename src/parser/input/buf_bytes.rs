@@ -10,8 +10,9 @@ struct Cache<U> {
 ///
 /// Certain [`Bytes`] implementations such as
 /// [`SharedBytes<I>`](crate::parser::input::SharedBytes) can have poor performance when used
-/// without buffering, such as in the case of [`std::io::File`] where many syscalls can occur even
-/// if reads occur that would
+/// without buffering, such as in the case of
+/// [`std::fs::File`](https://doc.rust-lang.org/std/fs/struct.File.html) where many syscalls can
+/// occur even if reads occur that would
 /// [normally not benefit from buffering](https://doc.rust-lang.org/std/io/struct.BufWriter.html).
 pub struct BufBytes<U: AsMut<[u8]>, B: Bytes> {
     cache: core::cell::RefCell<Cache<U>>,
