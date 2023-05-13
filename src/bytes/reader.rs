@@ -1,14 +1,8 @@
-use crate::bytes::{offset_overflowed, Bytes, Error, ErrorKind, Result};
+use crate::bytes::Bytes;
 
-/// A cursor used to read from [`Bytes`].
-///
-/// This is essentially an equivalent to
-/// [`std::io::Cursor`](https://doc.rust-lang.org/std/io/struct.Cursor.html).
-///
-/// If the `std` feature is enabled, then
+/// Wraps an instance of [`Bytes`] to provide a
 /// [`std::io::Read`](https://doc.rust-lang.org/std/io/trait.Read.html) and
-/// [`std::io::Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) implementations are also
-/// provided.
+/// [`std::io::Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) implementation.
 #[derive(Clone, Copy, Debug)]
 pub struct Reader<B: Bytes> {
     offset: u64,
@@ -51,34 +45,6 @@ impl<B: Bytes> Reader<B> {
     pub fn as_bytes(&self) -> &B {
         &self.bytes
     }
-
-    #[inline]
-    fn advance(&mut self, amount: usize) -> Result<()> {
-        let new_offset = u64::try_from(amount)
-            .ok()
-            .and_then(|amt| self.offset.checked_add(amt));
-        self.offset = new_offset.unwrap_or(u64::MAX);
-        if new_offset.is_some() {
-            Ok(())
-        } else {
-            Err(offset_overflowed())
-        }
-    }
-
-    /// Reads bytes and copies them into a `buffer`, advancing the cursor.
-    pub fn read<'b>(&mut self, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        let result = self.bytes.read_at(self.offset, buffer);
-        if let Ok(slice) = &result {
-            self.advance(slice.len())?;
-        }
-        result
-    }
-
-    /// Reads an exact number of bytes and copies them into a `buffer`, advancing the cursor.
-    pub fn read_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
-        self.bytes.read_at_exact(self.offset, buffer)?;
-        self.advance(buffer.len())
-    }
 }
 
 impl<B: Bytes> From<B> for Reader<B> {
@@ -88,21 +54,20 @@ impl<B: Bytes> From<B> for Reader<B> {
     }
 }
 
-#[cfg(feature = "std")]
 impl<B: Bytes> std::io::Read for Reader<B> {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let slice = self.read(buf)?;
-        Ok(slice.len())
+        Ok(self.bytes.read(buf, &mut self.offset)?.len())
     }
 
     #[inline]
     fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
-        self.read_exact(buf).map_err(Into::into)
+        self.bytes
+            .read_exact(buf, &mut self.offset)
+            .map_err(Into::into)
     }
 }
 
-#[cfg(feature = "std")]
 impl<B: Bytes> std::io::Seek for Reader<B> {
     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
         match pos {

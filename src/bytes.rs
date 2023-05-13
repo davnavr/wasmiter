@@ -2,17 +2,21 @@
 
 mod buf_bytes;
 mod error;
-mod reader;
 mod window;
 
+#[cfg(feature = "std")]
+mod reader;
 #[cfg(feature = "std")]
 mod shared_bytes;
 
 pub use buf_bytes::BufBytes;
 pub use error::{Error, ErrorKind};
-pub use reader::Reader;
-pub use shared_bytes::{SharedBytes, SharedInput};
 pub use window::Window;
+
+#[cfg(feature = "std")]
+pub use reader::Reader;
+#[cfg(feature = "std")]
+pub use shared_bytes::{SharedBytes, SharedInput};
 
 /// Result type used when an operation with an [`Input`] fails.
 ///
