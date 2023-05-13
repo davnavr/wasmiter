@@ -1,4 +1,4 @@
-use crate::parser::input::{self, Input};
+use crate::parser::input::{self, Bytes, Reader};
 use crate::parser::{Error, Result, ResultExt};
 
 #[macro_export]
@@ -102,33 +102,21 @@ impl IntegerEncoding for i64 {
 
 impl SignedInteger for i64 {}
 
-/// Decodes input from a stream of bytes.
-#[derive(Debug)]
-pub struct Decoder<I: Input> {
-    input: I,
+/// Wraps a [`Reader`] to parse structures from a source.
+#[derive(Clone, Copy, Debug)]
+pub struct Decoder<B: Bytes> {
+    reader: Reader<B>,
 }
 
-impl<I: Input> Decoder<I> {
-    /// Creates a new [`Decoder`] with the specified [`Input`].
-    pub fn new<S: input::IntoInput<In = I>>(input: S) -> Self {
-        Self {
-            input: input.into_input(),
-        }
+impl<B: Bytes> Decoder<B> {
+    /// Creates a new [`Decoder`] with the specified [`Reader`].
+    pub fn new(reader: Reader<B>) -> Self {
+        Self { reader }
     }
 
-    #[inline]
-    pub(crate) fn fork(&self) -> Result<Decoder<I::Fork>> {
-        Ok(Decoder::new(self.input.fork()?))
-    }
-
-    #[inline]
-    pub(crate) fn by_ref(&mut self) -> Decoder<&mut I> {
-        Decoder::new(&mut self.input)
-    }
-
-    #[inline]
-    pub(crate) fn windowed(&mut self, length: u64) -> Result<Decoder<input::Window<I::Fork>>> {
-        Ok(Decoder::new(self.input.windowed(length)?))
+    /// Creates a new [`Decoder`] to parse structures from the specified [`Bytes`].
+    pub fn from_bytes(bytes: B) -> Self {
+        Self::new(Reader::new(bytes))
     }
 
     #[inline]
@@ -324,9 +312,9 @@ impl<I: Input> Decoder<I> {
 
     /// Parses an UTF-8 string
     /// [name](https://webassembly.github.io/spec/core/binary/values.html#names).
-    pub fn name<'b, B: crate::allocator::Buffer>(
+    pub fn name<'b, U: crate::allocator::Buffer>(
         &mut self,
-        buffer: &'b mut B,
+        buffer: &'b mut U,
     ) -> Result<&'b mut str> {
         let length = self.leb128_usize().context("string length")?;
         buffer.clear();

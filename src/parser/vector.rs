@@ -1,4 +1,4 @@
-use crate::parser::{input::Input, Decoder, Parse, Result};
+use crate::parser::{input::Bytes, Decoder, Parse, Result};
 
 use super::ResultExt;
 
@@ -28,7 +28,7 @@ impl<P: Parse> Sequence<P> {
     }
 
     /// Parses the remaining elements in the sequence, discarding the results.
-    pub fn finish<I: Input>(mut self, input: &mut Decoder<I>) -> Result<()> {
+    pub fn finish<B: Bytes>(mut self, input: &mut Decoder<B>) -> Result<()> {
         while self.parse(input)?.is_some() {}
         Ok(())
     }
@@ -37,7 +37,7 @@ impl<P: Parse> Sequence<P> {
 impl<P: Parse> Parse for Sequence<P> {
     type Output = Option<P::Output>;
 
-    fn parse<I: Input>(&mut self, input: &mut Decoder<I>) -> Result<Self::Output> {
+    fn parse<B: Bytes>(&mut self, input: &mut Decoder<B>) -> Result<Self::Output> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -54,7 +54,7 @@ impl<P: Parse> Parse for Sequence<P> {
     }
 }
 
-impl<I: Input> Decoder<I> {
+impl<B: Bytes> Decoder<B> {
     /// Parses a sequence of elements prefixed by a `u32` length.
     pub fn vector<P: Parse, F: FnMut(P::Output) -> bool>(
         &mut self,
@@ -73,14 +73,15 @@ impl<I: Input> Decoder<I> {
 }
 
 /// Represents a sequence of elements prefixed by a `u32` count.
-pub struct Vector<I: Input, P: Parse> {
-    decoder: Decoder<I>,
+#[derive(Clone)]
+pub struct Vector<B: Bytes, P: Parse> {
+    decoder: Decoder<B>,
     sequence: Sequence<P>,
 }
 
-impl<I: Input, P: Parse> Vector<I, P> {
+impl<B: Bytes, P: Parse> Vector<B, P> {
     /// Creates a new [`Vector`] from the given `input`.
-    pub fn new(mut input: Decoder<I>, parser: P) -> Result<Self> {
+    pub fn new(mut input: Decoder<B>, parser: P) -> Result<Self> {
         let count = input.leb128_u32().context("vector element count")?;
         Ok(Self {
             decoder: input,
@@ -106,16 +107,7 @@ impl<I: Input, P: Parse> Vector<I, P> {
     }
 }
 
-impl<I: Input, P: Parse + Clone> Vector<I, P> {
-    pub(crate) fn try_clone(&self) -> Result<Vector<I::Fork, P>> {
-        Ok(Vector {
-            decoder: self.decoder.fork()?,
-            sequence: self.sequence.clone(),
-        })
-    }
-}
-
-impl<I: Input, P: Parse> Iterator for Vector<I, P> {
+impl<B: Bytes, P: Parse> Iterator for Vector<B, P> {
     type Item = Result<P::Output>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -130,11 +122,8 @@ impl<I: Input, P: Parse> Iterator for Vector<I, P> {
     }
 }
 
-impl<I: Input, P: Parse> core::fmt::Debug for Vector<I, P> {
+impl<B: Bytes + Clone, P: Parse + Clone> core::fmt::Debug for Vector<B, P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        return f
-            .debug_struct("Vector")
-            .field("count", &self.len())
-            .finish_non_exhaustive();
+        f.debug_list().entries(&self.clone()).finish()
     }
 }

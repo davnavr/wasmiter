@@ -81,9 +81,10 @@ impl Error {
 #[macro_export]
 macro_rules! const_input_error {
     ($kind:expr, $message:literal) => {{
-        const ERROR: &$crate::parser::input::error::ConstantError =
-            &$crate::parser::input::error::ConstantError::new($kind, $message);
-        $crate::parser::input::Error::from_const(ERROR)
+        const ERROR: &$crate::bytes::error::ConstantError =
+            &$crate::bytes::error::ConstantError::new($kind, $message);
+
+        $crate::bytes::Error::from_const(ERROR)
     }};
 }
 

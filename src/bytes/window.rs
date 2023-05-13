@@ -1,4 +1,4 @@
-use crate::parser::input::{Bytes, ErrorKind, Result};
+use crate::bytes::{Bytes, Result};
 
 /// Adapts a [`Bytes`] implementation to limit the amount of bytes that can be read to a specific
 /// range.

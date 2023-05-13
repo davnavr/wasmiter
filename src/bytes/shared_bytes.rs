@@ -1,4 +1,4 @@
-use crate::parser::input::{Bytes, Result};
+use crate::bytes::{Bytes, Result};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::sync::Mutex;

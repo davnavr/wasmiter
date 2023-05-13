@@ -15,15 +15,16 @@ pub mod component;
 pub mod instruction_set;
 pub mod parser;
 
+mod bytes;
 mod sections;
 
 pub use sections::{Section, SectionId, SectionKind, SectionSequence};
 
 pub(crate) use sections::section_id;
 
-use parser::{input, Error, Result, ResultExt as _};
+use parser::{Error, Result, ResultExt as _};
 
-fn parse_module_preamble<I: input::Input>(parser: &mut parser::Decoder<I>) -> Result<()> {
+fn parse_module_preamble<B: bytes::Bytes>(parser: &mut parser::Decoder<B>) -> Result<()> {
     const MAGIC: [u8; 4] = *b"\0asm";
     const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
@@ -47,33 +48,25 @@ fn parse_module_preamble<I: input::Input>(parser: &mut parser::Decoder<I>) -> Re
     Ok(())
 }
 
-fn parse_module_binary<I: input::Input, A: allocator::Allocator>(
-    binary: I,
+/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html)
+/// with the given [`Allocator`](allocator::Allocator), returning the sequence of sections.
+pub fn parse_module_sections_with_allocator<B: bytes::Bytes + Clone, A: allocator::Allocator>(
+    binary: B,
     allocator: A,
-) -> Result<SectionSequence<I, A>> {
+) -> Result<SectionSequence<B, A>> {
     let mut parser = parser::Decoder::new(binary);
     parse_module_preamble(&mut parser)?;
     Ok(SectionSequence::new_with_allocator(parser, allocator))
-}
-
-/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html)
-/// with the given [`Allocator`](allocator::Allocator), returning the sequence of sections.
-#[inline]
-pub fn parse_module_sections_with_allocator<I: input::IntoInput, A: allocator::Allocator>(
-    binary: I,
-    allocator: A,
-) -> Result<SectionSequence<I::In, A>> {
-    parse_module_binary(binary.into_input(), allocator)
 }
 
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
 #[inline]
 #[cfg(feature = "alloc")]
-pub fn parse_module_sections<I: input::IntoInput>(
-    binary: I,
-) -> Result<SectionSequence<I::In, allocator::Global>> {
-    parse_module_binary(binary.into_input(), Default::default())
+pub fn parse_module_sections<B: bytes::Bytes + Clone>(
+    binary: B,
+) -> Result<SectionSequence<B, allocator::Global>> {
+    parse_module_sections_with_allocator(binary, Default::default())
 }
 
 /*

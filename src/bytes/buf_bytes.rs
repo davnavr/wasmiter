@@ -1,4 +1,4 @@
-use crate::parser::input::{Bytes, Result};
+use crate::bytes::{Bytes, Result};
 
 struct Cache<U> {
     /// Buffered bytes, where `buffer[0]` refers to the byte at `cached_range.start`.

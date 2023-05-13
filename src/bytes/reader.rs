@@ -1,4 +1,4 @@
-use crate::parser::input::{Bytes, Error, ErrorKind, Result};
+use crate::bytes::{Bytes, Error, ErrorKind, Result};
 
 #[cold]
 #[inline(never)]
