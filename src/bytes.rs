@@ -20,6 +20,22 @@ pub use window::Window;
 /// [`std::io::Result`](https://doc.rust-lang.org/std/io/type.Result.html).
 pub type Result<T> = core::result::Result<T, Error>;
 
+#[cold]
+#[inline(never)]
+fn offset_overflowed() -> Error {
+    crate::const_input_error!(ErrorKind::UnexpectedEof, "reader offset overflowed")
+}
+
+#[inline]
+fn increment_offset(offset: &mut u64, amount: usize) -> Result<()> {
+    *offset = u64::try_from(amount)
+        .ok()
+        .and_then(|length| offset.checked_add(length))
+        .ok_or_else(offset_overflowed)?;
+
+    Ok(())
+}
+
 /// Trait for reading bytes at specific locations from a source.
 ///
 /// This trait is essentially a version of the
@@ -49,13 +65,14 @@ pub trait Bytes {
     /// The length could not be calculated for some reason, such as an I/O error.
     fn length_at(&self, offset: u64) -> Result<u64>;
 
-    /// Reads the bytes starting at the given `offset`, and copies them into the `buffer`.
+    /// Reads an exact number of bytes starting at the given `offset`, and copies them into the
+    /// `buffer`.
     ///
     /// See the documentation for [`read_at`](Bytes::read_at) for more information.
     ///
     /// # Errors
     ///
-    /// If the `buffer` is not completely filled, an error is returned.
+    /// If the `buffer` is not completely filled or the read failed, an error is returned.
     fn read_at_exact(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
         let buffer_length = buffer.len();
         let copied = self.read_at(offset, buffer)?;
@@ -75,6 +92,35 @@ pub trait Bytes {
     #[inline]
     fn by_ref(&self) -> &Self {
         self
+    }
+
+    /// Reads bytes starting at the given `offset`, copying them into the `buffer`, and then
+    /// advances the `offset` by the number of bytes that were read.
+    ///
+    /// See the documentation for [`read_at`](Bytes::read_at) for more information.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the read failed, or if the `offset` would overflow.
+    fn read<'b>(&self, offset: &mut u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+        let output = self.read_at(*offset, buffer)?;
+        increment_offset(offset, output.len())?;
+        Ok(output)
+    }
+
+    /// Reads an exact number of bytes starting at the given `offset`, copying them into the
+    /// `buffer`, and then advances the `offset` by the number of bytes that were read.
+    ///
+    /// See the documentation for [`read_exact_at`](Bytes::read_exact_at) for more information.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the read failed, the `offset` would overflow, or if the `buffer` was
+    /// not completely filled.
+    #[inline]
+    fn read_exact(&self, offset: &mut u64, buffer: &mut [u8]) -> Result<()> {
+        self.read_at_exact(*offset, buffer)?;
+        increment_offset(offset, buffer.len())
     }
 }
 

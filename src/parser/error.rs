@@ -1,4 +1,4 @@
-use crate::parser::input;
+use crate::bytes;
 use core::fmt::{Debug, Display, Formatter};
 
 #[cfg(feature = "backtrace")]
@@ -11,9 +11,8 @@ use alloc::{borrow::Cow, string::String};
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// An I/O error occured or an attempt to retrieve bytes from the [`Input`](input::Input)
-    /// failed.
-    BadInput(input::Error),
+    /// An I/O error occured or an attempt to read [`Bytes`](bytes::Bytes) failed.
+    BadInput(bytes::Error),
     /// The input is malformed.
     InvalidFormat,
 }
@@ -27,8 +26,8 @@ impl Display for ErrorKind {
     }
 }
 
-impl From<input::Error> for ErrorKind {
-    fn from(error: input::Error) -> Self {
+impl From<bytes::Error> for ErrorKind {
+    fn from(error: bytes::Error) -> Self {
         Self::BadInput(error)
     }
 }
@@ -161,9 +160,9 @@ impl Error {
     }
 }
 
-impl From<input::Error> for Error {
+impl From<bytes::Error> for Error {
     #[inline]
-    fn from(error: input::Error) -> Self {
+    fn from(error: bytes::Error) -> Self {
         Self::new(ErrorKind::from(error))
     }
 }

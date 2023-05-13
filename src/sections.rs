@@ -1,12 +1,12 @@
 use crate::allocator::{Allocator, OwnOrRef};
-use crate::parser::input::{Input, Window};
+use crate::bytes::{Bytes, Window};
 use crate::parser::{Decoder, Result, ResultExt};
 
 mod section_kind;
 
 pub use section_kind::{SectionId, SectionKind};
 
-pub(crate) use section_kind::section_id;
+pub(crate) use section_kind::section_id as id;
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).

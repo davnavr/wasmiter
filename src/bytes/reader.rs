@@ -1,10 +1,4 @@
-use crate::bytes::{Bytes, Error, ErrorKind, Result};
-
-#[cold]
-#[inline(never)]
-fn offset_overflowed() -> Error {
-    crate::const_input_error!(ErrorKind::UnexpectedEof, "reader offset overflowed")
-}
+use crate::bytes::{offset_overflowed, Bytes, Error, ErrorKind, Result};
 
 /// A cursor used to read from [`Bytes`].
 ///
