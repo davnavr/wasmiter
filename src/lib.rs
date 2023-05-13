@@ -11,11 +11,11 @@
 extern crate alloc;
 
 pub mod allocator;
+pub mod bytes;
 pub mod component;
 pub mod instruction_set;
 pub mod parser;
 
-mod bytes;
 mod sections;
 
 pub use sections::{Section, SectionId, SectionKind, SectionSequence};

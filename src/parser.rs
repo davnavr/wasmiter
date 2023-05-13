@@ -6,8 +6,6 @@ mod result_ext;
 mod simple_parse;
 mod vector;
 
-pub use crate::bytes;
-
 pub use decoder::Decoder;
 pub use error::{Context, Error, ErrorKind};
 pub use result_ext::ResultExt;
@@ -23,5 +21,5 @@ pub trait Parse {
     type Output;
 
     /// Parses the given input.
-    fn parse<B: bytes::Bytes>(&mut self, input: &mut Decoder<B>) -> Result<Self::Output>;
+    fn parse<B: crate::bytes::Bytes>(&mut self, input: &mut Decoder<B>) -> Result<Self::Output>;
 }
