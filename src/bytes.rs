@@ -26,7 +26,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[cold]
 #[inline(never)]
-fn offset_overflowed() -> Error {
+pub(crate) fn offset_overflowed() -> Error {
     crate::const_input_error!(ErrorKind::UnexpectedEof, "reader offset overflowed")
 }
 
