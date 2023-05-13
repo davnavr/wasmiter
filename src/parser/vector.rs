@@ -1,9 +1,9 @@
-use crate::parser::{input::Bytes, Decoder, Parse, Result};
-
-use super::ResultExt;
+use crate::bytes::Bytes;
+use crate::parser::{self, Offset, Parse, Result, ResultExt};
 
 /// Parser for a sequence of elements.
 #[derive(Clone, Debug, Default)]
+#[must_use]
 pub struct Sequence<P: Parse> {
     count: u32,
     parser: P,
@@ -28,8 +28,8 @@ impl<P: Parse> Sequence<P> {
     }
 
     /// Parses the remaining elements in the sequence, discarding the results.
-    pub fn finish<B: Bytes>(mut self, input: &mut Decoder<B>) -> Result<()> {
-        while self.parse(input)?.is_some() {}
+    pub fn finish<B: Bytes>(mut self, offset: &mut u64, bytes: B) -> Result<()> {
+        while self.parse(offset, bytes)?.is_some() {}
         Ok(())
     }
 }
@@ -37,12 +37,12 @@ impl<P: Parse> Sequence<P> {
 impl<P: Parse> Parse for Sequence<P> {
     type Output = Option<P::Output>;
 
-    fn parse<B: Bytes>(&mut self, input: &mut Decoder<B>) -> Result<Self::Output> {
+    fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> Result<Self::Output> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        let result = self.parser.parse(input);
+        let result = self.parser.parse(offset, bytes);
 
         if result.is_ok() {
             self.count -= 1;
@@ -54,37 +54,21 @@ impl<P: Parse> Parse for Sequence<P> {
     }
 }
 
-impl<B: Bytes> Decoder<B> {
-    /// Parses a sequence of elements prefixed by a `u32` length.
-    pub fn vector<P: Parse, F: FnMut(P::Output) -> bool>(
-        &mut self,
-        parser: P,
-        mut f: F,
-    ) -> Result<()> {
-        let count = self.leb128_u32().context("vector length")?;
-        let mut sequence = Sequence::new(count, parser);
-        while let Some(item) = sequence.parse(self)? {
-            if !f(item) {
-                break;
-            }
-        }
-        Ok(())
-    }
-}
-
 /// Represents a sequence of elements prefixed by a `u32` count.
 #[derive(Clone)]
-pub struct Vector<B: Bytes, P: Parse> {
-    decoder: Decoder<B>,
+pub struct Vector<O: Offset, B: Bytes, P: Parse> {
+    offset: O,
+    bytes: B,
     sequence: Sequence<P>,
 }
 
-impl<B: Bytes, P: Parse> Vector<B, P> {
-    /// Creates a new [`Vector`] from the given `input`.
-    pub fn new(mut input: Decoder<B>, parser: P) -> Result<Self> {
-        let count = input.leb128_u32().context("vector element count")?;
+impl<O: Offset, B: Bytes, P: Parse> Vector<O, B, P> {
+    /// Creates a new [`Vector`] from the given [`Bytes`].
+    pub fn new(mut offset: O, bytes: B, parser: P) -> Result<Self> {
+        let count = parser::leb128::u32(offset.offset(), bytes).context("vector element count")?;
         Ok(Self {
-            decoder: input,
+            offset,
+            bytes,
             sequence: Sequence::new(count, parser),
         })
     }
@@ -102,16 +86,19 @@ impl<B: Bytes, P: Parse> Vector<B, P> {
     }
 
     /// Parses the remaining elements in the vector, discarding the results.
-    pub fn finish(mut self) -> Result<()> {
-        self.sequence.finish(&mut self.decoder)
+    pub fn finish(mut self) -> Result<O> {
+        self.sequence.finish(self.offset.offset(), self.bytes)?;
+        Ok(self.offset)
     }
 }
 
-impl<B: Bytes, P: Parse> Iterator for Vector<B, P> {
+impl<O: Offset, B: Bytes, P: Parse> Iterator for Vector<O, B, P> {
     type Item = Result<P::Output>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.sequence.parse(&mut self.decoder).transpose()
+        self.sequence
+            .parse(self.offset.offset(), self.bytes)
+            .transpose()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -122,8 +109,31 @@ impl<B: Bytes, P: Parse> Iterator for Vector<B, P> {
     }
 }
 
-impl<B: Bytes + Clone, P: Parse + Clone> core::fmt::Debug for Vector<B, P> {
+impl<O, B, P> core::fmt::Debug for Vector<O, B, P>
+where
+    O: Offset + Clone,
+    B: Bytes + Clone,
+    P: Parse + Clone,
+    P::Output: core::fmt::Debug,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(&self.clone()).finish()
+        f.debug_list().entries(self.clone()).finish()
     }
+}
+
+/// Parses a sequence of elements prefixed by a `u32` length.
+pub fn vector<P: Parse, B: Bytes, F: FnMut(P::Output) -> bool>(
+    offset: &mut u64,
+    bytes: B,
+    parser: P,
+    mut f: F,
+) -> Result<()> {
+    let count = parser::leb128::u32(offset, bytes).context("vector length")?;
+    let mut sequence = Sequence::new(count, parser);
+    while let Some(item) = sequence.parse(offset, bytes)? {
+        if !f(item) {
+            break;
+        }
+    }
+    Ok(())
 }

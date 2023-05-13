@@ -1,16 +1,18 @@
 //! Low-level types and functions for parsing.
 
 mod error;
+mod offset;
 mod result_ext;
 mod simple_parse;
-// mod vector;
+mod vector;
 
 pub mod leb128;
 
 pub use error::{Context, Error, ErrorKind};
+pub use offset::Offset;
 pub use result_ext::ResultExt;
 pub use simple_parse::SimpleParse;
-// pub use vector::{Sequence, Vector};
+pub use vector::{Sequence, Vector};
 
 use crate::bytes::Bytes;
 
