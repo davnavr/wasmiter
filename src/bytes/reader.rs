@@ -57,13 +57,13 @@ impl<B: Bytes> From<B> for Reader<B> {
 impl<B: Bytes> std::io::Read for Reader<B> {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(self.bytes.read(buf, &mut self.offset)?.len())
+        Ok(self.bytes.read(&mut self.offset, buf)?.len())
     }
 
     #[inline]
     fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
         self.bytes
-            .read_exact(buf, &mut self.offset)
+            .read_exact(&mut self.offset, buf)
             .map_err(Into::into)
     }
 }

@@ -23,7 +23,7 @@ impl<B: Bytes> Window<B> {
 
 impl<B: Bytes> Bytes for Window<B> {
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        match u64::try_from(buffer) {
+        match u64::try_from(buffer.len()) {
             Ok(buffer_length) if offset >= self.base => {
                 let actual_buffer = if buffer_length <= self.length {
                     buffer
@@ -33,7 +33,7 @@ impl<B: Bytes> Bytes for Window<B> {
 
                 self.inner.read_at(offset, actual_buffer)
             }
-            _ => Ok(&[]),
+            _ => Ok(Default::default()),
         }
     }
 
