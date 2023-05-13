@@ -1,11 +1,13 @@
 //! Traits and type definitions for reading bytes from a source.
 
+mod buf_bytes;
 mod error;
 mod reader;
 
 #[cfg(feature = "std")]
 mod shared_bytes;
 
+pub use buf_bytes::BufBytes;
 pub use error::{Error, ErrorKind};
 pub use reader::Reader;
 pub use shared_bytes::{SharedBytes, SharedInput};
