@@ -1,6 +1,6 @@
 use crate::allocator::{Allocator, OwnOrRef};
 use crate::bytes::{Bytes, Window};
-use crate::parser::{Decoder, Result, ResultExt};
+use crate::parser::{self, Offset, Result, ResultExt};
 
 mod section_kind;
 
@@ -11,13 +11,13 @@ pub(crate) use section_kind::section_id as id;
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 #[derive(Debug)]
-pub struct Section<I: Input, S: AsRef<str>> {
+pub struct Section<B: Bytes, S: AsRef<str>> {
     kind: SectionKind<S>,
     length: u64,
-    contents: Decoder<Window<I>>,
+    contents: Window<B>,
 }
 
-impl<I: Input, S: AsRef<str>> Section<I, S> {
+impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     /// Gets the
     /// [*id* or custom section name](https://webassembly.github.io/spec/core/binary/modules.html#sections)
     /// for this section.
@@ -34,8 +34,12 @@ impl<I: Input, S: AsRef<str>> Section<I, S> {
         self.length
     }
 
-    /// Consumes the section, returning a [`Decoder<I>`] used to read its contents.
-    pub fn into_contents(self) -> Decoder<Window<I>> {
+    /// Consumes the section, returning its contents as a [`Window`].
+    ///
+    /// The offset to the first byte of the section's content can be obtained by calling
+    /// [`Window::base`].
+    #[inline]
+    pub fn into_contents(self) -> Window<B> {
         self.contents
     }
 }
@@ -43,48 +47,47 @@ impl<I: Input, S: AsRef<str>> Section<I, S> {
 /// Represents the
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
 /// in a WebAssembly module.
-pub struct SectionSequence<I: Input, A: Allocator> {
-    parser: Decoder<I>,
+#[must_use]
+pub struct SectionSequence<B: Bytes + Clone, A: Allocator> {
+    offset: u64,
+    bytes: B,
     allocator: A,
     buffer: A::Buf,
 }
 
-impl<I: Input, A: Allocator> SectionSequence<I, A> {
-    /// Uses the given [`Decoder<I>`] to read a sequence of sections with the given [`Allocator`].
-    pub fn new_with_allocator(parser: Decoder<I>, allocator: A) -> Self {
+impl<B: Bytes + Clone, A: Allocator> SectionSequence<B, A> {
+    /// Uses the given [`Bytes`] to read a sequence of sections with the given [`Allocator`]
+    /// starting at the specified `offset`.
+    pub fn new_with_allocator(offset: u64, bytes: B, allocator: A) -> Self {
         Self {
-            parser,
+            offset,
+            bytes,
             buffer: allocator.allocate_buffer(),
             allocator,
         }
     }
 
-    /// Uses the given [`Input`] to read a sequence of sections with the given [`Allocator`].
-    pub fn from_input_with_allocator(input: I, allocator: A) -> Self {
-        Self::new_with_allocator(Decoder::new(input), allocator)
-    }
-
-    fn parse(&mut self) -> Result<Option<Section<I::Fork, A::String>>> {
-        let id_byte = if let Some(byte) = self.parser.one_byte()? {
-            byte
+    fn parse(&mut self) -> Result<Option<Section<B, A::String>>> {
+        let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, self.bytes)? {
+            id
         } else {
             return Ok(None);
         };
 
         let kind = SectionId::new(id_byte);
-        let mut content_length =
-            u64::from(self.parser.leb128_u32().context("section content size")?);
+        let mut content_length = u64::from(
+            parser::leb128::u32(&mut self.offset, self.bytes).context("section content size")?,
+        );
 
         let id = if let Some(id_number) = kind {
             SectionKind::Id(id_number)
         } else {
-            let name_start = self.parser.position()?;
-            let name = self
-                .parser
-                .name(&mut self.buffer)
+            let name_start = self.offset;
+            let name = parser::name(&mut self.offset, self.bytes, &mut self.buffer)
                 .context("custom section name")?;
-            let name_end = self.parser.position()?;
-            content_length -= name_end - name_start;
+
+            content_length -= self.offset - name_start;
+
             SectionKind::Custom(
                 if let Some(known) = section_kind::cached_custom_name(name) {
                     OwnOrRef::Reference(known)
@@ -94,11 +97,13 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
             )
         };
 
-        let contents = self.parser.windowed(content_length)?;
+        let contents = Window::new(self.bytes, self.offset, content_length);
 
-        self.parser
-            .skip_exact(content_length)
-            .context("section content")?;
+        // TODO: Duplicate code w/ leb128, increment offset
+        // self.parser
+        //     .skip_exact(content_length)
+        //     .context("section content")?;
+        self.offset += content_length;
 
         Ok(Some(Section {
             kind: id,
@@ -109,20 +114,16 @@ impl<I: Input, A: Allocator> SectionSequence<I, A> {
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> SectionSequence<I, crate::allocator::Global> {
-    /// Uses the given [`Decoder<I>`] to read a sequence of sections.
-    pub fn new(parser: Decoder<I>) -> Self {
-        Self::new_with_allocator(parser, Default::default())
-    }
-
-    /// Uses the given [`Input`] to read a sequence of sections.
-    pub fn from_input(input: I) -> Self {
-        Self::new(Decoder::new(input))
+impl<B: Bytes + Clone> SectionSequence<B, crate::allocator::Global> {
+    /// Uses the given [`Bytes`] to read a sequence of sections starting at the specified `offset`.
+    #[inline]
+    pub fn new(offset: u64, bytes: B) -> Self {
+        Self::new_with_allocator(offset, bytes, Default::default())
     }
 }
 
-impl<I: Input, A: Allocator> Iterator for SectionSequence<I, A> {
-    type Item = Result<Section<I::Fork, A::String>>;
+impl<B: Bytes + Clone, A: Allocator> Iterator for SectionSequence<B, A> {
+    type Item = Result<Section<B, A::String>>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -130,15 +131,14 @@ impl<I: Input, A: Allocator> Iterator for SectionSequence<I, A> {
     }
 }
 
-impl<I, A> core::fmt::Debug for SectionSequence<I, A>
+impl<B, A> core::fmt::Debug for SectionSequence<B, A>
 where
-    I: Input + core::fmt::Debug,
-    A: Allocator + core::fmt::Debug,
+    B: Bytes + Clone,
+    A: Allocator,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("SectionSequence")
-            .field("parser", &self.parser)
-            .field("allocator", &self.allocator)
+            .field("offset", &self.offset)
             .finish()
     }
 }

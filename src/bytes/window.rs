@@ -19,6 +19,12 @@ impl<B: Bytes> Window<B> {
             inner,
         }
     }
+
+    /// Gets the offset at which the [`Window`] content begins.
+    #[inline]
+    pub fn base(&self) -> u64 {
+        self.base
+    }
 }
 
 impl<B: Bytes> Bytes for Window<B> {
