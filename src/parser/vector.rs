@@ -65,7 +65,8 @@ pub struct Vector<O: Offset, B: Bytes, P: Parse> {
 impl<O: Offset, B: Bytes, P: Parse> Vector<O, B, P> {
     /// Creates a new [`Vector`] from the given [`Bytes`].
     pub fn new(mut offset: O, bytes: B, parser: P) -> Result<Self> {
-        let count = parser::leb128::u32(offset.offset(), &bytes).context("vector element count")?;
+        let count =
+            parser::leb128::u32(offset.offset_mut(), &bytes).context("vector element count")?;
         Ok(Self {
             offset,
             bytes,
@@ -87,8 +88,18 @@ impl<O: Offset, B: Bytes, P: Parse> Vector<O, B, P> {
 
     /// Parses the remaining elements in the vector, discarding the results.
     pub fn finish(mut self) -> Result<O> {
-        self.sequence.finish(self.offset.offset(), self.bytes)?;
+        self.sequence.finish(self.offset.offset_mut(), self.bytes)?;
         Ok(self.offset)
+    }
+}
+
+impl<O: Offset, B: Bytes, P: Parse + Clone> Vector<O, B, P> {
+    pub(crate) fn by_ref(&self) -> Vector<u64, &B, P> {
+        Vector {
+            offset: self.offset.offset(),
+            bytes: &self.bytes,
+            sequence: self.sequence.clone(),
+        }
     }
 }
 
@@ -97,7 +108,7 @@ impl<O: Offset, B: Bytes, P: Parse> Iterator for Vector<O, B, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sequence
-            .parse(self.offset.offset(), &self.bytes)
+            .parse(self.offset.offset_mut(), &self.bytes)
             .transpose()
     }
 
@@ -111,13 +122,13 @@ impl<O: Offset, B: Bytes, P: Parse> Iterator for Vector<O, B, P> {
 
 impl<O, B, P> core::fmt::Debug for Vector<O, B, P>
 where
-    O: Offset + Clone,
-    B: Bytes + Clone,
+    O: Offset,
+    B: Bytes,
     P: Parse + Clone,
     P::Output: core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.clone()).finish()
+        f.debug_list().entries(self.by_ref()).finish()
     }
 }
 
