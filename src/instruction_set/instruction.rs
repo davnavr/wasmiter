@@ -1,5 +1,6 @@
 use crate::component::{self, BlockType, LabelIdx, LocalIdx};
-use crate::parser::{input::Input, Result, ResultExt, SimpleParse, Vector};
+use crate::bytes::Bytes;
+use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
 macro_rules! instructions {
     ($(
@@ -10,12 +11,12 @@ macro_rules! instructions {
         /// [WebAssembly instruction](https://webassembly.github.io/spec/core/syntax/instructions.html).
         #[derive(Debug)]
         #[non_exhaustive]
-        pub enum Instruction<I: Input> {$(
+        pub enum Instruction<'a, B: Bytes> {$(
             $(#[$meta])*
             $case $($arguments)?,
         )*}
 
-        impl<I: Input> Instruction<I> {
+        impl<B: Bytes> Instruction<'_, B> {
             /// Gets a string containing the name of the [`Instruction`].
             pub fn name(&self) -> &'static str {
                 match self {
@@ -68,7 +69,7 @@ instructions! {
     ///
     /// The table of labels is encoded as a [`Vector`] containing **at least one** [`LabelIdx`],
     /// with the last label specifies the default target.
-    BrTable[(Vector<I, SimpleParse<LabelIdx>>)] = "br_table",
+    BrTable[(Vector<&'a mut u64, B, SimpleParse<LabelIdx>>)] = "br_table",
     /// The
     /// [**return**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// instruction transfers control flow back to the calling function.
@@ -118,7 +119,7 @@ instructions! {
     GlobalSet[(LocalIdx)] = "globalset",
 }
 
-impl<I: Input> Instruction<I> {
+impl<B: Bytes> Instruction<'_, B> {
     /// Completely parses the [`Instruction`] and any of its required arguments.
     pub fn finish(self) -> Result<()> {
         match self {

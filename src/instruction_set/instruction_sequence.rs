@@ -1,54 +1,56 @@
 use crate::instruction_set::{Instruction, Opcode};
-use crate::parser::{input::Input, Decoder, Result, ResultExt, Vector};
+use crate::bytes::Bytes;
+use crate::component;
+use crate::parser::{self, Result, ResultExt, Vector};
 
-impl<I: Input> Decoder<I> {
-    /// Parses a WebAssembly [`Instruction`].
-    ///
-    /// In order to ensure the instruction is completely parsed, callers should call
-    /// [Instruction::finish].
-    pub fn instruction(&mut self) -> Result<Instruction<&mut I>> {
-        let opcode = Opcode::try_from(self.one_byte_exact().context("opcode byte")?)?;
-        Ok(match opcode {
-            Opcode::Unreachable => Instruction::Unreachable,
-            Opcode::Nop => Instruction::Nop,
-            Opcode::Block => Instruction::Block(self.block_type()?),
-            Opcode::Loop => Instruction::Loop(self.block_type().context("loop block type")?),
-            Opcode::If => Instruction::If(self.block_type().context("if block type")?),
-            Opcode::Br => Instruction::Br(self.index()?),
-            Opcode::BrIf => Instruction::BrIf(self.index()?),
-            Opcode::BrTable => Instruction::BrTable(
-                Vector::new(self.by_ref(), Default::default()).context("branch table")?,
-            ),
-            Opcode::Return => Instruction::Return,
-            Opcode::Call => Instruction::Call(self.index().context("call target")?),
-            Opcode::CallIndirect => Instruction::CallIndirect(
-                self.index().context("indirect call signature")?,
-                self.index().context("indirect call target")?,
-            ),
-            Opcode::Else => Instruction::Else,
-            Opcode::End => Instruction::End,
-            Opcode::LocalGet => Instruction::LocalGet(self.index()?),
-            Opcode::LocalSet => Instruction::LocalSet(self.index()?),
-            Opcode::LocalTee => Instruction::LocalTee(self.index()?),
-            Opcode::GlobalGet => Instruction::GlobalGet(self.index()?),
-            Opcode::GlobalSet => Instruction::GlobalSet(self.index()?),
-            _ => todo!("{opcode:?} not implemented"),
-        }) //.context() // the opcode name
-    }
+/// Parses a WebAssembly [`Instruction`].
+///
+/// In order to ensure the instruction is completely parsed, callers should call
+/// [Instruction::finish].
+fn instruction<'a, 'b, B: Bytes>(offset: &'a mut u64, bytes: &'b B) -> Result<Instruction<'a, &'b B>> {
+    let opcode = Opcode::try_from(parser::one_byte_exact(offset, bytes).context("opcode byte")?)?;
+    Ok(match opcode {
+        Opcode::Unreachable => Instruction::Unreachable,
+        Opcode::Nop => Instruction::Nop,
+        Opcode::Block => Instruction::Block(component::block_type(offset, bytes)?),
+        Opcode::Loop => Instruction::Loop(component::block_type(offset, bytes).context("loop block type")?),
+        Opcode::If => Instruction::If(component::block_type(offset, bytes).context("if block type")?),
+        Opcode::Br => Instruction::Br(component::index(offset, bytes)?),
+        Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes)?),
+        Opcode::BrTable => Instruction::BrTable(
+            Vector::new(offset, bytes, Default::default()).context("branch table")?,
+        ),
+        Opcode::Return => Instruction::Return,
+        Opcode::Call => Instruction::Call(component::index(offset, bytes).context("call target")?),
+        Opcode::CallIndirect => Instruction::CallIndirect(
+            component::index(offset, bytes).context("indirect call signature")?,
+            component::index(offset, bytes).context("indirect call target")?,
+        ),
+        Opcode::Else => Instruction::Else,
+        Opcode::End => Instruction::End,
+        Opcode::LocalGet => Instruction::LocalGet(component::index(offset, bytes)?),
+        Opcode::LocalSet => Instruction::LocalSet(component::index(offset, bytes)?),
+        Opcode::LocalTee => Instruction::LocalTee(component::index(offset, bytes)?),
+        Opcode::GlobalGet => Instruction::GlobalGet(component::index(offset, bytes)?),
+        Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, bytes)?),
+        _ => todo!("{opcode:?} not implemented"),
+    }) //.context() // the opcode name
 }
 
 /// Represents an expression or
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
-pub struct InstructionSequence<I: Input> {
+pub struct InstructionSequence<B: Bytes> {
     blocks: u32,
-    parser: Decoder<I>,
+    offset: u64,
+    bytes: B,
 }
 
-impl<I: Input> InstructionSequence<I> {
-    /// Uses the given [`Decoder`] to read a sequence of instructions.
-    pub fn new(parser: Decoder<I>) -> Self {
-        Self { blocks: 1, parser }
+impl<B: Bytes> InstructionSequence<B> {
+    /// Uses the given [`Bytes`] to read a sequence of instructions, starting at the given
+    /// `offset`.
+    pub fn new(offset: u64, bytes: B) -> Self {
+        Self { blocks: 1, offset, bytes }
     }
 
     /// Returns a value indicating if there are more instructions remaining to be parsed
@@ -60,7 +62,7 @@ impl<I: Input> InstructionSequence<I> {
     #[inline]
     fn process_next<'a, F>(&'a mut self, f: F) -> Result<()>
     where
-        F: FnOnce(&mut Instruction<&'a mut I>) -> Result<()>,
+        F: FnOnce(&mut Instruction<&mut u64, &'a B>) -> Result<()>,
     {
         let mut instruction = self.parser.instruction()?;
         f(&mut instruction)?;
@@ -84,9 +86,8 @@ impl<I: Input> InstructionSequence<I> {
 
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
     pub fn next<'a, F>(&'a mut self, f: F) -> Option<Result<()>>
-    // TODO: Fix, caller can "replace" current instruction
     where
-        F: FnOnce(&mut Instruction<&'a mut I>) -> Result<()>,
+        F: FnOnce(&mut Instruction<&mut u64, &'a B>) -> Result<()>,
     {
         if self.is_finished() {
             return None;
@@ -95,11 +96,12 @@ impl<I: Input> InstructionSequence<I> {
         Some(self.process_next(f))
     }
 
-    /// Processes the remaining instructions in the sequence.
+    /// Processes the remaining instructions in the sequence. Returns the offset to the byte after
+    /// the last byte of the last instruction.
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> Result<()> {
+    pub fn finish(mut self) -> Result<u64> {
         loop {
             match self.next(|_| Ok(())) {
                 Some(Ok(())) => (),
@@ -109,7 +111,7 @@ impl<I: Input> InstructionSequence<I> {
         }
 
         match self.blocks {
-            0 => Ok(()),
+            0 => Ok(self.offset),
             1 => Err(crate::parser_bad_format!(
                 "missing end instruction for expression, or blocks were not structured correctly"
             )),
@@ -127,7 +129,7 @@ impl<I: Input> InstructionSequence<I> {
     // }
 }
 
-impl<I: Input> core::fmt::Debug for InstructionSequence<I> {
+impl<B: Bytes> core::fmt::Debug for InstructionSequence<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("InstructionSequence")
             .finish_non_exhaustive()
