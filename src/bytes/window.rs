@@ -25,6 +25,22 @@ impl<B: Bytes> Window<B> {
     pub fn base(&self) -> u64 {
         self.base
     }
+
+    /// Gets length of the [`Window`].
+    #[inline]
+    pub fn length(&self) -> u64 {
+        self.length
+    }
+}
+
+impl<B: Bytes + Clone> Window<&B> {
+    pub(crate) fn cloned(&self) -> Window<B> {
+        Window {
+            base: self.base,
+            length: self.length,
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl<B: Bytes> Bytes for Window<B> {

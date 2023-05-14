@@ -6,7 +6,7 @@ use crate::allocator::OwnOrRef;
 pub type SectionId = core::num::NonZeroU8;
 
 /// Indicates what kind of contents are contained within a WebAssembly [`Section`](crate::Section).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub enum SectionKind<S: AsRef<str>> {
     /// The section is a known value documented in the
     /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/modules.html#sections)
@@ -15,6 +15,15 @@ pub enum SectionKind<S: AsRef<str>> {
     /// [custom section](https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec)
     /// with the given name.
     Custom(OwnOrRef<'static, str, S>),
+}
+
+impl<S: AsRef<str>> core::fmt::Debug for SectionKind<S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Id(id) => f.debug_tuple("Id").field(id).finish(),
+            Self::Custom(name) => f.debug_tuple("Custom").field(&name.as_ref()).finish(),
+        }
+    }
 }
 
 macro_rules! known_ids {
