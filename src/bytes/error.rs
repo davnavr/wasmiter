@@ -33,7 +33,7 @@ impl ConstantError {
     }
 }
 
-/// Error type used when an operation with an [`Input`](crate::parser::input::Input) fails.
+/// Error type used when an operation with [`Bytes`](crate::bytes::Bytes) fails.
 ///
 /// This type is meant to be a mirror of
 /// [`std::io::Error`](https://doc.rust-lang.org/std/io/struct.Error.html).

@@ -9,7 +9,7 @@ struct Cache<U> {
 /// Provides an in-memory buffer to cache results from [`Bytes`].
 ///
 /// Certain [`Bytes`] implementations such as
-/// [`SharedBytes<I>`](crate::parser::input::SharedBytes) can have poor performance when used
+/// [`SharedBytes<I>`](crate::bytes::SharedBytes) can have poor performance when used
 /// without buffering, such as in the case of
 /// [`std::fs::File`](https://doc.rust-lang.org/std/fs/struct.File.html) where many syscalls can
 /// occur even if reads occur that would

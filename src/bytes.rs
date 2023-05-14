@@ -18,7 +18,7 @@ pub use reader::Reader;
 #[cfg(feature = "std")]
 pub use shared_bytes::{SharedBytes, SharedInput};
 
-/// Result type used when an operation with an [`Input`] fails.
+/// Result type used when an operation with [`Bytes`] fails.
 ///
 /// This type is meant to be a mirror of
 /// [`std::io::Result`](https://doc.rust-lang.org/std/io/type.Result.html).
