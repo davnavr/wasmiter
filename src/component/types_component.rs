@@ -1,6 +1,6 @@
-use crate::component::ValType;
 use crate::bytes::Bytes;
-use crate::parser::{self, Decoder, Result, ResultExt};
+use crate::component::ValType;
+use crate::parser::{self, Result, ResultExt};
 
 /// Parser for a
 /// [WebAssembly result type](https://webassembly.github.io/spec/core/binary/types.html#result-types).
@@ -10,18 +10,22 @@ pub type ResultType<O, B> = parser::Vector<O, B, parser::SimpleParse<ValType>>;
 /// [**types** component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
+#[derive(Clone, Copy)]
 #[cfg_attr(not(feature = "alloc"), derive(Debug))]
-pub struct TypesComponent<I: Input> {
+pub struct TypesComponent<B: Bytes> {
     count: usize,
-    parser: Decoder<I>,
+    offset: u64,
+    bytes: B,
 }
 
-impl<I: Input> TypesComponent<I> {
-    /// Uses a [`Decoder<I>`] to read the contents of the *type section* of a module.
-    pub fn new(mut parser: Decoder<I>) -> Result<Self> {
+impl<B: Bytes> TypesComponent<B> {
+    /// Uses the given [`Bytes`] to read the contents of the *type section* of a module, starting
+    /// at the specified `offset`.
+    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
-            count: parser.leb128_usize().context("type section count")?,
-            parser,
+            count: parser::leb128::usize(&mut offset, &bytes).context("type section count")?,
+            bytes,
+            offset,
         })
     }
 
@@ -42,8 +46,8 @@ impl<I: Input> TypesComponent<I> {
     #[inline]
     pub fn next<P, R>(&mut self, parameter_types: P, result_types: R) -> Result<bool>
     where
-        P: FnOnce(&mut ResultType<&mut I>) -> Result<()>,
-        R: FnOnce(&mut ResultType<&mut I>) -> Result<()>,
+        P: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()>,
+        R: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()>,
     {
         if self.count == 0 {
             return Ok(false);
@@ -60,18 +64,19 @@ impl<I: Input> TypesComponent<I> {
         result.map(|()| true)
     }
 
-    fn try_clone(&self) -> Result<TypesComponent<I::Fork>> {
-        Ok(TypesComponent {
+    fn by_ref(&self) -> TypesComponent<&B> {
+        TypesComponent {
             count: self.count,
-            parser: self.parser.fork()?,
-        })
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
     }
 }
 
 #[cfg(feature = "alloc")]
-fn allocate_result_type<I: Input>(
+fn allocate_result_type<B: Bytes>(
     vector: &mut alloc::vec::Vec<ValType>,
-) -> impl FnOnce(&mut ResultType<&mut I>) -> Result<()> + '_ {
+) -> impl FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()> + '_ {
     |parser| {
         vector.reserve_exact(usize::try_from(parser.len()).unwrap_or_default());
         for ty in parser {
@@ -82,7 +87,7 @@ fn allocate_result_type<I: Input>(
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> Iterator for TypesComponent<I> {
+impl<B: Bytes> Iterator for TypesComponent<B> {
     type Item = Result<(alloc::vec::Vec<ValType>, alloc::vec::Vec<ValType>)>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -101,7 +106,7 @@ impl<I: Input> Iterator for TypesComponent<I> {
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> core::fmt::Debug for TypesComponent<I> {
+impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
         match self.try_clone() {
