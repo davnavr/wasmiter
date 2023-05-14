@@ -98,6 +98,8 @@ impl<B: Bytes, A: Allocator> SectionSequence<B, A> {
             SectionKind::Id(id_number)
         } else {
             let name_start = self.offset;
+
+            self.buffer.clear();
             let name = parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
                 .context("custom section name")?;
 

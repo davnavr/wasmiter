@@ -129,15 +129,17 @@ pub(crate) fn one_byte_exact<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u8>
 // }
 
 /// Parses an UTF-8 string
-/// [name](https://webassembly.github.io/spec/core/binary/values.html#names).
+/// [name](https://webassembly.github.io/spec/core/binary/values.html#names). Allocates extra space
+/// into the given `buffer`, and appends to contents of the string to it.
 pub fn name<'b, B: Bytes, U: crate::allocator::Buffer>(
     offset: &mut u64,
     bytes: &B,
     buffer: &'b mut U,
 ) -> Result<&'b mut str> {
     let length = leb128::usize(offset, bytes).context("string length")?;
-    buffer.clear();
+    let destination = buffer.as_ref().len()..;
     buffer.grow(length);
-    bytes_exact(offset, bytes, buffer.as_mut()).context("string contents")?;
-    core::str::from_utf8_mut(buffer.as_mut()).map_err(|e| crate::parser_bad_format!("{e}"))
+    bytes_exact(offset, bytes, &mut buffer.as_mut()[destination]).context("string contents")?;
+    core::str::from_utf8_mut(&mut buffer.as_mut()[destination])
+        .map_err(|e| crate::parser_bad_format!("{e}"))
 }
