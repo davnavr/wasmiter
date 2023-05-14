@@ -153,8 +153,9 @@ impl Bytes for &[u8] {
             .unwrap_or_default();
 
         let copy_amount = core::cmp::min(source.len(), buffer.len());
-        buffer.copy_from_slice(&source[..copy_amount]);
-        Ok(&mut buffer[..copy_amount])
+        let destination = &mut buffer[..copy_amount];
+        destination.copy_from_slice(&source[..copy_amount]);
+        Ok(destination)
     }
 
     fn length_at(&self, offset: u64) -> Result<u64> {
