@@ -130,7 +130,8 @@ where
     parameters.finish()?;
     let mut results = component::ResultType::new(offset, bytes, Default::default())?;
     result_types(&mut results)?;
-    results.finish()
+    results.finish()?;
+    Ok(())
 }
 
 macro_rules! type_parse_impls {

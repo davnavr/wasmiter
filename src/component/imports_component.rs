@@ -62,7 +62,7 @@ impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
     /// module, starting at the given `offset`.
     ///
     /// The `buffer` will be used to contain any parsed UTF-8 strings.
-    pub fn with_buffer(mut offset: u64, bytes: Bytes, buffer: U) -> Result<Self> {
+    pub fn with_buffer(mut offset: u64, bytes: B, buffer: U) -> Result<Self> {
         Ok(Self {
             count: parser::leb128::u32(&mut offset, &bytes).context("import count")?,
             offset,
@@ -73,7 +73,7 @@ impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
 
     /// Gets the expected remaining number of imports that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> u32 {
         self.count
     }
 
@@ -119,7 +119,7 @@ impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
         Ok(Import {
             module: unsafe {
                 // Safety: parser::name returns a valid string
-                core::str::from_utf8_unchecked(&self.buffer[module_name])
+                core::str::from_utf8_unchecked(&self.buffer.as_ref()[module_name])
             },
             name: import_name,
             kind,
@@ -149,7 +149,7 @@ impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
 impl<B: Bytes> ImportsComponent<B, alloc::vec::Vec<u8>> {
     /// Uses the given [`Bytes`] to read the contents of the *imports section* of a module,
     /// starting at the given `offset`.
-    pub fn new(offset: u64, bytes: Bytes) -> Result<Self> {
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
         Self::with_buffer(offset, bytes, alloc::vec::Vec::new())
     }
 }

@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::GlobalType;
+use crate::component::{self, GlobalType};
 use crate::instruction_set::InstructionSequence;
 use crate::parser::{self, Result, ResultExt};
 
@@ -7,7 +7,7 @@ use crate::parser::{self, Result, ResultExt};
 /// [**globals** component](https://webassembly.github.io/spec/core/syntax/modules.html#globals) of
 /// a WebAssembly module, stored in and parsed from the
 /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct GlobalsComponent<B: Bytes> {
     count: u32,
     offset: u64,
@@ -29,7 +29,7 @@ impl<B: Bytes> GlobalsComponent<B> {
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&B>) -> Result<T>,
     {
-        let global_type = self.decoder.global_type()?;
+        let global_type = component::global_type(&mut self.offset, &self.bytes)?;
         let mut expression = InstructionSequence::new(self.offset, &self.bytes);
         let result = f(global_type, &mut expression).context("global expression")?;
         self.offset = expression.finish().context("global expression")?;

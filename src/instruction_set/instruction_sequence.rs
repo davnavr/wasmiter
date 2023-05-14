@@ -73,9 +73,9 @@ impl<B: Bytes> InstructionSequence<B> {
     #[inline]
     fn process_next<'a, F>(&'a mut self, f: F) -> Result<()>
     where
-        F: FnOnce(&mut Instruction<&mut u64, &'a B>) -> Result<()>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<()>,
     {
-        let mut instruction = self.parser.instruction()?;
+        let mut instruction = self::instruction(&mut self.offset, &self.bytes)?;
         f(&mut instruction)?;
 
         match instruction {
@@ -98,7 +98,7 @@ impl<B: Bytes> InstructionSequence<B> {
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
     pub fn next<'a, F>(&'a mut self, f: F) -> Option<Result<()>>
     where
-        F: FnOnce(&mut Instruction<&mut u64, &'a B>) -> Result<()>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<()>,
     {
         if self.is_finished() {
             return None;

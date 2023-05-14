@@ -2,7 +2,7 @@ use crate::component::{Limits, RefType};
 
 /// Represents a
 /// [WebAssembly table type](https://webassembly.github.io/spec/core/binary/types.html#table-types).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct TableType {
     element_type: RefType,
     limits: Limits,

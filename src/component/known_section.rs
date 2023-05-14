@@ -1,4 +1,4 @@
-use crate::allocator::{self, Allocator};
+use crate::allocator::Allocator;
 use crate::bytes::{Bytes, Window};
 use crate::component;
 use crate::parser;
@@ -63,17 +63,6 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
         } else {
             Err(section)
         }
-    }
-}
-
-impl<B: Bytes, S: AsRef<str>> TryFrom<Section<B, S>>
-    for KnownSection<Window<B>, allocator::Global>
-{
-    type Error = Section<B, S>;
-
-    #[inline]
-    fn try_from(section: Section<B, S>) -> parser::Result<Self> {
-        KnownSection::try_from_with_allocator(section, allocator::Global)
     }
 }
 

@@ -12,7 +12,7 @@ pub struct MemsComponent<B: Bytes> {
 
 impl<B: Bytes> From<Vector<u64, B, SimpleParse<MemType>>> for MemsComponent<B> {
     #[inline]
-    fn from(limits: Vector<B, SimpleParse<MemType>>) -> Self {
+    fn from(limits: Vector<u64, B, SimpleParse<MemType>>) -> Self {
         Self { limits }
     }
 }

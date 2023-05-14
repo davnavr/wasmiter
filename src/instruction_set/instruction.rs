@@ -123,8 +123,11 @@ impl<B: Bytes> Instruction<'_, B> {
     /// Completely parses the [`Instruction`] and any of its required arguments.
     pub fn finish(self) -> Result<()> {
         match self {
-            Self::BrTable(indices) => indices.finish().context("branch label table"),
-            _ => Ok(()),
+            Self::BrTable(indices) => {
+                indices.finish().context("branch label table")?;
+            }
+            _ => (),
         }
+        Ok(())
     }
 }
