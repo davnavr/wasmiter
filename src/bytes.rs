@@ -77,7 +77,7 @@ pub trait Bytes {
     /// # Errors
     ///
     /// If the `buffer` is not completely filled or the read failed, an error is returned.
-    fn read_at_exact(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
+    fn read_exact_at(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
         let buffer_length = buffer.len();
         let copied = self.read_at(offset, buffer)?;
 
@@ -123,7 +123,7 @@ pub trait Bytes {
     /// not completely filled.
     #[inline]
     fn read_exact(&self, offset: &mut u64, buffer: &mut [u8]) -> Result<()> {
-        self.read_at_exact(*offset, buffer)?;
+        self.read_exact_at(*offset, buffer)?;
         increment_offset(offset, buffer.len())
     }
 }
@@ -140,8 +140,8 @@ impl<B: Bytes> Bytes for &B {
     }
 
     #[inline]
-    fn read_at_exact(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
-        B::read_at_exact(self, offset, buffer)
+    fn read_exact_at(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
+        B::read_exact_at(self, offset, buffer)
     }
 }
 
