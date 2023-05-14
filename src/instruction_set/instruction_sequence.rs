@@ -1,20 +1,27 @@
-use crate::instruction_set::{Instruction, Opcode};
 use crate::bytes::Bytes;
 use crate::component;
+use crate::instruction_set::{Instruction, Opcode};
 use crate::parser::{self, Result, ResultExt, Vector};
 
 /// Parses a WebAssembly [`Instruction`].
 ///
 /// In order to ensure the instruction is completely parsed, callers should call
 /// [Instruction::finish].
-fn instruction<'a, 'b, B: Bytes>(offset: &'a mut u64, bytes: &'b B) -> Result<Instruction<'a, &'b B>> {
+fn instruction<'a, 'b, B: Bytes>(
+    offset: &'a mut u64,
+    bytes: &'b B,
+) -> Result<Instruction<'a, &'b B>> {
     let opcode = Opcode::try_from(parser::one_byte_exact(offset, bytes).context("opcode byte")?)?;
     Ok(match opcode {
         Opcode::Unreachable => Instruction::Unreachable,
         Opcode::Nop => Instruction::Nop,
         Opcode::Block => Instruction::Block(component::block_type(offset, bytes)?),
-        Opcode::Loop => Instruction::Loop(component::block_type(offset, bytes).context("loop block type")?),
-        Opcode::If => Instruction::If(component::block_type(offset, bytes).context("if block type")?),
+        Opcode::Loop => {
+            Instruction::Loop(component::block_type(offset, bytes).context("loop block type")?)
+        }
+        Opcode::If => {
+            Instruction::If(component::block_type(offset, bytes).context("if block type")?)
+        }
         Opcode::Br => Instruction::Br(component::index(offset, bytes)?),
         Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes)?),
         Opcode::BrTable => Instruction::BrTable(
@@ -50,7 +57,11 @@ impl<B: Bytes> InstructionSequence<B> {
     /// Uses the given [`Bytes`] to read a sequence of instructions, starting at the given
     /// `offset`.
     pub fn new(offset: u64, bytes: B) -> Self {
-        Self { blocks: 1, offset, bytes }
+        Self {
+            blocks: 1,
+            offset,
+            bytes,
+        }
     }
 
     /// Returns a value indicating if there are more instructions remaining to be parsed

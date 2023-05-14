@@ -1,5 +1,5 @@
-use crate::component::{self, BlockType, LabelIdx, LocalIdx};
 use crate::bytes::Bytes;
+use crate::component::{self, BlockType, LabelIdx, LocalIdx};
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
 macro_rules! instructions {

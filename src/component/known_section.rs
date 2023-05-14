@@ -25,7 +25,7 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     Memory(component::MemsComponent<B>),
     /// The
     /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section)
-    Global(component::GlobalsComponent<I>),
+    Global(component::GlobalsComponent<B>),
 }
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
@@ -56,7 +56,7 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                     component::MemsComponent::new(contents.base(), contents).map(Self::from)
                 }
                 section_id::GLOBAL => {
-                    component::GlobalsComponent::new(section.into_contents()).map(Self::from)
+                    component::GlobalsComponent::new(contents.base(), contents).map(Self::from)
                 }
                 _ => return Err(section),
             })
@@ -112,14 +112,9 @@ impl<B: Bytes, A: Allocator> From<component::MemsComponent<B>> for KnownSection<
     }
 }
 
-impl<I, A, S> From<component::GlobalsComponent<I>> for KnownSection<I, A, S>
-where
-    I: Input,
-    A: Allocator,
-    S: StringPool<Interned = A::String>,
-{
+impl<B: Bytes, A: Allocator> From<component::GlobalsComponent<B>> for KnownSection<B, A> {
     #[inline]
-    fn from(globals: component::GlobalsComponent<I>) -> Self {
+    fn from(globals: component::GlobalsComponent<B>) -> Self {
         Self::Global(globals)
     }
 }
