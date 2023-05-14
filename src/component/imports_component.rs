@@ -154,8 +154,7 @@ impl<B: Bytes> ImportsComponent<B, alloc::vec::Vec<u8>> {
     }
 }
 
-impl<B: Bytes, U: Buffer> Debug for ImportsComponent<B, U>
-{
+impl<B: Bytes, U: Buffer> Debug for ImportsComponent<B, U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TypesComponent")
             .field("count", &self.count)
