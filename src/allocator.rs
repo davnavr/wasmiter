@@ -1,13 +1,8 @@
 //! Types and traits for handling allocations during WebAssembly parsing.
 
 mod own_or_ref;
-mod string_pool;
 
 pub use own_or_ref::OwnOrRef;
-pub use string_pool::StringPool;
-
-#[cfg(feature = "alloc")]
-pub use string_pool::FakeStringPool;
 
 /// Trait for byte buffers.
 pub trait Buffer: AsRef<[u8]> + AsMut<[u8]> {
