@@ -174,13 +174,14 @@ pub fn u32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u32> {
     unsigned(offset, bytes).context("could not parse u32")
 }
 
-/// Attempts to parse a [`u32`] in *LEB128* format, interpreting the result as a [`usize`].
+/// Attempts to parse a [`u32`](prim@u32) in *LEB128* format, interpreting the result as a
+/// [`usize`](prim@usize).
 ///
 /// This method is meant to parse
 /// [vector lengths](https://webassembly.github.io/spec/core/binary/conventions.html#vectors),
 /// which the specification currently limits to a 32-bit amount.
 ///
-/// See [`Decoder::leb128_u32`] for more information.
+/// See [`leb128::u32`](self::u32) for more information.
 pub fn usize<B: Bytes>(offset: &mut u64, bytes: B) -> Result<usize> {
     let length = unsigned::<u32, B>(offset, bytes).context("could not parse length")?;
     usize::try_from(length).map_err(|_| crate::parser_bad_format!("length ({length}) is too large"))
