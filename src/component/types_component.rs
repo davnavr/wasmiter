@@ -1,10 +1,10 @@
 use crate::component::ValType;
-use crate::parser::input::Input;
+use crate::bytes::Bytes;
 use crate::parser::{self, Decoder, Result, ResultExt};
 
 /// Parser for a
 /// [WebAssembly result type](https://webassembly.github.io/spec/core/binary/types.html#result-types).
-pub type ResultType<I> = parser::Vector<I, parser::SimpleParse<ValType>>;
+pub type ResultType<O, B> = parser::Vector<O, B, parser::SimpleParse<ValType>>;
 
 /// Represents the
 /// [**types** component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a

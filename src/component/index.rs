@@ -1,3 +1,4 @@
+use crate::bytes::Bytes;
 use crate::parser::{self, ResultExt as _};
 use core::fmt::Debug;
 
@@ -18,12 +19,12 @@ pub trait Index:
     const NAME: &'static str;
 }
 
-impl<I: parser::input::Input> parser::Decoder<I> {
-    /// Parses a
-    /// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
-    pub fn index<N: Index>(&mut self) -> parser::Result<N> {
-        self.leb128_u32().context(N::NAME).and_then(N::try_from)
-    }
+/// Parses a
+/// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
+pub fn index<N: Index, B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<N> {
+    parser::leb128::u32(offset, bytes)
+        .context(N::NAME)
+        .and_then(N::try_from)
 }
 
 macro_rules! indices {
@@ -109,8 +110,9 @@ macro_rules! indices {
         impl parser::Parse for parser::SimpleParse<$name> {
             type Output = $name;
 
-            fn parse<I: parser::input::Input>(&mut self, input: &mut parser::Decoder<I>) -> parser::Result<$name> {
-                input.index::<$name>()
+            #[inline]
+            fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> parser::Result<$name> {
+                index::<$name, B>(offset, bytes)
             }
         }
     )*};

@@ -1,5 +1,6 @@
+use crate::bytes::Bytes;
 use crate::component::FuncIdx;
-use crate::parser::{input::Input, Decoder, Result, ResultExt, SimpleParse, Vector};
+use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
 /// Represents the
 /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section),
@@ -8,26 +9,27 @@ use crate::parser::{input::Input, Decoder, Result, ResultExt, SimpleParse, Vecto
 /// function in the
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
-pub struct FunctionSection<I: Input> {
-    indices: Vector<I, SimpleParse<FuncIdx>>,
+pub struct FunctionSection<B: Bytes> {
+    indices: Vector<u64, B, SimpleParse<FuncIdx>>,
 }
 
-impl<I: Input> From<Vector<I, SimpleParse<FuncIdx>>> for FunctionSection<I> {
+impl<B: Bytes> From<Vector<u64, B, SimpleParse<FuncIdx>>> for FunctionSection<B> {
     #[inline]
-    fn from(indices: Vector<I, SimpleParse<FuncIdx>>) -> Self {
+    fn from(indices: Vector<u64, B, SimpleParse<FuncIdx>>) -> Self {
         Self { indices }
     }
 }
 
-impl<I: Input> FunctionSection<I> {
-    /// Uses the given [`Decoder<I>`] to read the contents of the *function section* of a module.
+impl<B: Bytes> FunctionSection<B> {
+    /// Uses the given [`Bytes`] to read the contents of the *function section* of a module, which
+    /// begins at the given `offset`.
     #[inline]
-    pub fn new(input: Decoder<I>) -> Result<Self> {
-        Vector::new(input, Default::default()).map(Self::from)
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::new(offset, bytes, Default::default()).map(Self::from)
     }
 }
 
-impl<I: Input> Iterator for FunctionSection<I> {
+impl<B: Bytes> Iterator for FunctionSection<B> {
     type Item = Result<FuncIdx>;
 
     #[inline]
@@ -41,8 +43,8 @@ impl<I: Input> Iterator for FunctionSection<I> {
     }
 }
 
-impl<I: Input> core::fmt::Debug for FunctionSection<I> {
+impl<B: Bytes> core::fmt::Debug for FunctionSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        crate::component::debug_section_contents(self.indices.try_clone(), f)
+        core::fmt::Debug::fmt(&self.indices, f)
     }
 }

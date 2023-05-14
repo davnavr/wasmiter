@@ -1,31 +1,33 @@
+use crate::bytes::Bytes;
 use crate::component::TableType;
-use crate::parser::{input::Input, Decoder, Result, ResultExt, SimpleParse, Vector};
+use crate::parser::{self, Result, ResultExt, SimpleParse, Vector};
 
 /// Represents the
 /// [**tables** component](https://webassembly.github.io/spec/core/syntax/modules.html#tables) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*tables section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
-pub struct TablesComponent<I: Input> {
-    types: Vector<I, SimpleParse<TableType>>,
+pub struct TablesComponent<B: Bytes> {
+    types: Vector<u64, B, SimpleParse<TableType>>,
 }
 
-impl<I: Input> From<Vector<I, SimpleParse<TableType>>> for TablesComponent<I> {
+impl<B: Bytes> From<Vector<u64, B, SimpleParse<TableType>>> for TablesComponent<B> {
     #[inline]
-    fn from(types: Vector<I, SimpleParse<TableType>>) -> Self {
+    fn from(types: Vector<u64, B, SimpleParse<TableType>>) -> Self {
         Self { types }
     }
 }
 
-impl<I: Input> TablesComponent<I> {
-    /// Uses the given [`Decoder<I>`] to read the contents of the *table section* of a module.
-    pub fn new(input: Decoder<I>) -> Result<Self> {
-        Vector::new(input, Default::default())
+impl<B: Bytes> TablesComponent<B> {
+    /// Uses the given [`Bytes`] to read the contents of the *table section* of a module, starting,
+    /// at the specified `offset`.
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::new(offset, bytes, Default::default())
             .map(Self::from)
             .context("table section")
     }
 }
 
-impl<I: Input> core::iter::Iterator for TablesComponent<I> {
+impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {
     type Item = Result<TableType>;
 
     #[inline]
@@ -39,8 +41,8 @@ impl<I: Input> core::iter::Iterator for TablesComponent<I> {
     }
 }
 
-impl<I: Input> core::fmt::Debug for TablesComponent<I> {
+impl<B: Bytes> core::fmt::Debug for TablesComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        crate::component::debug_section_contents(self.types.try_clone(), f)
+        core::fmt::Debug::fmt(&self.types, f)
     }
 }
