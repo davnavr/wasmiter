@@ -1,5 +1,5 @@
 /// Describes the minimum and maximum number of pages in a memory or elements in a table.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Limits {
     minimum: u32,
     maximum: Option<u32>,

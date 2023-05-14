@@ -1,4 +1,4 @@
-//! Provides types for parsing the various
+//! Provides types and functions for parsing the various
 //! [components of a WebAssembly module](https://webassembly.github.io/spec/core/syntax/modules.html)
 //! from its
 //! [sections in the binary format](https://webassembly.github.io/spec/core/binary/modules.html#sections).
@@ -16,16 +16,21 @@ mod types;
 mod types_component;
 
 pub use index::{
-    DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
+    index, DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
 };
 
 pub use types::{
     BlockType, GlobalMutability, GlobalType, NumType, RefType, TableType, ValType, VecType,
 };
 
+pub use type_parser::{
+    block_type, func_type, global_mutability, global_type, limits, mem_type, ref_type, table_type,
+    val_type,
+};
+
 pub use function_section::FunctionSection;
 pub use globals_component::GlobalsComponent;
-pub use imports_component::{Import, ImportKind, ImportParser, ImportsComponent};
+pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use known_section::KnownSection;
 pub use limits::{Limits, MemType};
 pub use mems_component::MemsComponent;

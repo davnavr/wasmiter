@@ -1,23 +1,11 @@
-use crate::allocator::{self, Allocator, OwnOrRef, StringPool};
+use crate::allocator::Buffer;
+use crate::bytes::Bytes;
 use crate::component;
-use crate::parser::{self, input::Input, Decoder, Result, ResultExt};
+use crate::parser::{self, Result, ResultExt};
 use core::fmt::{Debug, Formatter};
 
-fn cached_module_name(name: &str) -> Option<&'static str> {
-    macro_rules! names {
-        ($($name:literal,)*) => {
-            Some(match name {
-                $($name => $name,)*
-                _ => return None,
-            })
-        };
-    }
-
-    names!["env", "wasi_snapshot_preview1",]
-}
-
 /// Describes what kind of entity is specified by an [`Import`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ImportKind {
     /// An imported function with the specified signature.
     Function(component::TypeIdx),
@@ -31,77 +19,30 @@ pub enum ImportKind {
 
 /// Represents a
 /// [WebAssembly import](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-#[derive(Clone)]
-pub struct Import<S: AsRef<str>> {
-    module: OwnOrRef<'static, str, S>,
-    name: S,
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Import<'a> {
+    module: &'a str,
+    name: &'a str,
     kind: ImportKind,
 }
 
-impl<S: AsRef<str>> Debug for Import<S> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Import")
-            .field("module", &self.module.as_ref())
-            .field("name", &self.name.as_ref())
-            .field("kind", &self.kind)
-            .finish()
+impl<'a> Import<'a> {
+    /// Gets the name of the module that this import originates from.
+    #[inline]
+    pub fn module(&self) -> &'a str {
+        self.module
     }
-}
 
-/// Parses an [`Import`].
-#[derive(Default)]
-pub struct ImportParser<A: Allocator, S: StringPool<Interned = A::String>> {
-    strings: S,
-    buffer: A::Buf,
-    allocator: A,
-}
-
-impl<A: Allocator, S: StringPool<Interned = A::String>> ImportParser<A, S> {
-    /// Creates a new [`ImportParser`].
-    pub fn new(allocator: A, strings: S) -> Self {
-        Self {
-            strings,
-            buffer: allocator.allocate_buffer(),
-            allocator,
-        }
+    /// Gets the name of the import.
+    #[inline]
+    pub fn name(&self) -> &'a str {
+        self.name
     }
-}
 
-impl<A: Allocator, S: StringPool<Interned = A::String>> parser::Parse for ImportParser<A, S> {
-    type Output = Import<S::Interned>;
-
-    fn parse<I: Input>(&mut self, input: &mut Decoder<I>) -> Result<Self::Output> {
-        let module_name = input.name(&mut self.buffer).context("module name")?;
-
-        let module = if let Some(cached) = cached_module_name(module_name) {
-            OwnOrRef::Reference(cached)
-        } else {
-            OwnOrRef::Owned(self.strings.get(module_name))
-        };
-
-        let name = self
-            .allocator
-            .allocate_string(input.name(&mut self.buffer).context("import name")?);
-
-        let kind = match input.one_byte_exact().context("import kind")? {
-            0 => ImportKind::Function(input.index().context("function import type")?),
-            1 => ImportKind::Table(input.table_type().context("table import type")?),
-            2 => ImportKind::Memory(input.mem_type().context("memory import type")?),
-            3 => ImportKind::Global(input.global_type().context("global import type")?),
-            bad => {
-                return Err(crate::parser_bad_format!(
-                    "{bad:#02X} is not a known import kind"
-                ))
-            }
-        };
-
-        Ok(Import { module, name, kind })
-    }
-}
-
-impl<A: Allocator, S: StringPool<Interned = A::String>> Debug for ImportParser<A, S> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("ImportParser").finish_non_exhaustive()
+    /// Gets the kind of import.
+    #[inline]
+    pub fn kind(&self) -> &ImportKind {
+        &self.kind
     }
 }
 
@@ -109,87 +50,115 @@ impl<A: Allocator, S: StringPool<Interned = A::String>> Debug for ImportParser<A
 /// [**imports** component](https://webassembly.github.io/spec/core/syntax/modules.html#imports) of
 /// a WebAssembly module, stored in and parsed from the
 /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-pub struct ImportsComponent<I, A, S>
-where
-    I: Input,
-    S: StringPool<Interned = A::String>,
-    A: Allocator,
-{
-    imports: parser::Vector<I, ImportParser<A, S>>,
+pub struct ImportsComponent<B: Bytes, U: Buffer> {
+    count: u32,
+    offset: u64,
+    bytes: B,
+    buffer: U,
 }
 
-impl<I, A, S> From<parser::Vector<I, ImportParser<A, S>>> for ImportsComponent<I, A, S>
-where
-    I: Input,
-    A: Allocator,
-    S: StringPool<Interned = A::String>,
-{
+impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
+    /// Uses the given [`Bytes`] and [`Buffer`] to read the contents of the *imports section* of a
+    /// module, starting at the given `offset`.
+    ///
+    /// The `buffer` will be used to contain any parsed UTF-8 strings.
+    pub fn with_buffer(mut offset: u64, bytes: Bytes, buffer: U) -> Result<Self> {
+        Ok(Self {
+            count: parser::leb128::u32(&mut offset, &bytes).context("import count")?,
+            offset,
+            bytes,
+            buffer,
+        })
+    }
+
+    /// Gets the expected remaining number of imports that have yet to be parsed.
     #[inline]
-    fn from(imports: parser::Vector<I, ImportParser<A, S>>) -> Self {
-        Self { imports }
-    }
-}
-
-impl<I, A, S> ImportsComponent<I, A, S>
-where
-    I: Input,
-    A: Allocator,
-    S: StringPool<Interned = A::String>,
-{
-    /// Uses the given [`Decoder<I>`] and [`ImportParser<A, S>`] to read the contents of the
-    /// *imports section* of a module.
-    pub fn with_parser(input: Decoder<I>, parser: ImportParser<A, S>) -> Result<Self> {
-        parser::Vector::new(input, parser).map(Self::from)
+    pub fn len(&self) -> usize {
+        self.count
     }
 
-    /// Uses the given [`Decoder<I>`] to read the contents of the *imports section* of a module,
-    /// using the given [`StringPool`] to intern module names and [`Allocator`] to allocate buffers
-    /// for import names.
-    pub fn with_allocator_and_string_pool(
-        input: Decoder<I>,
-        allocator: A,
-        strings: S,
-    ) -> Result<Self> {
-        Self::with_parser(input, ImportParser::new(allocator, strings))
+    /// Returns a value indicating if the *imports section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[inline]
+    fn parse(&mut self) -> Result<Import<'_>> {
+        let module_name = 0..parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
+            .context("module name")?
+            .len();
+
+        let import_name: &str =
+            parser::name(&mut self.offset, &self.bytes, &mut self.buffer).context("import name")?;
+
+        let kind = match parser::one_byte_exact(&mut self.offset, &self.bytes)
+            .context("import kind")?
+        {
+            0 => ImportKind::Function(
+                component::index(&mut self.offset, &self.bytes).context("function import type")?,
+            ),
+            1 => ImportKind::Table(
+                component::table_type(&mut self.offset, &self.bytes)
+                    .context("table import type")?,
+            ),
+            2 => ImportKind::Memory(
+                component::mem_type(&mut self.offset, &self.bytes).context("memory import type")?,
+            ),
+            3 => ImportKind::Global(
+                component::global_type(&mut self.offset, &self.bytes)
+                    .context("global import type")?,
+            ),
+            bad => {
+                return Err(crate::parser_bad_format!(
+                    "{bad:#02X} is not a known import kind"
+                ))
+            }
+        };
+
+        Ok(Import {
+            module: unsafe {
+                // Safety: parser::name returns a valid string
+                core::str::from_utf8_unchecked(&self.buffer[module_name])
+            },
+            name: import_name,
+            kind,
+        })
+    }
+
+    /// Parses the next import in the section.
+    pub fn next(&mut self) -> Result<Option<Import<'_>>> {
+        if self.count == 0 {
+            return Ok(None);
+        }
+
+        match self.parse() {
+            Ok(import) => {
+                self.count -= 1;
+                Ok(Some(import))
+            }
+            Err(e) => {
+                self.count = 0;
+                Err(e)
+            }
+        }
     }
 }
 
 #[cfg(feature = "alloc")]
-impl<I: Input> ImportsComponent<I, allocator::Global, allocator::FakeStringPool> {
-    /// Uses a [`Decoder<I>`] to read the contents of the *imports section* of a module.
-    pub fn new(input: Decoder<I>) -> Result<Self> {
-        Self::with_parser(input, Default::default())
+impl<B: Bytes> ImportsComponent<B, alloc::vec::Vec<u8>> {
+    /// Uses the given [`Bytes`] to read the contents of the *imports section* of a module,
+    /// starting at the given `offset`.
+    pub fn new(offset: u64, bytes: Bytes) -> Result<Self> {
+        Self::with_buffer(offset, bytes, alloc::vec::Vec::new())
     }
 }
 
-impl<I, A, S> core::iter::Iterator for ImportsComponent<I, A, S>
-where
-    I: Input,
-    A: Allocator,
-    S: StringPool<Interned = A::String>,
-{
-    type Item = Result<Import<A::String>>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.imports.next().map(|r| r.context("import section"))
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.imports.size_hint()
-    }
-}
-
-impl<I, A, S> Debug for ImportsComponent<I, A, S>
-where
-    I: Input,
-    A: Allocator,
-    S: StringPool<Interned = A::String>,
+impl<B: Bytes, U: Buffer> Debug for ImportsComponent<B, U>
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TypesComponent")
-            .field("count", &self.imports.len())
+            .field("count", &self.count)
             .finish_non_exhaustive()
     }
 }
