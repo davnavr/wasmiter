@@ -68,7 +68,7 @@ impl<B: Bytes + Clone, A: Allocator> SectionSequence<B, A> {
     }
 
     fn parse(&mut self) -> Result<Option<Section<B, A::String>>> {
-        let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, self.bytes)? {
+        let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, &self.bytes)? {
             id
         } else {
             return Ok(None);
@@ -76,14 +76,14 @@ impl<B: Bytes + Clone, A: Allocator> SectionSequence<B, A> {
 
         let kind = SectionId::new(id_byte);
         let mut content_length = u64::from(
-            parser::leb128::u32(&mut self.offset, self.bytes).context("section content size")?,
+            parser::leb128::u32(&mut self.offset, &self.bytes).context("section content size")?,
         );
 
         let id = if let Some(id_number) = kind {
             SectionKind::Id(id_number)
         } else {
             let name_start = self.offset;
-            let name = parser::name(&mut self.offset, self.bytes, &mut self.buffer)
+            let name = parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
                 .context("custom section name")?;
 
             content_length -= self.offset - name_start;
@@ -97,7 +97,7 @@ impl<B: Bytes + Clone, A: Allocator> SectionSequence<B, A> {
             )
         };
 
-        let contents = Window::new(self.bytes, self.offset, content_length);
+        let contents = Window::new(self.bytes.clone(), self.offset, content_length);
 
         // TODO: Duplicate code w/ leb128, increment offset
         // self.parser

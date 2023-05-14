@@ -29,7 +29,7 @@ impl<P: Parse> Sequence<P> {
 
     /// Parses the remaining elements in the sequence, discarding the results.
     pub fn finish<B: Bytes>(mut self, offset: &mut u64, bytes: B) -> Result<()> {
-        while self.parse(offset, bytes)?.is_some() {}
+        while self.parse(offset, &bytes)?.is_some() {}
         Ok(())
     }
 }
@@ -65,7 +65,7 @@ pub struct Vector<O: Offset, B: Bytes, P: Parse> {
 impl<O: Offset, B: Bytes, P: Parse> Vector<O, B, P> {
     /// Creates a new [`Vector`] from the given [`Bytes`].
     pub fn new(mut offset: O, bytes: B, parser: P) -> Result<Self> {
-        let count = parser::leb128::u32(offset.offset(), bytes).context("vector element count")?;
+        let count = parser::leb128::u32(offset.offset(), &bytes).context("vector element count")?;
         Ok(Self {
             offset,
             bytes,
@@ -97,7 +97,7 @@ impl<O: Offset, B: Bytes, P: Parse> Iterator for Vector<O, B, P> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.sequence
-            .parse(self.offset.offset(), self.bytes)
+            .parse(self.offset.offset(), &self.bytes)
             .transpose()
     }
 
@@ -128,9 +128,9 @@ pub fn vector<P: Parse, B: Bytes, F: FnMut(P::Output) -> bool>(
     parser: P,
     mut f: F,
 ) -> Result<()> {
-    let count = parser::leb128::u32(offset, bytes).context("vector length")?;
+    let count = parser::leb128::u32(offset, &bytes).context("vector length")?;
     let mut sequence = Sequence::new(count, parser);
-    while let Some(item) = sequence.parse(offset, bytes)? {
+    while let Some(item) = sequence.parse(offset, &bytes)? {
         if !f(item) {
             break;
         }

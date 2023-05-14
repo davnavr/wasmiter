@@ -12,7 +12,7 @@ pub use error::{Context, Error, ErrorKind};
 pub use offset::Offset;
 pub use result_ext::ResultExt;
 pub use simple_parse::SimpleParse;
-pub use vector::{Sequence, Vector};
+pub use vector::{Sequence, Vector, vector};
 
 use crate::bytes::Bytes;
 
@@ -84,9 +84,10 @@ pub(crate) fn bytes<'b, B: Bytes>(
     bytes: B,
     buffer: &'b mut [u8],
 ) -> Result<&'b mut [u8]> {
+    let length = buffer.len();
     bytes
         .read(offset, buffer)
-        .map_err(|e| parser_bad_input!(e, "could not read {} bytes", buffer.len()))
+        .map_err(|e| parser_bad_input!(e, "could not read {} bytes", length))
 }
 
 #[inline]
@@ -131,7 +132,7 @@ pub(crate) fn one_byte_exact<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u8>
 /// [name](https://webassembly.github.io/spec/core/binary/values.html#names).
 pub fn name<'b, B: Bytes, U: crate::allocator::Buffer>(
     offset: &mut u64,
-    bytes: B,
+    bytes: &B,
     buffer: &'b mut U,
 ) -> Result<&'b mut str> {
     let length = leb128::usize(offset, bytes).context("string length")?;
