@@ -680,6 +680,7 @@ instructions! {
     V128Load32Lane[(MemArg, LaneIdx)] = "v128.load32_lane",
     /// [**v128.load64_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
     V128Load64Lane[(MemArg, LaneIdx)] = "v128.load64_lane",
+
     /// [**v128.store8_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
     V128Store8Lane[(MemArg, LaneIdx)] = "v128.store8_lane",
     /// [**v128.store16_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
@@ -688,6 +689,14 @@ instructions! {
     V128Store32Lane[(MemArg, LaneIdx)] = "v128.store32_lane",
     /// [**v128.store64_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
     V128Store64Lane[(MemArg, LaneIdx)] = "v128.store64_lane",
+
+    /// The
+    /// [**v128.const**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    /// instruction returns a 128-bit vector constant.
+    V128Const[(u128)] = "v128.const",
+
+    /// [**v128.i8x16.shuffle**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Shuffle[([LaneIdx; 16])] = "i8x16.shuffle",
 }
 
 impl<B: Bytes> Instruction<'_, B> {

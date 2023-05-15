@@ -324,6 +324,7 @@ fn instruction<'a, 'b, B: Bytes>(
                 VectorOpcode::Load64Zero => Instruction::V128Load64Zero(memarg(offset, bytes)?),
 
                 VectorOpcode::Store => Instruction::V128Store(memarg(offset, bytes)?),
+
                 VectorOpcode::Load8Lane => Instruction::V128Load8Lane(
                     memarg(offset, bytes)?,
                     parser::one_byte_exact(offset, bytes)?,
@@ -340,6 +341,7 @@ fn instruction<'a, 'b, B: Bytes>(
                     memarg(offset, bytes)?,
                     parser::one_byte_exact(offset, bytes)?,
                 ),
+
                 VectorOpcode::Store8Lane => Instruction::V128Store8Lane(
                     memarg(offset, bytes)?,
                     parser::one_byte_exact(offset, bytes)?,
@@ -355,6 +357,14 @@ fn instruction<'a, 'b, B: Bytes>(
                 VectorOpcode::Store64Lane => Instruction::V128Store64Lane(
                     memarg(offset, bytes)?,
                     parser::one_byte_exact(offset, bytes)?,
+                ),
+
+                VectorOpcode::Const => Instruction::V128Const(u128::from_le_bytes(
+                    parser::byte_array(offset, bytes).context("constant 128-bit vector")?,
+                )),
+
+                VectorOpcode::I8x16Shuffle => Instruction::I8x16Shuffle(
+                    parser::byte_array(offset, bytes).context("shuffle lane indices")?,
                 ),
             }
         }
