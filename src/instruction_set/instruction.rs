@@ -548,6 +548,57 @@ instructions! {
     F64Max = "f64.max",
     /// [**f64.copysign**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
     F64Copysign = "f64.copysign",
+
+    /// [**i32.wrap_i64**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32WrapI64 = "i32.wrap_i64",
+    /// [**i32.trunc_f32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncF32S = "i32.trunc_f32_s",
+    /// [**i32.trunc_f32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncF32U = "i32.trunc_f64_u",
+    /// [**i32.trunc_f64_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncF64S = "i32.trunc_f64_s",
+    /// [**i32.trunc_f64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncF64U = "i32.trunc_f64_u",
+    /// [**i64.extend_i32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64ExtendI32S = "i64.extend_i32_s",
+    /// [**i64.extend_i32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64ExtendI32U = "i64.extend_i32_u",
+    /// [**i64.trunc_f32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncF32S = "i64.trunc_f32_s",
+    /// [**i64.trunc_f32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncF32U = "i64.trunc_f64_u",
+    /// [**i64.trunc_f64_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncF64S = "i64.trunc_f64_s",
+    /// [**i64.trunc_f64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncF64U = "i64.trunc_f64_u",
+    /// [**f32.convert_i32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32ConvertI32S = "f32.convert_i32_s",
+    /// [**f32.convert_i32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32ConvertI32U = "f32.convert_i32_u",
+    /// [**f32.convert_i64_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32ConvertI64S = "f32.convert_i64_s",
+    /// [**f32.convert_i64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32ConvertI64U = "f32.convert_i64_u",
+    /// [**f32.demote_f64**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32DemoteF64 = "f32.demote_f64",
+    /// [**f64.convert_i32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64ConvertI32S = "f64.convert_i32_s",
+    /// [**f64.convert_i32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64ConvertI32U = "f64.convert_i32_u",
+    /// [**f64.convert_i64_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64ConvertI64S = "f64.convert_i64_s",
+    /// [**f64.convert_i64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64ConvertI64U = "f64.convert_i64_u",
+    /// [**f64.promote_f32**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64PromoteF32 = "f64.promote_f32",
+    /// [**i32.reinterpret_f32**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32ReinterpretF32 = "i32.reinterpret_f32",
+    /// [**i64.reinterpret_f64**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64ReinterpretF64 = "i64.reinterpret_f64",
+    /// [**f32.reinterpret_i32**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32ReinterpretI32 = "f32.reinterpret_i32",
+    /// [**f64.reinterpret_i64**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64ReinterpretI64 = "f64.reinterpret_i64",
 }
 
 impl<B: Bytes> Instruction<'_, B> {

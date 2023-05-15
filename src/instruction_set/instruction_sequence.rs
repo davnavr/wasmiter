@@ -211,6 +211,32 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::F64Max => Instruction::F64Max,
         Opcode::F64Copysign => Instruction::F64Copysign,
 
+        Opcode::I32WrapI64 => Instruction::I32WrapI64,
+        Opcode::I32TruncF32S => Instruction::I32TruncF32S,
+        Opcode::I32TruncF32U => Instruction::I32TruncF32U,
+        Opcode::I32TruncF64S => Instruction::I32TruncF64S,
+        Opcode::I32TruncF64U => Instruction::I32TruncF64U,
+        Opcode::I64ExtendI32S => Instruction::I64ExtendI32S,
+        Opcode::I64ExtendI32U => Instruction::I64ExtendI32U,
+        Opcode::I64TruncF32S => Instruction::I64TruncF32S,
+        Opcode::I64TruncF32U => Instruction::I64TruncF32U,
+        Opcode::I64TruncF64S => Instruction::I64TruncF64S,
+        Opcode::I64TruncF64U => Instruction::I64TruncF64U,
+        Opcode::F32ConvertI32S => Instruction::F32ConvertI32S,
+        Opcode::F32ConvertI32U => Instruction::F32ConvertI32U,
+        Opcode::F32ConvertI64S => Instruction::F32ConvertI64S,
+        Opcode::F32ConvertI64U => Instruction::F32ConvertI64U,
+        Opcode::F32DemoteF64 => Instruction::F32DemoteF64,
+        Opcode::F64ConvertI32S => Instruction::F64ConvertI32S,
+        Opcode::F64ConvertI32U => Instruction::F64ConvertI32U,
+        Opcode::F64ConvertI64S => Instruction::F64ConvertI64S,
+        Opcode::F64ConvertI64U => Instruction::F64ConvertI64U,
+        Opcode::F64PromoteF32 => Instruction::F64PromoteF32,
+        Opcode::I32ReinterpretF32 => Instruction::I32ReinterpretF32,
+        Opcode::I64ReinterpretF64 => Instruction::I64ReinterpretF64,
+        Opcode::F32ReinterpretI32 => Instruction::F32ReinterpretI32,
+        Opcode::F64ReinterpretI64 => Instruction::F64ReinterpretI64,
+
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }
