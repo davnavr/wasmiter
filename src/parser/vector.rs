@@ -62,13 +62,21 @@ pub struct Vector<O: Offset, B: Bytes, P: Parse> {
     sequence: Sequence<P>,
 }
 
-impl<'a, B: Bytes, P: Parse> Vector<u64, &'a B, P> {
-    pub(crate) fn empty(bytes: &'a B, parser: P) -> Self {
+impl<'a, O: Offset, B: Bytes, P: Parse> Vector<O, &'a B, P> {
+    #[inline]
+    pub(crate) const fn empty_with_offset(offset: O, bytes: &'a B, parser: P) -> Self {
         Self {
-            offset: 0,
+            offset,
             bytes,
             sequence: Sequence::new(0, parser),
         }
+    }
+}
+
+impl<'a, B: Bytes, P: Parse> Vector<u64, &'a B, P> {
+    #[inline]
+    pub(crate) const fn empty(bytes: &'a B, parser: P) -> Self {
+        Self::empty_with_offset(0, bytes, parser)
     }
 }
 

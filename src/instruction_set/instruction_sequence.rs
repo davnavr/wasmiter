@@ -35,6 +35,13 @@ fn instruction<'a, 'b, B: Bytes>(
         ),
         Opcode::Else => Instruction::Else,
         Opcode::End => Instruction::End,
+        Opcode::Drop => Instruction::Drop,
+        Opcode::Select => {
+            Instruction::Select(Vector::empty_with_offset(offset, bytes, Default::default()))
+        }
+        Opcode::SelectMany => Instruction::Select(
+            Vector::new(offset, bytes, Default::default()).context("select types")?,
+        ),
         Opcode::LocalGet => Instruction::LocalGet(component::index(offset, bytes)?),
         Opcode::LocalSet => Instruction::LocalSet(component::index(offset, bytes)?),
         Opcode::LocalTee => Instruction::LocalTee(component::index(offset, bytes)?),

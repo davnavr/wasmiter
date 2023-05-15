@@ -94,6 +94,20 @@ instructions! {
     /// or a block.
     End = "end",
 
+    // Parametric Instructions
+
+    /// The
+    /// [**drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-parametric)
+    /// instruction discards an operand from the value stack.
+    Drop = "drop",
+    /// The
+    /// [**select**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-parametric)
+    /// instruction selects one of two operands based on a third condition operand.
+    ///
+    /// The types specify the type of the operand selected. Future versions of WebAssembly may
+    /// allow selecting more than one value at a time, requiring more than one type.
+    Select[(Vector<&'a mut u64, B, SimpleParse<component::ValType>>)] = "select",
+
     // Variable Instructions
 
     /// The
@@ -125,6 +139,9 @@ impl<B: Bytes> Instruction<'_, B> {
         match self {
             Self::BrTable(indices) => {
                 indices.finish().context("branch label table")?;
+            }
+            Self::Select(types) => {
+                types.finish()?;
             }
             _ => (),
         }
