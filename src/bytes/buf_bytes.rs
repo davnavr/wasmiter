@@ -107,7 +107,7 @@ impl<U: AsMut<[u8]>, B: Bytes> Bytes for BufBytes<U, B> {
     }
 }
 
-impl<U: AsMut<[u8]>, B: Bytes + std::fmt::Debug> std::fmt::Debug for BufBytes<U, B> {
+impl<U: AsMut<[u8]>, B: Bytes + core::fmt::Debug> core::fmt::Debug for BufBytes<U, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("BufBytes")
             .field(
