@@ -1,6 +1,6 @@
 use crate::bytes::Bytes;
 use crate::component;
-use crate::instruction_set::{self, FCPrefixedOpcode, Instruction, Opcode};
+use crate::instruction_set::{self, FCPrefixedOpcode, Instruction, Opcode, VectorOpcode};
 use crate::parser::{self, leb128, Result, ResultExt, Vector};
 
 fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
@@ -301,7 +301,63 @@ fn instruction<'a, 'b, B: Bytes>(
                 FCPrefixedOpcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
             }
         }
-        _ => todo!("{opcode:?} not implemented"),
+        Opcode::PrefixV128 => {
+            let actual_opcode = leb128::u32(offset, bytes)
+                .context("actual opcode")?
+                .try_into()?;
+
+            match actual_opcode {
+                VectorOpcode::Load => Instruction::V128Load(memarg(offset, bytes)?),
+
+                VectorOpcode::Load8x8S => Instruction::V128Load8x8S(memarg(offset, bytes)?),
+                VectorOpcode::Load8x8U => Instruction::V128Load8x8U(memarg(offset, bytes)?),
+                VectorOpcode::Load16x4S => Instruction::V128Load16x4S(memarg(offset, bytes)?),
+                VectorOpcode::Load16x4U => Instruction::V128Load16x4U(memarg(offset, bytes)?),
+                VectorOpcode::Load32x2S => Instruction::V128Load32x2S(memarg(offset, bytes)?),
+                VectorOpcode::Load32x2U => Instruction::V128Load32x2U(memarg(offset, bytes)?),
+
+                VectorOpcode::Load8Splat => Instruction::V128Load8Splat(memarg(offset, bytes)?),
+                VectorOpcode::Load16Splat => Instruction::V128Load16Splat(memarg(offset, bytes)?),
+                VectorOpcode::Load32Splat => Instruction::V128Load32Splat(memarg(offset, bytes)?),
+                VectorOpcode::Load64Splat => Instruction::V128Load64Splat(memarg(offset, bytes)?),
+                VectorOpcode::Load32Zero => Instruction::V128Load32Zero(memarg(offset, bytes)?),
+                VectorOpcode::Load64Zero => Instruction::V128Load64Zero(memarg(offset, bytes)?),
+
+                VectorOpcode::Store => Instruction::V128Store(memarg(offset, bytes)?),
+                VectorOpcode::Load8Lane => Instruction::V128Load8Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Load16Lane => Instruction::V128Load16Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Load32Lane => Instruction::V128Load32Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Load64Lane => Instruction::V128Load64Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Store8Lane => Instruction::V128Store8Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Store16Lane => Instruction::V128Store16Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Store32Lane => Instruction::V128Store32Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+                VectorOpcode::Store64Lane => Instruction::V128Store64Lane(
+                    memarg(offset, bytes)?,
+                    parser::one_byte_exact(offset, bytes)?,
+                ),
+            }
+        }
     }) //.context() // the opcode name
 }
 

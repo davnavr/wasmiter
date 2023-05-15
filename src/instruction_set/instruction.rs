@@ -3,6 +3,11 @@ use crate::component::{self, BlockType, LabelIdx, LocalIdx, MemIdx, TableIdx};
 use crate::instruction_set::MemArg;
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
+/// A WebAssembly
+/// [`laneidx`](https://webassembly.github.io/spec/core/binary/instructions.html#vector-instructions)
+/// refers to a lane within a 128-bit vector.
+pub type LaneIdx = u8;
+
 macro_rules! instructions {
     ($(
         $(#[$meta:meta])*
@@ -627,6 +632,62 @@ instructions! {
     I64TruncSatF64S = "i64.trunc_sat_f64_s",
     /// [**i64.trunc_sat_f64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
     I64TruncSatF64U = "i64.trunc_sat_f64_u",
+
+    // Vector Instructions
+
+    /// The
+    /// [**v128.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    /// instruction reads an 128-bit vector from memory.
+    V128Load[(MemArg)] = "v128.load",
+
+    /// [**v128.load8x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load8x8S[(MemArg)] = "v128.load8x8_s",
+    /// [**v128.load8x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load8x8U[(MemArg)] = "v128.load8x8_u",
+    /// [**v128.load16x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load16x4S[(MemArg)] = "v128.load16x4_s",
+    /// [**v128.load16x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load16x4U[(MemArg)] = "v128.load16x4_u",
+    /// [**v128.load32x2_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load32x2S[(MemArg)] = "v128.load32x2_s",
+    /// [**v128.load32x2_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load32x2U[(MemArg)] = "v128.load32x2_u",
+
+    /// [**v128.load8_splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load8Splat[(MemArg)] = "v128.load8_splat",
+    /// [**v128.load16_splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load16Splat[(MemArg)] = "v128.load16_splat",
+    /// [**v128.load32_splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load32Splat[(MemArg)] = "v128.load32_splat",
+    /// [**v128.load64_splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load64Splat[(MemArg)] = "v128.load64_splat",
+
+    /// [**v128.load32_zero**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load32Zero[(MemArg)] = "v128.load32_zero",
+    /// [**v128.load64_zero**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load64Zero[(MemArg)] = "v128.load64_zero",
+
+    /// The
+    /// [**v128.store**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    /// instruction stores an 128-bit vector into memory.
+    V128Store[(MemArg)] = "v128.store",
+
+    /// [**v128.load8_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load8Lane[(MemArg, LaneIdx)] = "v128.load8_lane",
+    /// [**v128.load16_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load16Lane[(MemArg, LaneIdx)] = "v128.load16_lane",
+    /// [**v128.load32_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load32Lane[(MemArg, LaneIdx)] = "v128.load32_lane",
+    /// [**v128.load64_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Load64Lane[(MemArg, LaneIdx)] = "v128.load64_lane",
+    /// [**v128.store8_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Store8Lane[(MemArg, LaneIdx)] = "v128.store8_lane",
+    /// [**v128.store16_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Store16Lane[(MemArg, LaneIdx)] = "v128.store16_lane",
+    /// [**v128.store32_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Store32Lane[(MemArg, LaneIdx)] = "v128.store32_lane",
+    /// [**v128.store64_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Store64Lane[(MemArg, LaneIdx)] = "v128.store64_lane",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
