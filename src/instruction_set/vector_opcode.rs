@@ -142,7 +142,7 @@ opcodes! {
     Load64Zero = 93,
 
     F32x4DemoteF64x2Zero = 94,
-    F64x2PromoteF32x4 = 95,
+    F64x2PromoteLowF32x4 = 95,
 
     I8x16Abs = 96,
     I8x16Neg = 97,
@@ -264,10 +264,10 @@ opcodes! {
     I64x2LeS = 218,
     I64x2GeS = 219,
 
-    I32x4ExtmulLowI32x4S = 220,
-    I32x4ExtmulHighI32x4S = 221,
-    I32x4ExtmulLowI32x4U = 222,
-    I32x4ExtmulHighI32x4U = 223,
+    I64x2ExtmulLowI32x4S = 220,
+    I64x2ExtmulHighI32x4S = 221,
+    I64x2ExtmulLowI32x4U = 222,
+    I64x2ExtmulHighI32x4U = 223,
 
     F32x4Abs = 224,
     F32x4Neg = 225,

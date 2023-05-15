@@ -731,6 +731,418 @@ instructions! {
     F64x2ExtractLane[(LaneIdx)] = "f64x2.extract_lane",
     /// [**f64x2.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
     F64x2ReplaceLane[(LaneIdx)] = "f64x2.replace_lane",
+
+    /// [**i8x16.swizzle**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Swizzle = "i8x16.swizzle",
+
+    /// [**i8x16.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Splat = "i8x16.splat",
+    /// [**i16x8.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Splat = "i16x8.splat",
+    /// [**i32x4.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Splat = "i32x4.splat",
+    /// [**i64x4.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Splat = "i64x4.splat",
+    /// [**f32x4.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Splat = "f32x4.splat",
+    /// [**f64x2.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Splat = "f64x2.splat",
+
+    /// [**i8x16.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Eq = "i8x16.eq",
+    /// [**i8x16.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Ne = "i8x16.ne",
+    /// [**i8x16.lt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16LtS = "i8x16.lt_s",
+    /// [**i8x16.lt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16LtU = "i8x16.lt_u",
+    /// [**i8x16.gt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16GtS = "i8x16.gt_s",
+    /// [**i8x16.gt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16GtU = "i8x16.gt_u",
+    /// [**i8x16.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16LeS = "i8x16.le_s",
+    /// [**i8x16.le_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16LeU = "i8x16.le_u",
+    /// [**i8x16.ge_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16GeS = "i8x16.ge_s",
+    /// [**i8x16.ge_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16GeU = "i8x16.ge_u",
+
+    /// [**i16x8.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Eq = "i16x8.eq",
+    /// [**i16x8.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Ne = "i16x8.ne",
+    /// [**i16x8.lt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8LtS = "i16x8.lt_s",
+    /// [**i16x8.lt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8LtU = "i16x8.lt_u",
+    /// [**i16x8.gt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8GtS = "i16x8.gt_s",
+    /// [**i16x8.gt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8GtU = "i16x8.gt_u",
+    /// [**i16x8.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8LeS = "i16x8.le_s",
+    /// [**i16x8.le_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8LeU = "i16x8.le_u",
+    /// [**i16x8.ge_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8GeS = "i16x8.ge_s",
+    /// [**i16x8.ge_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8GeU = "i16x8.ge_u",
+
+    /// [**i32x4.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Eq = "i32x4.eq",
+    /// [**i32x4.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Ne = "i32x4.ne",
+    /// [**i32x4.lt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4LtS = "i32x4.lt_s",
+    /// [**i32x4.lt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4LtU = "i32x4.lt_u",
+    /// [**i32x4.gt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4GtS = "i32x4.gt_s",
+    /// [**i32x4.gt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4GtU = "i32x4.gt_u",
+    /// [**i32x4.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4LeS = "i32x4.le_s",
+    /// [**i32x4.le_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4LeU = "i32x4.le_u",
+    /// [**i32x4.ge_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4GeS = "i32x4.ge_s",
+    /// [**i32x4.ge_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4GeU = "i32x4.ge_u",
+
+    /// [**i64x2.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Eq = "i64x2.eq",
+    /// [**i64x2.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Ne = "i64x2.ne",
+    /// [**i64x2.lt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2LtS = "i64x2.lt_s",
+    /// [**i64x2.gt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2GtS = "i64x2.gt_s",
+    /// [**i64x2.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2LeS = "i64x2.le_s",
+    /// [**i64x2.ge_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2GeS = "i64x2.ge_s",
+
+    /// [**f32x4.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Eq = "f32x4.eq",
+    /// [**f32x4.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Ne = "f32x4.ne",
+    /// [**f32x4.lt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Lt = "f32x4.lt",
+    /// [**f32x4.gt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Gt = "f32x4.gt",
+    /// [**f32x4.le**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Le = "f32x4.le",
+    /// [**f32x4.ge**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Ge = "f32x4.ge",
+
+    /// [**f64x2.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Eq = "f64x2.eq",
+    /// [**f64x2.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Ne = "f64x2.ne",
+    /// [**f64x2.lt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Lt = "f64x2.lt",
+    /// [**f64x2.gt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Gt = "f64x2.gt",
+    /// [**f64x2.le**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Le = "f64x2.le",
+    /// [**f64x2.ge**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Ge = "f64x2.ge",
+
+    /// [**v128.not**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Not = "v128.not",
+    /// [**v128.and**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128And = "v128.and",
+    /// [**v128.andnot**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128AndNot = "v128.andnot",
+    /// [**v128.or**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Or = "v128.or",
+    /// [**v128.xor**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Xor = "v128.xor",
+    /// [**v128.bitselect**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128Bitselect = "v128.bitselect",
+    /// [**v128.any_true**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    V128AnyTrue = "v128.any_true",
+
+    /// [**i8x16.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Abs = "i8x16.abs",
+    /// [**i8x16.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Neg = "i8x16.neg",
+    /// [**i8x16.popcnt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Popcnt = "i8x16.popcnt",
+    /// [**i8x16.all_true**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16AllTrue = "i8x16.all_true",
+    /// [**i8x16.bitmask**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Bitmask = "i8x16.bitmask",
+    /// [**i8x16.narrow_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16NarrowI16x8S = "i8x16.narrow_i16x8_s",
+    /// [**i8x16.narrow_i16x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16NarrowI16x8U = "i8x16.narrow_i16x8_u",
+    /// [**i8x16.shl**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Shl = "i8x16.shl",
+    /// [**i8x16.shr_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16ShrS = "i8x16.shr_s",
+    /// [**i8x16.shr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16ShrU = "i8x16.shr_u",
+    /// [**i8x16.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Add = "i8x16.add",
+    /// [**i8x16.add_sat_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16AddSatS = "i8x16.add_sat_s",
+    /// [**i8x16.add_sat_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16AddSatU = "i8x16.add_sat_u",
+    /// [**i8x16.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16Sub = "i8x16.sub",
+    /// [**i8x16.sub_sat_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16SubSatS = "i8x16.sub_sat_s",
+    /// [**i8x16.sub_sat_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16SubSatU = "i8x16.sub_sat_u",
+    /// [**i8x16.min_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16MinS = "i8x16.min_s",
+    /// [**i8x16.min_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16MinU = "i8x16.min_u",
+    /// [**i8x16.max_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16MaxS = "i8x16.max_s",
+    /// [**i8x16.max_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16MaxU = "i8x16.max_u",
+    /// [**i8x16.avgr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16AvgrU = "i8x16.avgr_u",
+
+    /// [**i16x8.extadd_pairwise_i8x16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtaddPairwiseI8x16S = "i16x8.extadd_pairwise_i8x16_s",
+    /// [**i16x8.extadd_pairwise_i8x16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtaddPairwiseI8x16U = "i16x8.extadd_pairwise_i8x16_u",
+    /// [**i16x8.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Abs = "i16x8.abs",
+    /// [**i16x8.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Neg = "i16x8.neg",
+    /// [**i16x8.q15mulr_sat_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Q15MulrSatS = "i16x8.q15mulr_sat_s",
+    /// [**i16x8.all_true**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8AllTrue = "i16x8.all_true",
+    /// [**i16x8.bitmask**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Bitmask = "i16x8.bitmask",
+    /// [**i16x8.narrow_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8NarrowI32x4S = "i16x8.narrow_i32x4_s",
+    /// [**i16x8.narrow_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8NarrowI32x4U = "i16x8.narrow_i32x4_u",
+    /// [**i16x8.extend_low_i8x16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtendLowI8x16S = "i16x8.extend_low_i8x16_s",
+    /// [**i16x8.extend_high_i8x16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtendHighI8x16S = "i16x8.extend_high_i8x16_s",
+    /// [**i16x8.extend_low_i8x16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtendLowI8x16U = "i16x8.extend_low_i8x16_u",
+    /// [**i16x8.extend_high_i8x16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtendHighI8x16U = "i16x8.extend_high_i8x16_u",
+    /// [**i16x8.shl**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Shl = "i16x8.shl",
+    /// [**i16x8.shr_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ShrS = "i16x8.shr_s",
+    /// [**i16x8.shr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ShrU = "i16x8.shr_u",
+    /// [**i16x8.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Add = "i16x8.add",
+    /// [**i16x8.add_sat_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8AddSatS = "i16x8.add_sat_s",
+    /// [**i16x8.add_sat_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8AddSatU = "i16x8.add_sat_u",
+    /// [**i16x8.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Sub = "i16x8.sub",
+    /// [**i16x8.sub_sat_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8SubSatS = "i16x8.sub_sat_s",
+    /// [**i16x8.sub_sat_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8SubSatU = "i16x8.sub_sat_u",
+    /// [**i16x8.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8Mul = "i16x8.mul",
+    /// [**i16x8.min_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8MinS = "i16x8.min_s",
+    /// [**i16x8.min_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8MinU = "i16x8.min_u",
+    /// [**i16x8.max_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8MaxS = "i16x8.max_s",
+    /// [**i16x8.max_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8MaxU = "i16x8.max_u",
+    /// [**i16x8.avgr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8AvgrU = "i16x8.avgr_u",
+    /// [**i16x8.extmul_low_i8x16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtmulLowI8x16S = "i16x8.extmul_low_i8x16_s",
+    /// [**i16x8.extmul_high_i8x16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtmulHighI8x16S = "i16x8.extmul_high_i8x16_s",
+    /// [**i16x8.extmul_low_i8x16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtmulLowI8x16U = "i16x8.extmul_low_i8x16_u",
+    /// [**i16x8.extmul_high_i8x16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtmulHighI8x16U = "i16x8.extmul_high_i8x16_u",
+
+    /// [**i32x4.extadd_pairwise_i16x8s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtaddPairwiseI16x8S = "i32x4.extadd_pairwise_i16x8s",
+    /// [**i32x4.extadd_pairwise_i16x8u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtaddPairwiseI16x8U = "i32x4.extadd_pairwise_i16x8u",
+    /// [**i32x4.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Abs = "i32x4.abs",
+    /// [**i32x4.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Neg = "i32x4.neg",
+    /// [**i32x4.all_true**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4AllTrue = "i32x4.all_true",
+    /// [**i32x4.bitmask**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Bitmask = "i32x4.bitmask",
+    /// [**i32x4.extend_low_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtendLowI16x8S = "i32x4.extend_low_i16x8_s",
+    /// [**i32x4.extend_high_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtendHighI16x8S = "i32x4.extend_high_i16x8_s",
+    /// [**i32x4.extend_low_i16x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtendLowI16x8U = "i32x4.extend_low_i16x8_u",
+    /// [**i32x4.extend_high_i16x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtendHighI16x8U = "i32x4.extend_high_i16x8_u",
+    /// [**i32x4.shl**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Shl = "i32x4.shl",
+    /// [**i32x4.shr_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ShrS = "i32x4.shr_s",
+    /// [**i32x4.shr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ShrU = "i32x4.shr_u",
+    /// [**i32x4.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Add = "i32x4.add",
+    /// [**i32x4.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Sub = "i32x4.sub",
+    /// [**i32x4.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4Mul = "i32x4.mul",
+    /// [**i32x4.min_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4MinS = "i32x4.min_s",
+    /// [**i32x4.min_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4MinU = "i32x4.min_u",
+    /// [**i32x4.max_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4MaxS = "i32x4.max_s",
+    /// [**i32x4.max_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4MaxU = "i32x4.max_u",
+    /// [**i32x4.dot_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4DotI16x8S = "i32x4.dot_i16x8_s",
+    /// [**i32x4.extmul_low_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtmulLowI16x8S = "i32x4.extmul_low_i16x8_s",
+    /// [**i32x4.extmul_high_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtmulHighI16x8S = "i32x4.extmul_high_i16x8_s",
+    /// [**i32x4.extmul_low_i16x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtmulLowI16x8U = "i32x4.extmul_low_i16x8_u",
+    /// [**i32x4.extmul_high_i16x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtmulHighI16x8U = "i32x4.extmul_high_i16x8_u",
+
+    /// [**i64x2.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Abs = "i64x2.abs",
+    /// [**i64x2.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Neg = "i64x2.neg",
+    /// [**i64x2.all_true**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2AllTrue = "i64x2.all_true",
+    /// [**i64x2.bitmask**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Bitmask = "i64x2.bitmask",
+    /// [**i64x2.extend_low_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtendLowI32x4S = "i64x2.extend_low_i32x4_s",
+    /// [**i64x2.extend_high_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtendHighI32x4S = "i64x2.extend_high_i32x4_s",
+    /// [**i64x2.extend_low_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtendLowI32x4U = "i64x2.extend_low_i32x4_u",
+    /// [**i64x2.extend_high_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtendHighI32x4U = "i64x2.extend_high_i32x4_u",
+    /// [**i64x2.shl**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Shl = "i64x2.shl",
+    /// [**i64x2.shr_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ShrS = "i64x2.shr_s",
+    /// [**i64x2.shr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ShrU = "i64x2.shr_u",
+    /// [**i64x2.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Add = "i64x2.add",
+    /// [**i64x2.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Sub = "i64x2.sub",
+    /// [**i64x2.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2Mul = "i64x2.mul",
+    /// [**i64x2.extmul_low_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtmulLowI32x4S = "i64x2.extmul_low_i32x4_s",
+    /// [**i64x2.extmul_high_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtmulHighI32x4S = "i64x2.extmul_high_i32x4_s",
+    /// [**i64x2.extmul_low_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtmulLowI32x4U = "i64x2.extmul_low_i32x4_u",
+    /// [**i64x2.extmul_high_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtmulHighI32x4U = "i64x2.extmul_high_i32x4_u",
+
+    /// [**f32x4.ceil**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Ceil = "f32x4.ceil",
+    /// [**f32x4.floor**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Floor = "f32x4.floor",
+    /// [**f32x4.trunc**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Trunc = "f32x4.trunc",
+    /// [**f32x4.nearest**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Nearest = "f32x4.nearest",
+    /// [**f32x4.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Abs = "f32x4.abs",
+    /// [**f32x4.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Neg = "f32x4.neg",
+    /// [**f32x4.sqrt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Sqrt = "f32x4.sqrt",
+    /// [**f32x4.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Add = "f32x4.add",
+    /// [**f32x4.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Sub = "f32x4.sub",
+    /// [**f32x4.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Mul = "f32x4.mul",
+    /// [**f32x4.div**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Div = "f32x4.div",
+    /// [**f32x4.min**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Min = "f32x4.min",
+    /// [**f32x4.max**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Max = "f32x4.max",
+    /// [**f32x4.pmin**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Pmin = "f32x4.pmin",
+    /// [**f32x4.pmax**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4Pmax = "f32x4.pmax",
+
+    /// [**f64x2.ceil**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Ceil = "f64x2.ceil",
+    /// [**f64x2.floor**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Floor = "f64x2.floor",
+    /// [**f64x2.trunc**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Trunc = "f64x2.trunc",
+    /// [**f64x2.nearest**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Nearest = "f64x2.nearest",
+    /// [**f64x2.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Abs = "f64x2.abs",
+    /// [**f64x2.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Neg = "f64x2.neg",
+    /// [**f64x2.sqrt**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Sqrt = "f64x2.sqrt",
+    /// [**f64x2.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Add = "f64x2.add",
+    /// [**f64x2.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Sub = "f64x2.sub",
+    /// [**f64x2.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Mul = "f64x2.mul",
+    /// [**f64x2.div**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Div = "f64x2.div",
+    /// [**f64x2.min**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Min = "f64x2.min",
+    /// [**f64x2.max**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Max = "f64x2.max",
+    /// [**f64x2.pmin**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Pmin = "f64x2.pmin",
+    /// [**f64x2.pmax**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2Pmax = "f64x2.pmax",
+
+    /// [**i32x4.trunc_sat_f32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4TruncSatF32x4S = "i32x4.trunc_sat_f32x4_s",
+    /// [**i32x4.trunc_sat_f32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4TruncSatF32x4U = "i32x4.trunc_sat_f32x4_u",
+    /// [**f32x4.convert_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4ConvertI32x4S = "f32x4.convert_i32x4_s",
+    /// [**f32x4.convert_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4ConvertI32x4U = "f32x4.convert_i32x4_u",
+    /// [**i32x4.trunc_sat_f64x2_s_zero**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4TruncSatF64x2SZero = "i32x4.trunc_sat_f64x2_s_zero",
+    /// [**i32x4.trunc_sat_f64x2_u_zero**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4TruncSatF64x2UZero = "i32x4.trunc_sat_f64x2_u_zero",
+    /// [**f64x2.convert_low_i32x4_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2ConvertLowI32x4S = "f64x2.convert_low_i32x4_s",
+    /// [**f64x2.convert_low_i32x4_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2ConvertLowI32x4U = "f64x2.convert_low_i32x4_u",
+    /// [**f32x4.demote_f64x2_zero**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4DemoteF64x2Zero = "f32x4.demote_f64x2_zero",
+    /// [**f64x2.promote_low_f32x4**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2PromoteLowF32x4 = "f64x2.promote_low_f32x4",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
