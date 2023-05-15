@@ -35,27 +35,34 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
         allocator: A,
     ) -> Result<parser::Result<Self>, Section<B, S>> {
         if let SectionKind::Id(id) = section.kind() {
-            let contents = section.into_contents();
             Ok(match *id {
                 section_id::TYPE => {
+                    let contents = section.into_contents();
                     component::TypesComponent::new(contents.base(), contents).map(Self::from)
                 }
-                section_id::IMPORT => component::ImportsComponent::with_buffer(
-                    contents.base(),
-                    contents,
-                    allocator.allocate_buffer(),
-                )
+                section_id::IMPORT => {
+                    let contents = section.into_contents();
+                    component::ImportsComponent::with_buffer(
+                        contents.base(),
+                        contents,
+                        allocator.allocate_buffer(),
+                    )
+                }
                 .map(Self::from),
                 section_id::FUNC => {
+                    let contents = section.into_contents();
                     component::FunctionSection::new(contents.base(), contents).map(Self::from)
                 }
                 section_id::TABLE => {
+                    let contents = section.into_contents();
                     component::TablesComponent::new(contents.base(), contents).map(Self::from)
                 }
                 section_id::MEMORY => {
+                    let contents = section.into_contents();
                     component::MemsComponent::new(contents.base(), contents).map(Self::from)
                 }
                 section_id::GLOBAL => {
+                    let contents = section.into_contents();
                     component::GlobalsComponent::new(contents.base(), contents).map(Self::from)
                 }
                 _ => return Err(section),
