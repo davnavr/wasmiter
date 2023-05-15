@@ -108,7 +108,7 @@ pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits
 /// Parses a
 /// [WebAssembly function type](https://webassembly.github.io/spec/core/syntax/types.html#function-types),
 /// which specifies the parameter and result types of a function.
-pub fn func_type<B: Bytes, P, R>(
+pub fn func_type<'o, B: Bytes, P, R>(
     offset: &mut u64,
     bytes: &B,
     parameter_types: P,
@@ -125,7 +125,8 @@ where
         ));
     }
 
-    let mut parameters = component::ResultType::new(offset, bytes, Default::default())?;
+    let offset_reborrow: &mut u64 = offset;
+    let mut parameters = component::ResultType::new(offset_reborrow, bytes, Default::default())?;
     parameter_types(&mut parameters)?;
     parameters.finish()?;
     let mut results = component::ResultType::new(offset, bytes, Default::default())?;

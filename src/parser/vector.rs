@@ -62,8 +62,8 @@ pub struct Vector<O: Offset, B: Bytes, P: Parse> {
     sequence: Sequence<P>,
 }
 
-impl<B: Bytes, P: Parse> Vector<u64, &B, P> {
-    pub(crate) fn empty(bytes: &B, parser: P) -> Self {
+impl<'a, B: Bytes, P: Parse> Vector<u64, &'a B, P> {
+    pub(crate) fn empty(bytes: &'a B, parser: P) -> Self {
         Self {
             offset: 0,
             bytes,
@@ -113,8 +113,8 @@ impl<O: Offset, B: Bytes, P: Parse + Clone> Vector<O, B, P> {
     }
 }
 
-impl<O: Offset, B: Bytes, P: Parse + Clone> Vector<O, &&B, P> {
-    pub(crate) fn dereferenced(&self) -> Vector<u64, &B, P> {
+impl<'a, O: Offset, B: Bytes, P: Parse + Clone> Vector<O, &&'a B, P> {
+    pub(crate) fn dereferenced(&self) -> Vector<u64, &'a B, P> {
         Vector {
             offset: self.offset.offset(),
             bytes: self.bytes,
