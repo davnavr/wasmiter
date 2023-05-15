@@ -98,6 +98,13 @@ pub(crate) fn bytes_exact<B: Bytes>(offset: &mut u64, bytes: B, buffer: &mut [u8
 }
 
 #[inline]
+pub(crate) fn byte_array<B: Bytes, const N: usize>(offset: &mut u64, bytes: B) -> Result<[u8; N]> {
+    let mut array = [0u8; N];
+    bytes_exact(offset, bytes, array.as_mut_slice())?;
+    Ok(array)
+}
+
+#[inline]
 pub(crate) fn one_byte<B: Bytes>(offset: &mut u64, bytes: B) -> Result<Option<u8>> {
     Ok(if let [value] = self::bytes(offset, bytes, &mut [0u8])? {
         Some(*value)

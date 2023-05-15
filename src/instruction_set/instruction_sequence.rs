@@ -1,11 +1,11 @@
 use crate::bytes::Bytes;
 use crate::component;
 use crate::instruction_set::{self, FCPrefixedOpcode, Instruction, Opcode};
-use crate::parser::{self, Result, ResultExt, Vector};
+use crate::parser::{self, leb128, Result, ResultExt, Vector};
 
 fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
-    let a = parser::leb128::u32(offset, bytes).context("memory argument alignment")?;
-    let o = parser::leb128::u32(offset, bytes).context("memory argument offset")?;
+    let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
+    let o = leb128::u32(offset, bytes).context("memory argument offset")?;
 
     let align = u8::try_from(a)
         .ok()
@@ -88,6 +88,14 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::I64Store32 => Instruction::I64Store32(memarg(offset, bytes)?),
         Opcode::MemorySize => Instruction::MemorySize(component::index(offset, bytes)?),
         Opcode::MemoryGrow => Instruction::MemoryGrow(component::index(offset, bytes)?),
+        Opcode::I32Const => Instruction::I32Const(leb128::s32(offset, bytes)?),
+        Opcode::I64Const => Instruction::I64Const(leb128::s64(offset, bytes)?),
+        Opcode::F32Const => Instruction::F32Const(f32::from_le_bytes(
+            parser::byte_array(offset, bytes).context("32-bit float constant")?,
+        )),
+        Opcode::F64Const => Instruction::F64Const(f64::from_le_bytes(
+            parser::byte_array(offset, bytes).context("64-bit float constant")?,
+        )),
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }
@@ -96,7 +104,7 @@ fn instruction<'a, 'b, B: Bytes>(
             component::index(offset, bytes).context("invalid reference to function")?,
         ),
         Opcode::PrefixFC => {
-            let actual_opcode = parser::leb128::u32(offset, bytes)
+            let actual_opcode = leb128::u32(offset, bytes)
                 .context("actual opcode")?
                 .try_into()?;
 

@@ -319,6 +319,27 @@ instructions! {
     /// [**memory.fill**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction fills a region of memory with byte value.
     MemoryFill[(MemIdx)] = "memory.fill",
+
+    // Numeric Instructions
+
+    /// The
+    /// [**i32.const**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    /// instruction returns a 32-bit integer constant.
+    I32Const[(i32)] = "i32.const",
+    /// The
+    /// [**i64.const**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    /// instruction returns a 64-bit integer constant.
+    I64Const[(i64)] = "i64.const",
+    /// The
+    /// [**f32.const**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    /// instruction returns a 32-bit IEEE-754 floating point constant.
+    F32Const[(f32)] = "f32.const",
+    /// The
+    /// [**f64.const**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    /// instruction returns a 64-bit IEEE-754 floating point constant.
+    F64Const[(f64)] = "f64.const",
+
+    //I32Eqz
 }
 
 impl<B: Bytes> Instruction<'_, B> {
