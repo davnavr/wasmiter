@@ -44,6 +44,55 @@ impl<'a> Import<'a> {
     pub fn kind(&self) -> &ImportKind {
         &self.kind
     }
+
+    #[inline]
+    fn parse<'b: 'a, B: Bytes, U: Buffer>(
+        offset: &mut u64,
+        bytes: &B,
+        buffer: &'b mut U,
+    ) -> Result<Self> {
+        let module_name = parser::name(offset, &bytes, buffer)
+            .context("module name")?
+            .len();
+
+        let import_name = parser::name(offset, bytes, buffer)
+            .context("import name")?
+            .len();
+
+        let kind = match parser::one_byte_exact(offset, bytes).context("import kind")? {
+            0 => ImportKind::Function(
+                component::index(offset, bytes).context("function import type")?,
+            ),
+            1 => ImportKind::Table(
+                component::table_type(offset, bytes).context("table import type")?,
+            ),
+            2 => ImportKind::Memory(
+                component::mem_type(offset, bytes).context("memory import type")?,
+            ),
+            3 => ImportKind::Global(
+                component::global_type(offset, bytes).context("global import type")?,
+            ),
+            bad => {
+                return Err(crate::parser_bad_format!(
+                    "{bad:#02X} is not a known import kind"
+                ))
+            }
+        };
+
+        // Need to convert &mut [u8] to [u8], borrow error occurs if as_ref is used
+        let names: &'a [u8] = buffer.as_mut();
+        Ok(Self {
+            module: unsafe {
+                // Safety: parser::name returns a valid string
+                core::str::from_utf8_unchecked(&names[0..module_name])
+            },
+            name: unsafe {
+                // Safety: parser::name returns a valid string, and this is after the module name
+                core::str::from_utf8_unchecked(&names[module_name..module_name + import_name])
+            },
+            kind,
+        })
+    }
 }
 
 /// Represents the
@@ -83,56 +132,13 @@ impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
         self.len() == 0
     }
 
-    #[inline]
-    fn parse(&mut self) -> Result<Import<'_>> {
-        let module_name = 0..parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
-            .context("module name")?
-            .len();
-
-        let import_name: &str =
-            parser::name(&mut self.offset, &self.bytes, &mut self.buffer).context("import name")?;
-
-        let kind = match parser::one_byte_exact(&mut self.offset, &self.bytes)
-            .context("import kind")?
-        {
-            0 => ImportKind::Function(
-                component::index(&mut self.offset, &self.bytes).context("function import type")?,
-            ),
-            1 => ImportKind::Table(
-                component::table_type(&mut self.offset, &self.bytes)
-                    .context("table import type")?,
-            ),
-            2 => ImportKind::Memory(
-                component::mem_type(&mut self.offset, &self.bytes).context("memory import type")?,
-            ),
-            3 => ImportKind::Global(
-                component::global_type(&mut self.offset, &self.bytes)
-                    .context("global import type")?,
-            ),
-            bad => {
-                return Err(crate::parser_bad_format!(
-                    "{bad:#02X} is not a known import kind"
-                ))
-            }
-        };
-
-        Ok(Import {
-            module: unsafe {
-                // Safety: parser::name returns a valid string
-                core::str::from_utf8_unchecked(&self.buffer.as_ref()[module_name])
-            },
-            name: import_name,
-            kind,
-        })
-    }
-
     /// Parses the next import in the section.
     pub fn next(&mut self) -> Result<Option<Import<'_>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        match self.parse() {
+        match Import::parse(&mut self.offset, &self.bytes, &mut self.buffer) {
             Ok(import) => {
                 self.count -= 1;
                 Ok(Some(import))
