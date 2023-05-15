@@ -47,6 +47,13 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::LocalTee => Instruction::LocalTee(component::index(offset, bytes)?),
         Opcode::GlobalGet => Instruction::GlobalGet(component::index(offset, bytes)?),
         Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, bytes)?),
+        Opcode::RefNull => {
+            Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
+        }
+        Opcode::RefIsNull => Instruction::RefIsNull,
+        Opcode::RefFunc => Instruction::RefFunc(
+            component::index(offset, bytes).context("invalid reference to function")?,
+        ),
         _ => todo!("{opcode:?} not implemented"),
     }) //.context() // the opcode name
 }

@@ -94,14 +94,29 @@ instructions! {
     /// or a block.
     End = "end",
 
+    // Reference Instructions
+
+    /// The
+    /// [**ref.null**](https://webassembly.github.io/spec/core/syntax/instructions.html#reference-instructions)
+    /// instruction produces a `null` value of the specified reference type.
+    RefNull[(component::RefType)] = "ref.null",
+    /// The
+    /// [**ref.is_null**](https://webassembly.github.io/spec/core/syntax/instructions.html#reference-instructions)
+    /// instruction checks if an operand is `null`.
+    RefIsNull = "ref.is_null",
+    /// The
+    /// [**ref.func**](https://webassembly.github.io/spec/core/syntax/instructions.html#reference-instructions)
+    /// instruction produces a reference to a given function (a `funcref`).
+    RefFunc[(component::FuncIdx)] = "ref.func",
+
     // Parametric Instructions
 
     /// The
-    /// [**drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-parametric)
+    /// [**drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#parametric-instructions)
     /// instruction discards an operand from the value stack.
     Drop = "drop",
     /// The
-    /// [**select**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-parametric)
+    /// [**select**](https://webassembly.github.io/spec/core/syntax/instructions.html#parametric-instructions)
     /// instruction selects one of two operands based on a third condition operand.
     ///
     /// The types specify the type of the operand selected. Future versions of WebAssembly may
