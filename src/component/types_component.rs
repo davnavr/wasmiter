@@ -64,14 +64,6 @@ impl<B: Bytes> TypesComponent<B> {
 
         result.map(|()| true)
     }
-
-    fn by_ref(&self) -> TypesComponent<&B> {
-        TypesComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
-    }
 }
 
 struct FuncType<'a, B: Bytes> {
