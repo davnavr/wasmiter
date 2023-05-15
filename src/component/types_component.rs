@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::ValType;
+use crate::component::{self, ValType};
 use crate::parser::{self, Result, ResultExt};
 
 /// Parser for a
@@ -53,7 +53,8 @@ impl<B: Bytes> TypesComponent<B> {
             return Ok(false);
         }
 
-        let result = self.parser.func_type(parameter_types, result_types);
+        let result =
+            component::func_type(&mut self.offset, &self.bytes, parameter_types, result_types);
 
         if result.is_ok() {
             self.count -= 1;
@@ -73,46 +74,62 @@ impl<B: Bytes> TypesComponent<B> {
     }
 }
 
-#[cfg(feature = "alloc")]
-fn allocate_result_type<B: Bytes>(
-    vector: &mut alloc::vec::Vec<ValType>,
-) -> impl FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()> + '_ {
-    |parser| {
-        vector.reserve_exact(usize::try_from(parser.len()).unwrap_or_default());
-        for ty in parser {
-            vector.push(ty?);
-        }
-        Ok(())
+struct FuncType<'a, B: Bytes> {
+    parameters: ResultType<u64, &'a B>,
+    results: ResultType<u64, &'a B>,
+}
+
+impl<B: Bytes> core::fmt::Debug for FuncType<'_, B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("FuncType")
+            .field("parameters", &self.parameters)
+            .field("results", &self.results)
+            .finish()
     }
 }
 
-#[cfg(feature = "alloc")]
-impl<B: Bytes> Iterator for TypesComponent<B> {
-    type Item = Result<(alloc::vec::Vec<ValType>, alloc::vec::Vec<ValType>)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut parameters = alloc::vec::Vec::new();
-        let mut results = alloc::vec::Vec::new();
-        let more = self.next(
-            allocate_result_type(&mut parameters),
-            allocate_result_type(&mut results),
-        );
-        match more {
-            Ok(true) => Some(Ok((parameters, results))),
-            Ok(false) => None,
-            Err(e) => Some(Err(e)),
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
 impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
-        match self.try_clone() {
-            Ok(fork) => list.entries(fork),
-            Err(e) => list.entry(&Result::<()>::Err(e)),
+        let mut types = TypesComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        };
+
+        let empty_types = ResultType::empty(&self.bytes, Default::default());
+        let mut last_parameters = empty_types.clone();
+        let mut last_results = empty_types.clone();
+
+        loop {
+            let result = types.next(
+                |parameter_types| {
+                    last_parameters = parameter_types.dereferenced();
+                    Ok(())
+                },
+                |result_types| {
+                    last_results = result_types.dereferenced();
+                    Ok(())
+                },
+            );
+
+            match result {
+                Ok(true) => {
+                    let parameters = core::mem::replace(&mut last_parameters, empty_types.clone());
+                    let results = core::mem::replace(&mut last_results, empty_types.clone());
+                    list.entry(&FuncType {
+                        parameters,
+                        results,
+                    });
+                }
+                Ok(false) => break,
+                Err(e) => {
+                    list.entry(&Result::<()>::Err(e));
+                    break;
+                }
+            }
         }
-        .finish()
+
+        list.finish()
     }
 }

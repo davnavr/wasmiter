@@ -62,6 +62,16 @@ pub struct Vector<O: Offset, B: Bytes, P: Parse> {
     sequence: Sequence<P>,
 }
 
+impl<B: Bytes, P: Parse> Vector<u64, &B, P> {
+    pub(crate) fn empty(bytes: &B, parser: P) -> Self {
+        Self {
+            offset: 0,
+            bytes,
+            sequence: Sequence::new(0, parser),
+        }
+    }
+}
+
 impl<O: Offset, B: Bytes, P: Parse> Vector<O, B, P> {
     /// Creates a new [`Vector`] from the given [`Bytes`].
     pub fn new(mut offset: O, bytes: B, parser: P) -> Result<Self> {
@@ -94,10 +104,20 @@ impl<O: Offset, B: Bytes, P: Parse> Vector<O, B, P> {
 }
 
 impl<O: Offset, B: Bytes, P: Parse + Clone> Vector<O, B, P> {
-    pub(crate) fn by_ref(&self) -> Vector<u64, &B, P> {
+    pub(crate) fn by_reference(&self) -> Vector<u64, &B, P> {
         Vector {
             offset: self.offset.offset(),
             bytes: &self.bytes,
+            sequence: self.sequence.clone(),
+        }
+    }
+}
+
+impl<O: Offset, B: Bytes, P: Parse + Clone> Vector<O, &&B, P> {
+    pub(crate) fn dereferenced(&self) -> Vector<u64, &B, P> {
+        Vector {
+            offset: self.offset.offset(),
+            bytes: self.bytes,
             sequence: self.sequence.clone(),
         }
     }
@@ -128,7 +148,7 @@ where
     P::Output: core::fmt::Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.by_ref()).finish()
+        f.debug_list().entries(self.by_reference()).finish()
     }
 }
 
