@@ -1,9 +1,8 @@
 use wasmiter::component::{TypesComponent, ValType};
-use wasmiter::parser::Decoder;
 
 #[test]
 fn basic_type() {
-    let bytes = &[
+    let bytes = [
         1u8,  // count
         0x60, // func
         1,    // parameter count
@@ -12,11 +11,21 @@ fn basic_type() {
         0x7E, // i64
     ];
 
-    let mut types = TypesComponent::new(Decoder::new(bytes)).unwrap();
+    let mut types = TypesComponent::new(0, bytes.as_slice()).unwrap();
 
     assert_eq!(types.len(), 1);
-    let type_1 = Iterator::next(&mut types).unwrap().unwrap();
-    assert_eq!(type_1.0, &[ValType::I32]);
-    assert_eq!(type_1.1, &[ValType::I64]);
-    assert!(Iterator::next(&mut types).is_none());
+    assert!(types
+        .next(
+            |parameters| {
+                assert_eq!(parameters.next().transpose().unwrap(), Some(ValType::I32));
+                assert_eq!(parameters.next().transpose().unwrap(), None);
+                Ok(())
+            },
+            |results| {
+                assert_eq!(results.next().transpose().unwrap(), Some(ValType::I64));
+                assert_eq!(results.next().transpose().unwrap(), None);
+                Ok(())
+            }
+        )
+        .unwrap());
 }
