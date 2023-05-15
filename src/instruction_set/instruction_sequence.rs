@@ -49,6 +49,7 @@ fn instruction<'a, 'b, B: Bytes>(
         ),
         Opcode::Else => Instruction::Else,
         Opcode::End => Instruction::End,
+
         Opcode::Drop => Instruction::Drop,
         Opcode::Select => {
             Instruction::Select(Vector::empty_with_offset(offset, bytes, Default::default()))
@@ -56,17 +57,21 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::SelectMany => Instruction::Select(
             Vector::new(offset, bytes, Default::default()).context("select types")?,
         ),
+
         Opcode::LocalGet => Instruction::LocalGet(component::index(offset, bytes)?),
         Opcode::LocalSet => Instruction::LocalSet(component::index(offset, bytes)?),
         Opcode::LocalTee => Instruction::LocalTee(component::index(offset, bytes)?),
         Opcode::GlobalGet => Instruction::GlobalGet(component::index(offset, bytes)?),
         Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, bytes)?),
+
         Opcode::TableGet => Instruction::TableGet(component::index(offset, bytes)?),
         Opcode::TableSet => Instruction::TableSet(component::index(offset, bytes)?),
+
         Opcode::I32Load => Instruction::I32Load(memarg(offset, bytes)?),
         Opcode::I64Load => Instruction::I64Load(memarg(offset, bytes)?),
         Opcode::F32Load => Instruction::F32Load(memarg(offset, bytes)?),
         Opcode::F64Load => Instruction::F64Load(memarg(offset, bytes)?),
+
         Opcode::I32Load8S => Instruction::I32Load8S(memarg(offset, bytes)?),
         Opcode::I32Load8U => Instruction::I32Load8U(memarg(offset, bytes)?),
         Opcode::I32Load16S => Instruction::I32Load16S(memarg(offset, bytes)?),
@@ -77,17 +82,21 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::I64Load16U => Instruction::I64Load16U(memarg(offset, bytes)?),
         Opcode::I64Load32S => Instruction::I64Load32S(memarg(offset, bytes)?),
         Opcode::I64Load32U => Instruction::I64Load32U(memarg(offset, bytes)?),
+
         Opcode::I32Store => Instruction::I32Store(memarg(offset, bytes)?),
         Opcode::I64Store => Instruction::I64Store(memarg(offset, bytes)?),
         Opcode::F32Store => Instruction::F32Store(memarg(offset, bytes)?),
         Opcode::F64Store => Instruction::F64Store(memarg(offset, bytes)?),
+
         Opcode::I32Store8 => Instruction::I32Store8(memarg(offset, bytes)?),
         Opcode::I32Store16 => Instruction::I32Store16(memarg(offset, bytes)?),
         Opcode::I64Store8 => Instruction::I64Store8(memarg(offset, bytes)?),
         Opcode::I64Store16 => Instruction::I64Store16(memarg(offset, bytes)?),
         Opcode::I64Store32 => Instruction::I64Store32(memarg(offset, bytes)?),
+
         Opcode::MemorySize => Instruction::MemorySize(component::index(offset, bytes)?),
         Opcode::MemoryGrow => Instruction::MemoryGrow(component::index(offset, bytes)?),
+
         Opcode::I32Const => Instruction::I32Const(leb128::s32(offset, bytes)?),
         Opcode::I64Const => Instruction::I64Const(leb128::s64(offset, bytes)?),
         Opcode::F32Const => Instruction::F32Const(f32::from_le_bytes(
@@ -96,6 +105,7 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::F64Const => Instruction::F64Const(f64::from_le_bytes(
             parser::byte_array(offset, bytes).context("64-bit float constant")?,
         )),
+
         Opcode::I32Eqz => Instruction::I32Eqz,
         Opcode::I32Eq => Instruction::I32Eq,
         Opcode::I32Ne => Instruction::I32Ne,
@@ -107,6 +117,7 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::I32LeU => Instruction::I32LeU,
         Opcode::I32GeS => Instruction::I32GeS,
         Opcode::I32GeU => Instruction::I32GeU,
+
         Opcode::I64Eqz => Instruction::I64Eqz,
         Opcode::I64Eq => Instruction::I64Eq,
         Opcode::I64Ne => Instruction::I64Ne,
@@ -118,6 +129,7 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::I64LeU => Instruction::I64LeU,
         Opcode::I64GeS => Instruction::I64GeS,
         Opcode::I64GeU => Instruction::I64GeU,
+
         Opcode::F32Eq => Instruction::F32Eq,
         Opcode::F32Ne => Instruction::F32Ne,
         Opcode::F32Lt => Instruction::F32Lt,
@@ -130,6 +142,75 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::F64Gt => Instruction::F64Gt,
         Opcode::F64Le => Instruction::F64Le,
         Opcode::F64Ge => Instruction::F64Ge,
+
+        Opcode::I32Clz => Instruction::I32Clz,
+        Opcode::I32Ctz => Instruction::I32Ctz,
+        Opcode::I32Popcnt => Instruction::I32Popcnt,
+        Opcode::I32Add => Instruction::I32Add,
+        Opcode::I32Sub => Instruction::I32Sub,
+        Opcode::I32Mul => Instruction::I32Mul,
+        Opcode::I32DivS => Instruction::I32DivS,
+        Opcode::I32DivU => Instruction::I32DivU,
+        Opcode::I32RemS => Instruction::I32RemS,
+        Opcode::I32RemU => Instruction::I32RemU,
+        Opcode::I32And => Instruction::I32And,
+        Opcode::I32Or => Instruction::I32Or,
+        Opcode::I32Xor => Instruction::I32Xor,
+        Opcode::I32Shl => Instruction::I32Shl,
+        Opcode::I32ShrS => Instruction::I32ShrS,
+        Opcode::I32ShrU => Instruction::I32ShrU,
+        Opcode::I32Rotl => Instruction::I32Rotl,
+        Opcode::I32Rotr => Instruction::I32Rotr,
+
+        Opcode::I64Clz => Instruction::I64Clz,
+        Opcode::I64Ctz => Instruction::I64Ctz,
+        Opcode::I64Popcnt => Instruction::I64Popcnt,
+        Opcode::I64Add => Instruction::I64Add,
+        Opcode::I64Sub => Instruction::I64Sub,
+        Opcode::I64Mul => Instruction::I64Mul,
+        Opcode::I64DivS => Instruction::I64DivS,
+        Opcode::I64DivU => Instruction::I64DivU,
+        Opcode::I64RemS => Instruction::I64RemS,
+        Opcode::I64RemU => Instruction::I64RemU,
+        Opcode::I64And => Instruction::I64And,
+        Opcode::I64Or => Instruction::I64Or,
+        Opcode::I64Xor => Instruction::I64Xor,
+        Opcode::I64Shl => Instruction::I64Shl,
+        Opcode::I64ShrS => Instruction::I64ShrS,
+        Opcode::I64ShrU => Instruction::I64ShrU,
+        Opcode::I64Rotl => Instruction::I64Rotl,
+        Opcode::I64Rotr => Instruction::I64Rotr,
+
+        Opcode::F32Abs => Instruction::F32Abs,
+        Opcode::F32Neg => Instruction::F32Neg,
+        Opcode::F32Ceil => Instruction::F32Ceil,
+        Opcode::F32Floor => Instruction::F32Floor,
+        Opcode::F32Trunc => Instruction::F32Trunc,
+        Opcode::F32Nearest => Instruction::F32Nearest,
+        Opcode::F32Sqrt => Instruction::F32Sqrt,
+        Opcode::F32Add => Instruction::F32Add,
+        Opcode::F32Sub => Instruction::F32Sub,
+        Opcode::F32Mul => Instruction::F32Mul,
+        Opcode::F32Div => Instruction::F32Div,
+        Opcode::F32Min => Instruction::F32Min,
+        Opcode::F32Max => Instruction::F32Max,
+        Opcode::F32Copysign => Instruction::F32Copysign,
+
+        Opcode::F64Abs => Instruction::F64Abs,
+        Opcode::F64Neg => Instruction::F64Neg,
+        Opcode::F64Ceil => Instruction::F64Ceil,
+        Opcode::F64Floor => Instruction::F64Floor,
+        Opcode::F64Trunc => Instruction::F64Trunc,
+        Opcode::F64Nearest => Instruction::F64Nearest,
+        Opcode::F64Sqrt => Instruction::F64Sqrt,
+        Opcode::F64Add => Instruction::F64Add,
+        Opcode::F64Sub => Instruction::F64Sub,
+        Opcode::F64Mul => Instruction::F64Mul,
+        Opcode::F64Div => Instruction::F64Div,
+        Opcode::F64Min => Instruction::F64Min,
+        Opcode::F64Max => Instruction::F64Max,
+        Opcode::F64Copysign => Instruction::F64Copysign,
+
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }
@@ -137,6 +218,7 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::RefFunc => Instruction::RefFunc(
             component::index(offset, bytes).context("invalid reference to function")?,
         ),
+
         Opcode::PrefixFC => {
             let actual_opcode = leb128::u32(offset, bytes)
                 .context("actual opcode")?

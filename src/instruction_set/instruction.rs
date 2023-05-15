@@ -416,6 +416,138 @@ instructions! {
     F64Le = "f64.le",
     /// [**f64.ge**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
     F64Ge = "f64.ge",
+
+    /// [**i32.clz**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Clz = "i32.clz",
+    /// [**i32.ctz**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Ctz = "i32.ctz",
+    /// [**i32.popcnt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Popcnt = "i32.popcnt",
+    /// [**i32.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Add = "i32.add",
+    /// [**i32.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Sub = "i32.sub",
+    /// [**i32.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Mul = "i32.mul",
+    /// [**i32.div_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32DivS = "i32.div_s",
+    /// [**i32.div_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32DivU = "i32.div_u",
+    /// [**i32.rem_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32RemS = "i32.rem_s",
+    /// [**i32.rem_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32RemU = "i32.rem_u",
+    /// [**i32.and**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32And = "i32.and",
+    /// [**i32.or**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Or = "i32.or",
+    /// [**i32.xor**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Xor = "i32.xor",
+    /// [**i32.shl**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Shl = "i32.shl",
+    /// [**i32.shr_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32ShrS = "i32.shr_s",
+    /// [**i32.shr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32ShrU = "i32.shr_u",
+    /// [**i32.rotl**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Rotl = "i32.rotl",
+    /// [**i32.rotr**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Rotr = "i32.rotr",
+
+    /// [**i64.clz**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Clz = "i64.clz",
+    /// [**i64.ctz**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Ctz = "i64.ctz",
+    /// [**i64.popcnt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Popcnt = "i64.popcnt",
+    /// [**i64.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Add = "i64.add",
+    /// [**i64.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Sub = "i64.sub",
+    /// [**i64.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Mul = "i64.mul",
+    /// [**i64.div_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64DivS = "i64.div_s",
+    /// [**i64.div_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64DivU = "i64.div_u",
+    /// [**i64.rem_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64RemS = "i64.rem_s",
+    /// [**i64.rem_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64RemU = "i64.rem_u",
+    /// [**i64.and**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64And = "i64.and",
+    /// [**i64.or**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Or = "i64.or",
+    /// [**i64.xor**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Xor = "i64.xor",
+    /// [**i64.shl**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Shl = "i64.shl",
+    /// [**i64.shr_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64ShrS = "i64.shr_s",
+    /// [**i64.shr_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64ShrU = "i64.shr_u",
+    /// [**i64.rotl**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Rotl = "i64.rotl",
+    /// [**i64.rotr**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Rotr = "i64.rotr",
+
+    /// [**f32.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Abs = "f32.abs",
+    /// [**f32.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Neg = "f32.neg",
+    /// [**f32.ceil**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Ceil = "f32.ceil",
+    /// [**f32.floor**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Floor = "f32.floor",
+    /// [**f32.trunc**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Trunc = "f32.trunc",
+    /// [**f32.nearest**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Nearest = "f32.nearest",
+    /// [**f32.sqrt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Sqrt = "f32.sqrt",
+    /// [**f32.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Add = "f32.add",
+    /// [**f32.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Sub = "f32.sub",
+    /// [**f32.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Mul = "f32.mul",
+    /// [**f32.div**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Div = "f32.div",
+    /// [**f32.min**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Min = "f32.min",
+    /// [**f32.max**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Max = "f32.max",
+    /// [**f32.copysign**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Copysign = "f32.copysign",
+
+    /// [**f64.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Abs = "f64.abs",
+    /// [**f64.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Neg = "f64.neg",
+    /// [**f64.ceil**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Ceil = "f64.ceil",
+    /// [**f64.floor**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Floor = "f64.floor",
+    /// [**f64.trunc**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Trunc = "f64.trunc",
+    /// [**f64.nearest**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Nearest = "f64.nearest",
+    /// [**f64.sqrt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Sqrt = "f64.sqrt",
+    /// [**f64.add**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Add = "f64.add",
+    /// [**f64.sub**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Sub = "f64.sub",
+    /// [**f64.mul**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Mul = "f64.mul",
+    /// [**f64.div**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Div = "f64.div",
+    /// [**f64.min**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Min = "f64.min",
+    /// [**f64.max**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Max = "f64.max",
+    /// [**f64.copysign**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Copysign = "f64.copysign",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
