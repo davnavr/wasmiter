@@ -237,6 +237,12 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::F32ReinterpretI32 => Instruction::F32ReinterpretI32,
         Opcode::F64ReinterpretI64 => Instruction::F64ReinterpretI64,
 
+        Opcode::I32Extend8S => Instruction::I32Extend8S,
+        Opcode::I32Extend16S => Instruction::I32Extend16S,
+        Opcode::I64Extend8S => Instruction::I64Extend8S,
+        Opcode::I64Extend16S => Instruction::I64Extend16S,
+        Opcode::I64Extend32S => Instruction::I64Extend32S,
+
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }

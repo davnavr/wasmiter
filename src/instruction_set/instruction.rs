@@ -599,6 +599,17 @@ instructions! {
     F32ReinterpretI32 = "f32.reinterpret_i32",
     /// [**f64.reinterpret_i64**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
     F64ReinterpretI64 = "f64.reinterpret_i64",
+
+    /// [**i32.extend8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Extend8S = "i32.extend8_s",
+    /// [**i32.extend16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Extend16S = "i32.extend16_s",
+    /// [**i64.extend8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Extend8S = "i64.extend8_s",
+    /// [**i64.extend16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Extend16S = "i64.extend16_s",
+    /// [**i64.extend32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Extend32S = "i64.extend32_s",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
