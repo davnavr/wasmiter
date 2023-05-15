@@ -1,4 +1,4 @@
-use crate::allocator::{Allocator, OwnOrRef};
+use crate::allocator::{Allocator, Buffer, OwnOrRef};
 use crate::bytes::{Bytes, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
