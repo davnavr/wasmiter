@@ -37,6 +37,7 @@ impl<const P: u8> core::fmt::Display for InvalidPrefixedOpcode<P> {
 impl<const P: u8> std::error::Error for InvalidPrefixedOpcode<P> {}
 
 impl<const P: u8> From<InvalidPrefixedOpcode<P>> for crate::parser::Error {
+    #[inline]
     fn from(error: InvalidPrefixedOpcode<P>) -> Self {
         crate::parser_bad_format!("{error}")
     }

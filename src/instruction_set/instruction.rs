@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::{self, BlockType, LabelIdx, LocalIdx};
+use crate::component::{self, BlockType, LabelIdx, LocalIdx, TableIdx};
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
 macro_rules! instructions {
@@ -81,7 +81,7 @@ instructions! {
     /// The
     /// [**call_indirect**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// instruction calls a function from a `funcref` stored in a table.
-    CallIndirect[(component::TypeIdx, component::TableIdx)] = "call_indirect",
+    CallIndirect[(component::TypeIdx, TableIdx)] = "call_indirect",
     /// The
     /// [**else**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// instruction marks the start of the block control flow is transferred to if the condition for
@@ -145,7 +145,51 @@ instructions! {
     /// The
     /// [**global.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
     /// instruction pops a value from the stack and stores it into a global variable.
-    GlobalSet[(LocalIdx)] = "globalset",
+    GlobalSet[(LocalIdx)] = "global.set",
+
+    // Table Instructions
+
+    /// The
+    /// [**table.get**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction loads an element in the specified table.
+    TableGet[(TableIdx)] = "table.get",
+    /// The
+    /// [**table.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction stores an element in the specified table.
+    TableSet[(TableIdx)] = "table.set",
+    /// The
+    /// [**table.init**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction copies elements from a
+    /// [passive element segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-elem)
+    /// into the specified table.
+    TableInit[(component::ElemIdx, TableIdx)] = "table.init",
+    /// The
+    /// [**elem.drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction serves as a hint that the given
+    /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-elem)
+    /// will no longer be used.
+    ElemDrop[(component::ElemIdx)] = "elem.drop",
+    /// The
+    /// [**table.copy**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction copies elements from the `source` table into the `destination` table.
+    TableCopy[{
+        /// The table elements are copied into.
+        destination: TableIdx,
+        /// The table elements are copied from.
+        source: TableIdx
+    }] = "table.copy",
+    /// The
+    /// [**table.grow**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction increases the number of elements that can be stored in a table.
+    TableGrow[(TableIdx)] = "table.grow",
+    /// The
+    /// [**table.size**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction returns the current number of elements in the table.
+    TableSize[(TableIdx)] = "table.size",
+    /// The
+    /// [**table.fill**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
+    /// instruction sets all elements in the table to the value specified by an operand.
+    TableFill[(TableIdx)] = "table.fill",
 }
 
 impl<B: Bytes> Instruction<'_, B> {

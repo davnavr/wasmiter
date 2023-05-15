@@ -1,6 +1,6 @@
 use crate::bytes::Bytes;
 use crate::component;
-use crate::instruction_set::{Instruction, Opcode};
+use crate::instruction_set::{FCPrefixedOpcode, Instruction, Opcode};
 use crate::parser::{self, Result, ResultExt, Vector};
 
 /// Parses a WebAssembly [`Instruction`].
@@ -47,6 +47,8 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::LocalTee => Instruction::LocalTee(component::index(offset, bytes)?),
         Opcode::GlobalGet => Instruction::GlobalGet(component::index(offset, bytes)?),
         Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, bytes)?),
+        Opcode::TableGet => Instruction::TableGet(component::index(offset, bytes)?),
+        Opcode::TableSet => Instruction::TableSet(component::index(offset, bytes)?),
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }
@@ -54,6 +56,35 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::RefFunc => Instruction::RefFunc(
             component::index(offset, bytes).context("invalid reference to function")?,
         ),
+        Opcode::PrefixFC => {
+            let actual_opcode = parser::leb128::u32(offset, bytes)
+                .context("actual opcode")?
+                .try_into()?;
+
+            match actual_opcode {
+                FCPrefixedOpcode::TableInit => Instruction::TableInit(
+                    component::index(offset, bytes)?,
+                    component::index(offset, bytes)?,
+                ),
+                FCPrefixedOpcode::ElemDrop => {
+                    Instruction::ElemDrop(component::index(offset, bytes)?)
+                }
+                FCPrefixedOpcode::TableCopy => Instruction::TableCopy {
+                    destination: component::index(offset, bytes).context("destination table")?,
+                    source: component::index(offset, bytes).context("source table")?,
+                },
+                FCPrefixedOpcode::TableGrow => {
+                    Instruction::TableGrow(component::index(offset, bytes)?)
+                }
+                FCPrefixedOpcode::TableSize => {
+                    Instruction::TableSize(component::index(offset, bytes)?)
+                }
+                FCPrefixedOpcode::TableFill => {
+                    Instruction::TableFill(component::index(offset, bytes)?)
+                }
+                _ => todo!("0xFC {actual_opcode:?} not implemented"),
+            }
+        }
         _ => todo!("{opcode:?} not implemented"),
     }) //.context() // the opcode name
 }
