@@ -2,7 +2,7 @@ use crate::bytes::Bytes;
 use crate::parser::{self, Offset, Parse, Result, ResultExt};
 
 /// Parser for a sequence of elements.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 #[must_use]
 pub struct Sequence<P: Parse> {
     count: u32,
@@ -55,7 +55,7 @@ impl<P: Parse> Parse for Sequence<P> {
 }
 
 /// Represents a sequence of elements prefixed by a `u32` count.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Vector<O: Offset, B: Bytes, P: Parse> {
     offset: O,
     bytes: B,

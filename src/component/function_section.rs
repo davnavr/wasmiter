@@ -9,6 +9,7 @@ use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 /// function in the
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
+#[derive(Clone, Copy)]
 pub struct FunctionSection<B: Bytes> {
     indices: Vector<u64, B, SimpleParse<FuncIdx>>,
 }

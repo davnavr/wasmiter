@@ -6,6 +6,7 @@ use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 /// [**tables** component](https://webassembly.github.io/spec/core/syntax/modules.html#tables) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*tables section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
+#[derive(Clone, Copy)]
 pub struct TablesComponent<B: Bytes> {
     types: Vector<u64, B, SimpleParse<TableType>>,
 }

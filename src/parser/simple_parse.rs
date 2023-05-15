@@ -1,8 +1,16 @@
 /// Provides a [`Parse`](crate::parser::Parse) implementation.
-#[derive(Clone)]
 pub struct SimpleParse<T> {
     _phantom: core::marker::PhantomData<*const T>,
 }
+
+impl<T> Clone for SimpleParse<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+
+impl<T> Copy for SimpleParse<T> {}
 
 impl<T> Default for SimpleParse<T> {
     #[inline]
