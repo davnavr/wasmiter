@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
 use crate::component::{self, BlockType, LabelIdx, LocalIdx, TableIdx};
+use crate::instruction_set::MemArg;
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
 macro_rules! instructions {
@@ -190,6 +191,13 @@ instructions! {
     /// [**table.fill**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
     /// instruction sets all elements in the table to the value specified by an operand.
     TableFill[(TableIdx)] = "table.fill",
+
+    // Memory Instructions
+
+    /// The
+    /// [**i32.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 32-bit integer from memory.
+    I32Load[(MemArg)] = "i32.load",
 }
 
 impl<B: Bytes> Instruction<'_, B> {

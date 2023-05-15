@@ -1,7 +1,21 @@
 use crate::bytes::Bytes;
 use crate::component;
-use crate::instruction_set::{FCPrefixedOpcode, Instruction, Opcode};
+use crate::instruction_set::{self, FCPrefixedOpcode, Instruction, Opcode};
 use crate::parser::{self, Result, ResultExt, Vector};
+
+fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
+    let a = parser::leb128::u32(offset, bytes).context("memory argument alignment")?;
+    let o = parser::leb128::u32(offset, bytes).context("memory argument offset")?;
+
+    let align = u8::try_from(a)
+        .ok()
+        .and_then(core::num::NonZeroU8::new)
+        .ok_or_else(|| {
+            crate::parser_bad_format!("{a} is too large to be a valid alignment power")
+        })?;
+
+    Ok(instruction_set::MemArg::new(o, align))
+}
 
 /// Parses a WebAssembly [`Instruction`].
 ///
@@ -49,6 +63,7 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, bytes)?),
         Opcode::TableGet => Instruction::TableGet(component::index(offset, bytes)?),
         Opcode::TableSet => Instruction::TableSet(component::index(offset, bytes)?),
+        Opcode::I32Load => Instruction::I32Load(memarg(offset, bytes)?),
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }
