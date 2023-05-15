@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::{self, BlockType, LabelIdx, LocalIdx, TableIdx};
+use crate::component::{self, BlockType, LabelIdx, LocalIdx, MemIdx, TableIdx};
 use crate::instruction_set::MemArg;
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
@@ -198,6 +198,127 @@ instructions! {
     /// [**i32.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction reads a 32-bit integer from memory.
     I32Load[(MemArg)] = "i32.load",
+    /// The
+    /// [**i64.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 64-bit integer from memory.
+    I64Load[(MemArg)] = "i64.load",
+    /// The
+    /// [**f32.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 32-bit IEEE-754 float from memory.
+    F32Load[(MemArg)] = "f32.load",
+    /// The
+    /// [**f64.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 64-bit IEEE-754 float from memory.
+    F64Load[(MemArg)] = "f64.load",
+    /// The
+    /// [**i32.load8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a byte from memory, and sign-extends it into a 32-bit integer.
+    I32Load8S[(MemArg)] = "i32.load8_s",
+    /// The
+    /// [**i32.load8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a byte from memory, and interprets zero-extends it into a 32-bit integer.
+    I32Load8U[(MemArg)] = "i32.load8_u",
+    /// The
+    /// [**i32.load16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 16-bit integer from memory, and sign-extends it into a 32-bit integer.
+    I32Load16S[(MemArg)] = "i32.load16_s",
+    /// The
+    /// [**i32.load16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 16-bit integer from memory, and interprets zero-extends it into a 32-bit integer.
+    I32Load16U[(MemArg)] = "i32.load16_u",
+    /// The
+    /// [**i64.load8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a byte from memory, and sign-extends it into a 64-bit integer.
+    I64Load8S[(MemArg)] = "i64.load8_s",
+    /// The
+    /// [**i64.load8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a byte from memory, and interprets zero-extends it into a 64-bit integer.
+    I64Load8U[(MemArg)] = "i64.load8_u",
+    /// The
+    /// [**i64.load16_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 16-bit integer from memory, and sign-extends it into a 64-bit integer.
+    I64Load16S[(MemArg)] = "i64.load16_s",
+    /// The
+    /// [**i64.load16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 16-bit integer from memory, and interprets zero-extends it into a 64-bit integer.
+    I64Load16U[(MemArg)] = "i64.load16_u",
+    /// The
+    /// [**i64.load32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 32-bit integer from memory, and sign-extends it into a 64-bit integer.
+    I64Load32S[(MemArg)] = "i64.load32_s",
+    /// The
+    /// [**i64.load32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction reads a 32-bit integer from memory, and interprets zero-extends it into a 64-bit integer.
+    I64Load32U[(MemArg)] = "i64.load32_u",
+    /// The
+    /// [**i32.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 32-bit integer into memory.
+    I32Store[(MemArg)] = "i32.store",
+    /// The
+    /// [**i64.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 64-bit integer into memory.
+    I64Store[(MemArg)] = "i64.store",
+    /// The
+    /// [**f32.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 32-bit IEEE-754 float into memory.
+    F32Store[(MemArg)] = "f32.store",
+    /// The
+    /// [**f64.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 64-bit IEEE-754 float into memory.
+    F64Store[(MemArg)] = "f64.store",
+    /// The
+    /// [**i32.store8**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a byte into memory.
+    I32Store8[(MemArg)] = "i32.store8",
+    /// The
+    /// [**i32.store16**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 16-bit integer into memory.
+    I32Store16[(MemArg)] = "i32.store16",
+    /// The
+    /// [**i64.store8**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a byte into memory.
+    I64Store8[(MemArg)] = "i64.store8",
+    /// The
+    /// [**i64.store16**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 16-bit integer into memory.
+    I64Store16[(MemArg)] = "i64.store16",
+    /// The
+    /// [**i64.store32**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction writes a 32-bit integer into memory.
+    I64Store32[(MemArg)] = "i64.store32",
+    /// The
+    /// [**memory.size**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction returns the current number of pages allocated for the given memory.
+    MemorySize[(MemIdx)] = "memory.size",
+    /// The
+    /// [**memory.grow**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction increases the number of pages allocated for the given memory by an amount.
+    MemoryGrow[(MemIdx)] = "memory.grow",
+    /// The
+    /// [**memory.init**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction copies bytes from a
+    /// [passive data segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-data)
+    /// into the given memory.
+    MemoryInit[(component::DataIdx, MemIdx)] = "memory.init",
+    /// The
+    /// [**data.drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction serves as a hint that the given
+    /// [data segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-data)
+    /// will no longer be used.
+    DataDrop[(component::DataIdx)] = "data.drop",
+    /// The
+    /// [**memory.copy**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction copies bytes from one memory into another memory.
+    MemoryCopy[{
+        /// The memory that bytes are copied into.
+        destination: MemIdx,
+        /// The memory that bytes are copied from.
+        source: MemIdx,
+    }] = "memory.copy",
+    /// The
+    /// [**memory.fill**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
+    /// instruction fills a region of memory with byte value.
+    MemoryFill[(MemIdx)] = "memory.fill",
 }
 
 impl<B: Bytes> Instruction<'_, B> {

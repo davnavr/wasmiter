@@ -64,6 +64,30 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::TableGet => Instruction::TableGet(component::index(offset, bytes)?),
         Opcode::TableSet => Instruction::TableSet(component::index(offset, bytes)?),
         Opcode::I32Load => Instruction::I32Load(memarg(offset, bytes)?),
+        Opcode::I64Load => Instruction::I64Load(memarg(offset, bytes)?),
+        Opcode::F32Load => Instruction::F32Load(memarg(offset, bytes)?),
+        Opcode::F64Load => Instruction::F64Load(memarg(offset, bytes)?),
+        Opcode::I32Load8S => Instruction::I32Load8S(memarg(offset, bytes)?),
+        Opcode::I32Load8U => Instruction::I32Load8U(memarg(offset, bytes)?),
+        Opcode::I32Load16S => Instruction::I32Load16S(memarg(offset, bytes)?),
+        Opcode::I32Load16U => Instruction::I32Load16U(memarg(offset, bytes)?),
+        Opcode::I64Load8S => Instruction::I64Load8S(memarg(offset, bytes)?),
+        Opcode::I64Load8U => Instruction::I64Load8U(memarg(offset, bytes)?),
+        Opcode::I64Load16S => Instruction::I64Load16S(memarg(offset, bytes)?),
+        Opcode::I64Load16U => Instruction::I64Load16U(memarg(offset, bytes)?),
+        Opcode::I64Load32S => Instruction::I64Load32S(memarg(offset, bytes)?),
+        Opcode::I64Load32U => Instruction::I64Load32U(memarg(offset, bytes)?),
+        Opcode::I32Store => Instruction::I32Store(memarg(offset, bytes)?),
+        Opcode::I64Store => Instruction::I64Store(memarg(offset, bytes)?),
+        Opcode::F32Store => Instruction::F32Store(memarg(offset, bytes)?),
+        Opcode::F64Store => Instruction::F64Store(memarg(offset, bytes)?),
+        Opcode::I32Store8 => Instruction::I32Store8(memarg(offset, bytes)?),
+        Opcode::I32Store16 => Instruction::I32Store16(memarg(offset, bytes)?),
+        Opcode::I64Store8 => Instruction::I64Store8(memarg(offset, bytes)?),
+        Opcode::I64Store16 => Instruction::I64Store16(memarg(offset, bytes)?),
+        Opcode::I64Store32 => Instruction::I64Store32(memarg(offset, bytes)?),
+        Opcode::MemorySize => Instruction::MemorySize(component::index(offset, bytes)?),
+        Opcode::MemoryGrow => Instruction::MemoryGrow(component::index(offset, bytes)?),
         Opcode::RefNull => {
             Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
         }
@@ -77,6 +101,20 @@ fn instruction<'a, 'b, B: Bytes>(
                 .try_into()?;
 
             match actual_opcode {
+                FCPrefixedOpcode::MemoryInit => Instruction::MemoryInit(
+                    component::index(offset, bytes)?,
+                    component::index(offset, bytes)?,
+                ),
+                FCPrefixedOpcode::DataDrop => {
+                    Instruction::DataDrop(component::index(offset, bytes)?)
+                }
+                FCPrefixedOpcode::MemoryCopy => Instruction::MemoryCopy {
+                    destination: component::index(offset, bytes).context("destination memory")?,
+                    source: component::index(offset, bytes).context("source memory")?,
+                },
+                FCPrefixedOpcode::MemoryFill => {
+                    Instruction::MemoryFill(component::index(offset, bytes)?)
+                }
                 FCPrefixedOpcode::TableInit => Instruction::TableInit(
                     component::index(offset, bytes)?,
                     component::index(offset, bytes)?,
