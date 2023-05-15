@@ -291,7 +291,14 @@ fn instruction<'a, 'b, B: Bytes>(
                 FCPrefixedOpcode::TableFill => {
                     Instruction::TableFill(component::index(offset, bytes)?)
                 }
-                _ => todo!("0xFC {actual_opcode:?} not implemented"),
+                FCPrefixedOpcode::I32TruncSatF32S => Instruction::I32TruncSatF32S,
+                FCPrefixedOpcode::I32TruncSatF32U => Instruction::I32TruncSatF32U,
+                FCPrefixedOpcode::I32TruncSatF64S => Instruction::I32TruncSatF64S,
+                FCPrefixedOpcode::I32TruncSatF64U => Instruction::I32TruncSatF64U,
+                FCPrefixedOpcode::I64TruncSatF32S => Instruction::I64TruncSatF32S,
+                FCPrefixedOpcode::I64TruncSatF32U => Instruction::I64TruncSatF32U,
+                FCPrefixedOpcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
+                FCPrefixedOpcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
             }
         }
         _ => todo!("{opcode:?} not implemented"),

@@ -610,6 +610,23 @@ instructions! {
     I64Extend16S = "i64.extend16_s",
     /// [**i64.extend32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
     I64Extend32S = "i64.extend32_s",
+
+    /// [**i32.trunc_sat_f32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncSatF32S = "i32.trunc_sat_f32_s",
+    /// [**i32.trunc_sat_f32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncSatF32U = "i32.trunc_sat_f32_u",
+    /// [**i32.trunc_sat_f64_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncSatF64S = "i32.trunc_sat_f64_s",
+    /// [**i32.trunc_sat_f64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32TruncSatF64U = "i32.trunc_sat_f64_u",
+    /// [**i64.trunc_sat_f32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncSatF32S = "i64.trunc_sat_f32_s",
+    /// [**i64.trunc_sat_f32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncSatF32U = "i64.trunc_sat_f32_u",
+    /// [**i64.trunc_sat_f64_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncSatF64S = "i64.trunc_sat_f64_s",
+    /// [**i64.trunc_sat_f64_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64TruncSatF64U = "i64.trunc_sat_f64_u",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
