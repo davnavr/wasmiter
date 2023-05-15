@@ -210,6 +210,7 @@ instructions! {
     /// [**f64.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction reads a 64-bit IEEE-754 float from memory.
     F64Load[(MemArg)] = "f64.load",
+
     /// The
     /// [**i32.load8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction reads a byte from memory, and sign-extends it into a 32-bit integer.
@@ -226,6 +227,7 @@ instructions! {
     /// [**i32.load16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction reads a 16-bit integer from memory, and interprets zero-extends it into a 32-bit integer.
     I32Load16U[(MemArg)] = "i32.load16_u",
+
     /// The
     /// [**i64.load8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction reads a byte from memory, and sign-extends it into a 64-bit integer.
@@ -250,6 +252,7 @@ instructions! {
     /// [**i64.load32_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction reads a 32-bit integer from memory, and interprets zero-extends it into a 64-bit integer.
     I64Load32U[(MemArg)] = "i64.load32_u",
+
     /// The
     /// [**i32.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction writes a 32-bit integer into memory.
@@ -266,6 +269,7 @@ instructions! {
     /// [**f64.load**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction writes a 64-bit IEEE-754 float into memory.
     F64Store[(MemArg)] = "f64.store",
+
     /// The
     /// [**i32.store8**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction writes a byte into memory.
@@ -274,6 +278,7 @@ instructions! {
     /// [**i32.store16**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction writes a 16-bit integer into memory.
     I32Store16[(MemArg)] = "i32.store16",
+
     /// The
     /// [**i64.store8**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction writes a byte into memory.
@@ -286,6 +291,7 @@ instructions! {
     /// [**i64.store32**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction writes a 32-bit integer into memory.
     I64Store32[(MemArg)] = "i64.store32",
+
     /// The
     /// [**memory.size**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
     /// instruction returns the current number of pages allocated for the given memory.
@@ -339,7 +345,77 @@ instructions! {
     /// instruction returns a 64-bit IEEE-754 floating point constant.
     F64Const[(f64)] = "f64.const",
 
-    //I32Eqz
+    /// [**i32.eqz**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Eqz = "i32.eqz",
+    /// [**i32.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Eq = "i32.eq",
+    /// [**i32.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32Ne = "i32.ne",
+    /// [**i32.lt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32LtS = "i32.lt_s",
+    /// [**i32.lt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32LtU = "i32.lt_u",
+    /// [**i32.gt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32GtS = "i32.gt_s",
+    /// [**i32.gt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32GtU = "i32.gt_u",
+    /// [**i32.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32LeS = "i32.le_s",
+    /// [**i32.le_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32LeU = "i32.le_u",
+    /// [**i32.ge_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32GeS = "i32.ge_s",
+    /// [**i32.ge_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I32GeU = "i32.ge_u",
+
+    /// [**i64.eqz**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Eqz = "i64.eqz",
+    /// [**i64.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Eq = "i64.eq",
+    /// [**i64.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64Ne = "i64.ne",
+    /// [**i64.lt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64LtS = "i64.lt_s",
+    /// [**i64.lt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64LtU = "i64.lt_u",
+    /// [**i64.gt_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64GtS = "i64.gt_s",
+    /// [**i64.gt_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64GtU = "i64.gt_u",
+    /// [**i64.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64LeS = "i64.le_s",
+    /// [**i64.le_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64LeU = "i64.le_u",
+    /// [**i64.ge_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64GeS = "i64.ge_s",
+    /// [**i64.ge_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    I64GeU = "i64.ge_u",
+
+    /// [**f32.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Eq = "f32.eq",
+    /// [**f32.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Ne = "f32.ne",
+    /// [**f32.lt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Lt = "f32.lt",
+    /// [**f32.gt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Gt = "f32.gt",
+    /// [**f32.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Le = "f32.le",
+    /// [**f32.ge**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F32Ge = "f32.ge",
+
+    /// [**f64.eq**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Eq = "f64.eq",
+    /// [**f64.ne**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Ne = "f64.ne",
+    /// [**f64.lt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Lt = "f64.lt",
+    /// [**f64.gt**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Gt = "f64.gt",
+    /// [**f64.le_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Le = "f64.le",
+    /// [**f64.ge**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
+    F64Ge = "f64.ge",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
