@@ -139,7 +139,10 @@ pub fn name<'b, B: Bytes, U: crate::allocator::Buffer>(
     let length = leb128::usize(offset, bytes).context("string length")?;
     let destination = buffer.as_ref().len()..;
     buffer.grow(length);
-    bytes_exact(offset, bytes, &mut buffer.as_mut()[destination]).context("string contents")?;
+
+    bytes_exact(offset, bytes, &mut buffer.as_mut()[destination.clone()])
+        .context("string contents")?;
+
     core::str::from_utf8_mut(&mut buffer.as_mut()[destination])
         .map_err(|e| crate::parser_bad_format!("{e}"))
 }
