@@ -82,13 +82,15 @@ impl<'a> Import<'a> {
         // Need to convert &mut [u8] to [u8], borrow error occurs if as_ref is used
         let names: &'a [u8] = buffer.as_mut();
         Ok(Self {
-            module: unsafe {
+            module: {
                 // Safety: parser::name returns a valid string
-                core::str::from_utf8_unchecked(&names[0..module_name])
+                unsafe { core::str::from_utf8_unchecked(&names[0..module_name]) }
             },
-            name: unsafe {
+            name: {
                 // Safety: parser::name returns a valid string, and this is after the module name
-                core::str::from_utf8_unchecked(&names[module_name..module_name + import_name])
+                unsafe {
+                    core::str::from_utf8_unchecked(&names[module_name..module_name + import_name])
+                }
             },
             kind,
         })
@@ -133,7 +135,7 @@ impl<B: Bytes, U: Buffer> ImportsComponent<B, U> {
     }
 
     /// Parses the next import in the section.
-    pub fn next(&mut self) -> Result<Option<Import<'_>>> {
+    pub fn parse_next(&mut self) -> Result<Option<Import<'_>>> {
         if self.count == 0 {
             return Ok(None);
         }

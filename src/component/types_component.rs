@@ -90,8 +90,8 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
         };
 
         let empty_types = ResultType::empty(&self.bytes, Default::default());
-        let mut last_parameters = empty_types.clone();
-        let mut last_results = empty_types.clone();
+        let mut last_parameters = empty_types;
+        let mut last_results = empty_types;
 
         loop {
             let result = types.next(
@@ -107,8 +107,8 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
 
             match result {
                 Ok(true) => {
-                    let parameters = core::mem::replace(&mut last_parameters, empty_types.clone());
-                    let results = core::mem::replace(&mut last_results, empty_types.clone());
+                    let parameters = core::mem::replace(&mut last_parameters, empty_types);
+                    let results = core::mem::replace(&mut last_results, empty_types);
                     list.entry(&FuncType {
                         parameters,
                         results,
