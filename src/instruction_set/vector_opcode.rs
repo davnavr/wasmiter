@@ -70,7 +70,7 @@ opcodes! {
     I32x4ReplaceLane = 28,
     I64x2ExtractLane = 29,
     I64x2ReplaceLane = 30,
-    F32x4ExtractLance = 31,
+    F32x4ExtractLane = 31,
     F32x4ReplaceLane = 32,
     F64x2ExtractLane = 33,
     F64x2ReplaceLane = 34,

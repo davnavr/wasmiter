@@ -366,6 +366,54 @@ fn instruction<'a, 'b, B: Bytes>(
                 VectorOpcode::I8x16Shuffle => Instruction::I8x16Shuffle(
                     parser::byte_array(offset, bytes).context("shuffle lane indices")?,
                 ),
+
+                VectorOpcode::I8x16ExtractLaneS => Instruction::I8x16ExtractLaneS(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::I8x16ExtractLaneU => Instruction::I8x16ExtractLaneU(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::I8x16ReplaceLane => Instruction::I8x16ReplaceLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+
+                VectorOpcode::I16x8ExtractLaneS => Instruction::I16x8ExtractLaneS(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::I16x8ExtractLaneU => Instruction::I16x8ExtractLaneU(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::I16x8ReplaceLane => Instruction::I16x8ReplaceLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+
+                VectorOpcode::I32x4ExtractLane => Instruction::I32x4ExtractLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::I32x4ReplaceLane => Instruction::I32x4ReplaceLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+
+                VectorOpcode::I64x2ExtractLane => Instruction::I64x2ExtractLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::I64x2ReplaceLane => Instruction::I64x2ReplaceLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+
+                VectorOpcode::F32x4ExtractLane => Instruction::F32x4ExtractLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::F32x4ReplaceLane => Instruction::F32x4ReplaceLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+
+                VectorOpcode::F64x2ExtractLane => Instruction::F64x2ExtractLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
+                VectorOpcode::F64x2ReplaceLane => Instruction::F64x2ReplaceLane(
+                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                ),
             }
         }
     }) //.context() // the opcode name

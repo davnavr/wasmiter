@@ -695,8 +695,42 @@ instructions! {
     /// instruction returns a 128-bit vector constant.
     V128Const[(u128)] = "v128.const",
 
-    /// [**v128.i8x16.shuffle**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    /// [**i8x16.shuffle**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
     I8x16Shuffle[([LaneIdx; 16])] = "i8x16.shuffle",
+
+    /// [**i8x16.extract_lane_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16ExtractLaneS[(LaneIdx)] = "i8x16.extract_lane_s",
+    /// [**i8x16.extract_lane_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16ExtractLaneU[(LaneIdx)] = "i8x16.extract_lane_u",
+    /// [**i8x16.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I8x16ReplaceLane[(LaneIdx)] = "i8x16.replace_lane",
+
+    /// [**i16x8.extract_lane_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtractLaneS[(LaneIdx)] = "i16x8.extract_lane_s",
+    /// [**i16x8.extract_lane_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ExtractLaneU[(LaneIdx)] = "i16x8.extract_lane_u",
+    /// [**i16x8.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I16x8ReplaceLane[(LaneIdx)] = "i16x8.replace_lane",
+
+    /// [**i32x4.extract_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ExtractLane[(LaneIdx)] = "i32x4.extract_lane",
+    /// [**i32x4.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I32x4ReplaceLane[(LaneIdx)] = "i32x4.replace_lane",
+
+    /// [**i64x2.extract_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ExtractLane[(LaneIdx)] = "i64x2.extract_lane",
+    /// [**i64x2.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    I64x2ReplaceLane[(LaneIdx)] = "i64x2.replace_lane",
+
+    /// [**f32x4.extract_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4ExtractLane[(LaneIdx)] = "f32x4.extract_lane",
+    /// [**f32x4.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F32x4ReplaceLane[(LaneIdx)] = "f32x4.replace_lane",
+
+    /// [**f64x2.extract_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2ExtractLane[(LaneIdx)] = "f64x2.extract_lane",
+    /// [**f64x2.replace_lane**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+    F64x2ReplaceLane[(LaneIdx)] = "f64x2.replace_lane",
 }
 
 impl<B: Bytes> Instruction<'_, B> {
