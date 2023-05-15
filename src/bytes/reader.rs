@@ -70,19 +70,28 @@ impl<B: Bytes> std::io::Read for Reader<B> {
 
 impl<B: Bytes> std::io::Seek for Reader<B> {
     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
-        match pos {
-            std::io::SeekFrom::Start(offset) => {
-                self.offset = offset;
-                Ok(offset)
-            }
+        #[cold]
+        #[inline(never)]
+        fn seek_oob() -> std::io::Error {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "cannot seek to offset due to overflow",
+            )
+        }
+
+        self.offset = match pos {
+            std::io::SeekFrom::Start(offset) => offset,
             std::io::SeekFrom::Current(amount) => {
-                todo!("from current u64 + i64")
+                u64::try_from(i128::from(self.offset) + i128::from(amount))
+                    .map_err(|_| seek_oob())?
             }
             std::io::SeekFrom::End(amount) => {
-                //self.bytes.length_at(0)
-                todo!("from end u64 - i64")
+                u64::try_from(i128::from(self.bytes.length_at(0)?) + i128::from(amount))
+                    .map_err(|_| seek_oob())?
             }
-        }
+        };
+
+        Ok(self.offset)
     }
 
     #[inline]
