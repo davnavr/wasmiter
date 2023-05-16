@@ -3,6 +3,7 @@
 
 mod instruction;
 mod instruction_sequence;
+mod is_constant;
 mod memarg;
 mod opcode;
 mod prefix_fc;
@@ -12,6 +13,7 @@ mod vector_opcode;
 pub use crate::component::{BlockType, LabelIdx, LocalIdx};
 pub use instruction::{Instruction, LaneIdx};
 pub use instruction_sequence::InstructionSequence;
+pub use is_constant::IsConstant;
 pub use memarg::MemArg;
 pub use opcode::{InvalidOpcode, Opcode};
 pub use prefix_fc::FCPrefixedOpcode;
