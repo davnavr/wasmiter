@@ -141,6 +141,7 @@ impl<B: Bytes, A: Allocator> ImportsComponent<B, A> {
             return Ok(None);
         }
 
+        self.buffer.clear();
         match Import::parse(&mut self.offset, &self.bytes, &mut self.buffer) {
             Ok(import) => {
                 self.count -= 1;
