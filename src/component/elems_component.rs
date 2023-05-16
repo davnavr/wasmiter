@@ -93,7 +93,7 @@ pub enum ElementInit<O: Offset, B: Bytes> {
     /// A vector of functions to create `funcref` elements from.
     Functions(Vector<O, B, parser::SimpleParse<component::FuncIdx>>),
     /// A vector of expressions that evaluate to references.
-    Expressions(ElementExpressions<O, B>),
+    Expressions(Option<component::RefType>, ElementExpressions<O, B>),
 }
 
 impl<O: Offset, B: Bytes> ElementInit<O, B> {
@@ -102,7 +102,7 @@ impl<O: Offset, B: Bytes> ElementInit<O, B> {
             Self::Functions(functions) => {
                 functions.finish()?;
             }
-            Self::Expressions(expressions) => expressions.finish()?,
+            Self::Expressions(_, expressions) => expressions.finish()?,
         }
         Ok(())
     }
@@ -112,9 +112,11 @@ impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Functions(functions) => f.debug_tuple("Functions").field(functions).finish(),
-            Self::Expressions(expressions) => {
-                f.debug_tuple("Expressions").field(expressions).finish()
-            }
+            Self::Expressions(rtype, expressions) => f
+                .debug_struct("Expressions")
+                .field("type", rtype)
+                .field("values", expressions)
+                .finish(),
         }
     }
 }
@@ -171,6 +173,15 @@ pub struct ElemsComponent<B: Bytes> {
     bytes: B,
 }
 
+fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
+    match parser::one_byte_exact(offset, bytes).context("elemkind")? {
+        0 => Ok(()),
+        bad => Err(crate::parser_bad_format!(
+            "{bad:#02X} is not a valid elemkind"
+        )),
+    }
+}
+
 impl<B: Bytes> ElemsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *element section* of a module, starting
     /// at the specified `offset`.
@@ -199,11 +210,97 @@ impl<B: Bytes> ElemsComponent<B> {
                     TableIdx::from(0u8),
                     InstructionSequence::new(&mut self.offset, &self.bytes),
                 );
+
                 init_arg = mode_f(&mut mode)?;
                 mode.finish()?;
                 init = ElementInit::Functions(
                     Vector::new(&mut self.offset, &self.bytes, Default::default())
                         .context("function references in active element segment")?,
+                );
+            }
+            1 => {
+                let mut mode = ElementMode::Passive;
+                elem_kind(&mut self.offset, &self.bytes)?;
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?; // Does nothing
+                init = ElementInit::Functions(
+                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                        .context("function references in passive element segment")?,
+                );
+            }
+            2 => {
+                let mut mode = ElementMode::Active(
+                    component::index(&mut self.offset, &self.bytes)?,
+                    InstructionSequence::new(&mut self.offset, &self.bytes),
+                );
+
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?;
+                elem_kind(&mut self.offset, &self.bytes)?;
+                init = ElementInit::Functions(
+                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                        .context("function references in active element segment")?,
+                );
+            }
+            3 => {
+                let mut mode = ElementMode::Declarative;
+                elem_kind(&mut self.offset, &self.bytes)?;
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?; // Does nothing
+                init = ElementInit::Functions(
+                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                        .context("function references in declarative element segment")?,
+                );
+            }
+            4 => {
+                let mut mode = ElementMode::Active(
+                    TableIdx::from(0u8),
+                    InstructionSequence::new(&mut self.offset, &self.bytes),
+                );
+
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?;
+                init = ElementInit::Expressions(
+                    None,
+                    ElementExpressions::new(&mut self.offset, &self.bytes)
+                        .context("expressions in active element segment")?,
+                );
+            }
+            5 => {
+                let rtype = component::ref_type(&mut self.offset, &self.bytes)?;
+                let mut mode = ElementMode::Passive;
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?; // Does nothing
+                init = ElementInit::Expressions(
+                    Some(rtype),
+                    ElementExpressions::new(&mut self.offset, &self.bytes)
+                        .context("expressions in passive element segment")?,
+                );
+            }
+            6 => {
+                let mut mode = ElementMode::Active(
+                    component::index(&mut self.offset, &self.bytes)?,
+                    InstructionSequence::new(&mut self.offset, &self.bytes),
+                );
+
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?;
+                let rtype = component::ref_type(&mut self.offset, &self.bytes)?;
+                init = ElementInit::Expressions(
+                    Some(rtype),
+                    ElementExpressions::new(&mut self.offset, &self.bytes)
+                        .context("expressions in active element segment")?,
+                );
+            }
+            7 => {
+                let rtype = component::ref_type(&mut self.offset, &self.bytes)?;
+                let mut mode = ElementMode::Declarative;
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?; // Does nothing
+                init = ElementInit::Expressions(
+                    Some(rtype),
+                    ElementExpressions::new(&mut self.offset, &self.bytes)
+                        .context("expressions in declarative element segment")?,
                 );
             }
             _ => {
