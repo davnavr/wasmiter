@@ -35,6 +35,12 @@ impl<B: Bytes> Window<B> {
         self.length
     }
 
+    /// Gets a reference to the inner [`Bytes`].
+    #[inline]
+    pub fn as_inner(&self) -> &B {
+        &self.inner
+    }
+
     pub(crate) fn borrowed(&self) -> Window<&B> {
         Window {
             base: self.base,

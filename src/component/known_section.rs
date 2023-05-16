@@ -44,7 +44,7 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     Data(component::DatasComponent<B>),
     /// The
     /// [*data count section**](https://webassembly.github.io/spec/core/binary/modules.html#data-count-section)
-    /// specifies the number of of entries in the [*data section*](Section::Data).
+    /// specifies the number of of entries in the [*data section*](KnownSection::Data).
     DataCount(u32),
 }
 
