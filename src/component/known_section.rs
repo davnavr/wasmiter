@@ -25,6 +25,9 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     /// The
     /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section)
     Global(component::GlobalsComponent<B>),
+    /// The
+    /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section)
+    Export(component::ExportsComponent<B, A>),
 }
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
@@ -114,6 +117,13 @@ impl<B: Bytes, A: Allocator> From<component::GlobalsComponent<B>> for KnownSecti
     }
 }
 
+impl<B: Bytes, A: Allocator> From<component::ExportsComponent<B, A>> for KnownSection<B, A> {
+    #[inline]
+    fn from(exports: component::ExportsComponent<B, A>) -> Self {
+        Self::Export(exports)
+    }
+}
+
 impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -123,6 +133,7 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
             Self::Table(tables) => f.debug_tuple("Table").field(tables).finish(),
             Self::Memory(memories) => f.debug_tuple("Memory").field(memories).finish(),
             Self::Global(globals) => f.debug_tuple("Global").field(globals).finish(),
+            Self::Export(exports) => f.debug_tuple("Export").field(exports).finish(),
         }
     }
 }

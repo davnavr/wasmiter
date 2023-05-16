@@ -3,6 +3,7 @@
 //! from its
 //! [sections in the binary format](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 
+mod exports_component;
 mod function_section;
 mod globals_component;
 mod imports_component;
@@ -28,6 +29,7 @@ pub use type_parser::{
     val_type,
 };
 
+pub use exports_component::{Export, ExportKind, ExportsComponent};
 pub use function_section::FunctionSection;
 pub use globals_component::GlobalsComponent;
 pub use imports_component::{Import, ImportKind, ImportsComponent};
