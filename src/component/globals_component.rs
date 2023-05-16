@@ -58,8 +58,38 @@ impl<B: Bytes> GlobalsComponent<B> {
     }
 }
 
+struct Global<'a, B: Bytes> {
+    r#type: GlobalType,
+    init: InstructionSequence<u64, &'a B>,
+}
+
+impl<B: Bytes> core::fmt::Debug for Global<'_, B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Global")
+            .field("type", &self.r#type)
+            .field("init", &self.init)
+            .finish()
+    }
+}
+
 impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("GlobalsComponent").finish_non_exhaustive()
+        let mut globals = GlobalsComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        };
+
+        let mut list = f.debug_list();
+        loop {
+            let result = globals.next(|ty, init| Ok((ty, init.map_bytes(|_| &self.bytes))));
+
+            list.entry(&match result {
+                Ok(None) => break,
+                Ok(Some((ty, init))) => Ok(Global { r#type: ty, init }),
+                Err(e) => Err(e),
+            });
+        }
+        list.finish()
     }
 }
