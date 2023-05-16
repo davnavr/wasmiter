@@ -11,7 +11,6 @@ pub type ResultType<O, B> = parser::Vector<O, B, parser::SimpleParse<ValType>>;
 /// WebAssembly module, stored in and parsed from the
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 #[derive(Clone, Copy)]
-#[cfg_attr(not(feature = "alloc"), derive(Debug))]
 pub struct TypesComponent<B: Bytes> {
     count: usize,
     offset: u64,
