@@ -736,13 +736,6 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
         }
     }
 
-    // fn try_clone(&self) -> Result<InstructionSequence<I::Fork>> {
-    //     Ok(InstructionSequence {
-    //         blocks: self.blocks,
-    //         parser: self.parser.fork()?,
-    //     })
-    // }
-
     pub(crate) fn map_bytes<U: Bytes, F: FnOnce(&B) -> U>(
         &self,
         f: F,
@@ -757,7 +750,28 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
 
 impl<O: Offset, B: Bytes> core::fmt::Debug for InstructionSequence<O, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("InstructionSequence")
-            .finish_non_exhaustive()
+        let mut instructions = InstructionSequence {
+            blocks: self.blocks,
+            offset: self.offset.offset(),
+            bytes: &self.bytes,
+        };
+
+        let mut list = f.debug_list();
+        loop {
+            let result = instructions.next(|i| {
+                list.entry(&Result::Ok(i));
+                Ok(())
+            });
+
+            match result {
+                None => break,
+                Some(Err(e)) => {
+                    list.entry(&Result::<()>::Err(e));
+                    break;
+                }
+                Some(Ok(_)) => (),
+            }
+        }
+        list.finish()
     }
 }
