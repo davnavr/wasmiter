@@ -42,6 +42,10 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     /// The
     /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section)
     Data(component::DatasComponent<B>),
+    /// The
+    /// [*data count section**](https://webassembly.github.io/spec/core/binary/modules.html#data-count-section)
+    /// specifies the number of of entries in the [*data section*](Section::Data).
+    DataCount(u32),
 }
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
@@ -98,6 +102,12 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                 section_id::DATA => {
                     let contents = section.into_contents();
                     component::DatasComponent::new(contents.base(), contents).map(Self::from)
+                }
+                section_id::DATA_COUNT => {
+                    let contents = section.into_contents();
+                    parser::leb128::u32(&mut contents.base(), contents)
+                        .context("data count section")
+                        .map(|count| Self::DataCount(count))
                 }
                 _ => return Err(section),
             })
@@ -191,6 +201,7 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
             Self::Element(elements) => f.debug_tuple("Element").field(elements).finish(),
             Self::Code(code) => f.debug_tuple("Code").field(code).finish(),
             Self::Data(data) => f.debug_tuple("Data").field(data).finish(),
+            Self::DataCount(count) => f.debug_tuple("DataCount").field(count).finish(),
         }
     }
 }
@@ -214,6 +225,7 @@ where
             Self::Element(elements) => Self::Element(elements.clone()),
             Self::Code(code) => Self::Code(code.clone()),
             Self::Data(data) => Self::Data(data.clone()),
+            Self::DataCount(count) => Self::DataCount(*count),
         }
     }
 }
