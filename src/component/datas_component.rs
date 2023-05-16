@@ -140,7 +140,7 @@ impl<B: Bytes> Debug for DatasComponent<B> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("DataSegment")
                     .field("mode", &self.mode)
-                    //.field("data", &self.data)
+                    .field("data", &self.data)
                     .finish()
             }
         }

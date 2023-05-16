@@ -1,11 +1,11 @@
-use crate::bytes::{Bytes, Result};
+use crate::bytes::{self, Bytes, Result};
 
 /// Adapts a [`Bytes`] implementation to limit the amount of bytes that can be read to a specific
 /// range.
 ///
 /// To instead treat the first readab;e byte within the region of the [`Window`] as starting at
-/// offset `0`, see the [`BytesSlice`](crate::bytes::BytesSlice) struct.
-#[derive(Clone, Copy, Debug)]
+/// offset `0`, see the [`BytesSlice`](bytes::BytesSlice) struct.
+#[derive(Clone, Copy)]
 pub struct Window<B: Bytes> {
     base: u64,
     length: u64,
@@ -76,5 +76,22 @@ impl<B: Bytes> Bytes for Window<B> {
         } else {
             0
         })
+    }
+}
+
+impl<B: Bytes> core::fmt::Debug for Window<B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Window")
+            .field("base", &self.base)
+            .field("length", &self.length)
+            .field(
+                "content",
+                &bytes::BytesDebug::from(bytes::BytesSlice::new(
+                    &self.inner,
+                    self.base,
+                    self.length,
+                )),
+            )
+            .finish()
     }
 }

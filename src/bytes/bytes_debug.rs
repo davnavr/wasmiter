@@ -26,7 +26,7 @@ impl<B: Bytes> Debug for BytesDebug<B> {
             match result {
                 Ok([]) => break,
                 Ok(bytes) => {
-                    for b in bytes.iter().copied() {
+                    for b in bytes.iter() {
                         list.entry(&format_args!("{b:02X}"));
                     }
                 }
