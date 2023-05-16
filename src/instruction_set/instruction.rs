@@ -8,17 +8,41 @@ use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 /// refers to a lane within a 128-bit vector.
 pub type LaneIdx = u8;
 
+macro_rules! instruction_debug_impl {
+    ($f:ident, $e:expr, $case:ident) => {
+        if let Self::$case = $e {
+            return $f.debug_tuple(stringify!($case)).finish();
+        }
+    };
+    ($f:ident, $e:expr, $case:ident($(#[$a_meta:meta])* $a:ty)) => {
+        if let Self::$case(a) = $e {
+            return $f.debug_tuple(stringify!($case)).field(&a).finish();
+        }
+    };
+    ($f:ident, $e:expr, $case:ident($(#[$a_meta:meta])* $a:ty, $(#[$b_meta:meta])* $b:ty)) => {
+        if let Self::$case(a, b) = $e {
+            return $f.debug_tuple(stringify!($case)).field(&a).field(&b).finish();
+        }
+    };
+    ($f:ident, $e:expr, $case:ident { $($(#[$field_meta:meta])* $field_name:ident: $field_ty:ty $(,)?)+ }) => {
+        if let Self::$case { $($field_name,)+ } = $e {
+            return $f.debug_struct(stringify!($case))
+                $(.field(stringify!($field_name), &$field_name))+
+                .finish();
+        }
+    };
+}
+
 macro_rules! instructions {
     ($(
         $(#[$group_meta:meta])*
         $group:ident {$(
             $(#[$meta:meta])*
             $case:ident$([$arguments:tt])? = $name:literal,
-        )*}
+        )+}
     )*) => {
         /// Represents a
         /// [WebAssembly instruction](https://webassembly.github.io/spec/core/syntax/instructions.html).
-        #[derive(Debug)]
         #[non_exhaustive]
         pub enum Instruction<'a, B: Bytes> {$($(
             $(#[$meta])*
@@ -29,7 +53,7 @@ macro_rules! instructions {
             /// Gets a string containing the name of the [`Instruction`].
             pub const fn name(&self) -> &'static str {
                 match self {
-                    $($(Self::$case { .. } => $name,)*)*
+                    $($(Self::$case { .. } => $name,)+)*
                 }
             }
 
@@ -37,11 +61,21 @@ macro_rules! instructions {
                 $(#[$group_meta])*
                 pub const fn $group(&self) -> bool {
                     match self {
-                        $(| Self::$case { .. })* => true,
+                        $(| Self::$case { .. })+ => true,
                         _ => false,
                     }
                 }
             )*
+        }
+
+        impl<B: Bytes> core::fmt::Debug for Instruction<'_, B> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                $($(
+                    instruction_debug_impl!(f, self, $case $($arguments)?);
+                )+)*
+
+                unreachable!()
+            }
         }
     };
 }
