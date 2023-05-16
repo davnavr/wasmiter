@@ -33,6 +33,12 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     /// of a WebAssembly module, encoded in the
     /// [*start section*](https://webassembly.github.io/spec/core/binary/modules.html#start-section).
     Start(component::FuncIdx),
+    /// The
+    /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section)
+    Element(component::ElemsComponent<B>),
+    /// The
+    /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section)
+    Code(component::CodeSection<B>),
 }
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
@@ -77,6 +83,14 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                     component::index(&mut contents.base(), contents)
                         .context("start section")
                         .map(|index| Self::Start(index))
+                }
+                section_id::ELEMENT => {
+                    let contents = section.into_contents();
+                    component::ElemsComponent::new(contents.base(), contents).map(Self::from)
+                }
+                section_id::CODE => {
+                    let contents = section.into_contents();
+                    component::CodeSection::new(contents.base(), contents).map(Self::from)
                 }
                 _ => return Err(section),
             })
@@ -135,6 +149,20 @@ impl<B: Bytes, A: Allocator> From<component::ExportsComponent<B, A>> for KnownSe
     }
 }
 
+impl<B: Bytes, A: Allocator> From<component::ElemsComponent<B>> for KnownSection<B, A> {
+    #[inline]
+    fn from(elements: component::ElemsComponent<B>) -> Self {
+        Self::Element(elements)
+    }
+}
+
+impl<B: Bytes, A: Allocator> From<component::CodeSection<B>> for KnownSection<B, A> {
+    #[inline]
+    fn from(code: component::CodeSection<B>) -> Self {
+        Self::Code(code)
+    }
+}
+
 impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -146,6 +174,8 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
             Self::Global(globals) => f.debug_tuple("Global").field(globals).finish(),
             Self::Export(exports) => f.debug_tuple("Export").field(exports).finish(),
             Self::Start(start) => f.debug_tuple("Start").field(start).finish(),
+            Self::Element(elements) => f.debug_tuple("Element").field(elements).finish(),
+            Self::Code(code) => f.debug_tuple("Code").field(code).finish(),
         }
     }
 }
