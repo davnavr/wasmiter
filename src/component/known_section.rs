@@ -6,7 +6,6 @@ use crate::sections::id as section_id;
 use crate::{Section, SectionKind};
 
 /// Represents a well-known WebAssembly [`Section`].
-#[derive(Debug)]
 pub enum KnownSection<B: Bytes, A: Allocator> {
     /// The
     /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
@@ -112,5 +111,18 @@ impl<B: Bytes, A: Allocator> From<component::GlobalsComponent<B>> for KnownSecti
     #[inline]
     fn from(globals: component::GlobalsComponent<B>) -> Self {
         Self::Global(globals)
+    }
+}
+
+impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Type(types) => f.debug_tuple("Type").field(types).finish(),
+            Self::Import(imports) => f.debug_tuple("Import").field(imports).finish(),
+            Self::Function(functions) => f.debug_tuple("Function").field(functions).finish(),
+            Self::Table(tables) => f.debug_tuple("Table").field(tables).finish(),
+            Self::Memory(memories) => f.debug_tuple("Memory").field(memories).finish(),
+            Self::Global(globals) => f.debug_tuple("Global").field(globals).finish(),
+        }
     }
 }
