@@ -39,6 +39,9 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     /// The
     /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section)
     Code(component::CodeSection<B>),
+    /// The
+    /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section)
+    Data(component::DatasComponent<B>),
 }
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
@@ -91,6 +94,10 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                 section_id::CODE => {
                     let contents = section.into_contents();
                     component::CodeSection::new(contents.base(), contents).map(Self::from)
+                }
+                section_id::DATA => {
+                    let contents = section.into_contents();
+                    component::DatasComponent::new(contents.base(), contents).map(Self::from)
                 }
                 _ => return Err(section),
             })
@@ -163,6 +170,13 @@ impl<B: Bytes, A: Allocator> From<component::CodeSection<B>> for KnownSection<B,
     }
 }
 
+impl<B: Bytes, A: Allocator> From<component::DatasComponent<B>> for KnownSection<B, A> {
+    #[inline]
+    fn from(data: component::DatasComponent<B>) -> Self {
+        Self::Data(data)
+    }
+}
+
 impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -176,6 +190,7 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
             Self::Start(start) => f.debug_tuple("Start").field(start).finish(),
             Self::Element(elements) => f.debug_tuple("Element").field(elements).finish(),
             Self::Code(code) => f.debug_tuple("Code").field(code).finish(),
+            Self::Data(data) => f.debug_tuple("Data").field(data).finish(),
         }
     }
 }

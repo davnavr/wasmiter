@@ -124,10 +124,10 @@ impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
 /// Specifies a kind of [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
 pub enum ElementMode<O: Offset, B: Bytes> {
     /// A **passive** element segment's elements are copied to a table using the
-    /// [`table.init`](crate::instruction_set::InstructionSequence) instruction.
+    /// [`table.init`](crate::instruction_set::Instruction::TableInit) instruction.
     Passive,
-    /// An **active** element segment copies elements into a table, starting at the expressed offset
-    /// specified by an expression, during
+    /// An **active** element segment copies elements into the specified table, starting at the
+    /// expressed offset specified by an expression, during
     /// [instantiation](https://webassembly.github.io/spec/core/exec/modules.html#exec-instantiation)
     /// of the module.
     Active(TableIdx, InstructionSequence<O, B>),
@@ -187,7 +187,7 @@ impl<B: Bytes> ElemsComponent<B> {
     /// at the specified `offset`.
     pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
-            count: parser::leb128::usize(&mut offset, &bytes).context("type section count")?,
+            count: parser::leb128::usize(&mut offset, &bytes).context("element section count")?,
             bytes,
             offset,
         })

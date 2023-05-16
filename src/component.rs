@@ -4,6 +4,7 @@
 //! [sections in the binary format](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 
 mod code_section;
+mod datas_component;
 mod elems_component;
 mod exports_component;
 mod function_section;
@@ -32,6 +33,7 @@ pub use type_parser::{
 };
 
 pub use code_section::{CodeSection, Locals};
+pub use datas_component::{DataMode, DatasComponent};
 pub use elems_component::{ElementExpressions, ElementInit, ElementMode, ElemsComponent};
 pub use exports_component::{Export, ExportKind, ExportsComponent};
 pub use function_section::FunctionSection;
