@@ -1,21 +1,163 @@
 use crate::bytes::Bytes;
-use crate::component;
-use crate::parser::{self, Vector, Result, ResultExt};
+use crate::component::{self, TableIdx};
 use crate::instruction_set::InstructionSequence;
+use crate::parser::{self, Offset, Result, ResultExt, Vector};
+use core::fmt::{Debug, Formatter};
 
-pub struct ElementExpressions {
-
+/// Represents a vector of expressions that evaluate to references in an
+/// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
+pub struct ElementExpressions<O: Offset, B: Bytes> {
+    count: u32,
+    offset: O,
+    bytes: B,
 }
 
-pub enum ElementInit<'a, 'b, B: Bytes> {
-    Functions(&'b mut Vector<&'a mut u64, B, parser::SimpleParse<component::FuncIdx>>),
-    Expressions(ElementExpressions),
+impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
+    fn new(mut offset: O, bytes: B) -> Result<Self> {
+        Ok(Self {
+            count: parser::leb128::u32(offset.offset_mut(), &bytes)
+                .context("element segment expression count")?,
+            offset,
+            bytes,
+        })
+    }
+
+    fn next_inner<T, F>(&mut self, f: F) -> Result<T>
+    where
+        F: FnOnce(&mut InstructionSequence<&mut u64, &B>) -> Result<T>,
+    {
+        let mut offset_cell = self.offset.offset();
+        let mut expression = InstructionSequence::new(&mut offset_cell, &self.bytes);
+        let result = f(&mut expression)?;
+        *self.offset.offset_mut() = *expression.finish()?;
+        Ok(result)
+    }
+
+    /// Parses the next expression.
+    pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
+    where
+        F: FnOnce(&mut InstructionSequence<&mut u64, &B>) -> Result<T>,
+    {
+        if self.count == 0 {
+            return Ok(None);
+        }
+
+        let result = self.next_inner(f);
+
+        if result.is_ok() {
+            self.count -= 1;
+        } else {
+            self.count = 0;
+        }
+
+        result.map(Some)
+    }
+
+    fn finish(mut self) -> Result<()> {
+        while let Some(Ok(())) = self.next(|_| Ok(())).transpose() {}
+        Ok(())
+    }
 }
 
-pub enum ElementKind<'a, B: Bytes> {
+impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let mut borrowed = ElementExpressions {
+            count: self.count,
+            offset: self.offset.offset(),
+            bytes: &self.bytes,
+        };
+
+        let mut list = f.debug_list();
+        loop {
+            let result = borrowed.next(|instructions| {
+                list.entry(&Result::Ok(instructions));
+                Ok(())
+            });
+
+            match result {
+                Ok(Some(())) => (),
+                Ok(None) => break,
+                Err(e) => {
+                    list.entry(&Result::<()>::Err(e));
+                    break;
+                }
+            }
+        }
+        list.finish()
+    }
+}
+
+/// Represents the references within an
+/// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
+pub enum ElementInit<O: Offset, B: Bytes> {
+    /// A vector of functions to create `funcref` elements from.
+    Functions(Vector<O, B, parser::SimpleParse<component::FuncIdx>>),
+    /// A vector of expressions that evaluate to references.
+    Expressions(ElementExpressions<O, B>),
+}
+
+impl<O: Offset, B: Bytes> ElementInit<O, B> {
+    fn finish(self) -> Result<()> {
+        match self {
+            Self::Functions(functions) => {
+                functions.finish()?;
+            }
+            Self::Expressions(expressions) => expressions.finish()?,
+        }
+        Ok(())
+    }
+}
+
+impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Functions(functions) => f.debug_tuple("Functions").field(functions).finish(),
+            Self::Expressions(expressions) => {
+                f.debug_tuple("Expressions").field(expressions).finish()
+            }
+        }
+    }
+}
+
+/// Specifies a kind of [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
+pub enum ElementMode<O: Offset, B: Bytes> {
+    /// A **passive** element segment's elements are copied to a table using the
+    /// [`table.init`](crate::instruction_set::InstructionSequence) instruction.
     Passive,
-    Active(component::TableIdx, &'a mut InstructionSequence<B>),
+    /// An **active** element segment copies elements into a table, starting at the expressed offset
+    /// specified by an expression, during
+    /// [instantiation](https://webassembly.github.io/spec/core/exec/modules.html#exec-instantiation)
+    /// of the module.
+    Active(TableIdx, InstructionSequence<O, B>),
+    /// A **declarative** data segment cannot be used at runtime. It can be used as a hint to
+    /// indicate that references to the given elements will be used in code later in the module.
     Declarative,
+}
+
+impl<O: Offset, B: Bytes> ElementMode<O, B> {
+    fn finish(self) -> Result<()> {
+        match self {
+            Self::Passive | Self::Declarative => (),
+            Self::Active(_, instructions) => {
+                instructions.finish()?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Passive => f.debug_tuple("Passive").finish(),
+            Self::Declarative => f.debug_tuple("Declarative").finish(),
+            Self::Active(table, offset) => f
+                .debug_struct("Active")
+                .field("table", &table)
+                .field("offset", offset)
+                .finish(),
+        }
+    }
 }
 
 /// Represents the
@@ -40,12 +182,111 @@ impl<B: Bytes> ElemsComponent<B> {
         })
     }
 
-    pub fn next<K, I>(&mut self, kind: K, init: I) -> Result<()>
+    #[inline]
+    fn next_inner<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Z>
     where
-        K: FnOnce(ElementKind<'_, &B>) -> Result<()>,
-        I: FnOnce(ElementInit<'_, '_, &B>) -> Result<()>,
+        M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
+        I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
     {
-        todo!()
+        let segment_kind =
+            parser::leb128::u32(&mut self.offset, &self.bytes).context("element segment mode")?;
+
+        let mut init;
+        let init_arg: Y;
+        match segment_kind {
+            0 => {
+                let mut mode = ElementMode::Active(
+                    TableIdx::from(0u8),
+                    InstructionSequence::new(&mut self.offset, &self.bytes),
+                );
+                init_arg = mode_f(&mut mode)?;
+                mode.finish()?;
+                init = ElementInit::Functions(
+                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                        .context("function references in active element segment")?,
+                );
+            }
+            _ => {
+                return Err(crate::parser_bad_format!(
+                    "{segment_kind} is not a supported element segment mode"
+                ))
+            }
+        }
+
+        let result = init_f(init_arg, &mut init)?;
+        init.finish()?;
+        Ok(result)
+    }
+
+    /// Gets the next element segment in the section.
+    pub fn next<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Option<Z>>
+    where
+        M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
+        I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
+    {
+        if self.count == 0 {
+            return Ok(None);
+        }
+
+        let result = self.next_inner(mode_f, init_f);
+
+        if result.is_ok() {
+            self.count -= 1;
+        } else {
+            self.count = 0;
+        }
+
+        result.map(Some)
     }
 }
 
+impl<B: Bytes> Debug for ElemsComponent<B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let bytes = &self.bytes;
+        let mut elems = ElemsComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes,
+        };
+
+        let mut list = f.debug_list();
+
+        struct Elem<'a, 'b, 'c, 'd, 'e, B: Bytes> {
+            mode: ElementMode<u64, &'a B>,
+            elements: &'b mut ElementInit<&'c mut u64, &'d &'e B>,
+        }
+
+        impl<B: Bytes> Debug for Elem<'_, '_, '_, '_, '_, B> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct("ElementSegment")
+                    .field("mode", &self.mode)
+                    .field("elements", self.elements)
+                    .finish()
+            }
+        }
+
+        while elems.count > 0 {
+            let result = elems.next(
+                |mode| {
+                    Ok(match mode {
+                        ElementMode::Passive => ElementMode::Passive,
+                        ElementMode::Declarative => ElementMode::Declarative,
+                        ElementMode::Active(table, offset) => {
+                            ElementMode::Active(*table, offset.map_bytes(|_| bytes))
+                        }
+                    })
+                },
+                |mode, elements| {
+                    list.entry(&Elem { mode, elements });
+
+                    Ok(())
+                },
+            );
+
+            if let Err(e) = result {
+                list.entry(&Result::<()>::Err(e));
+            }
+        }
+        list.finish()
+    }
+}

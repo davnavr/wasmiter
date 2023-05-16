@@ -742,6 +742,17 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     //         parser: self.parser.fork()?,
     //     })
     // }
+
+    pub(crate) fn map_bytes<U: Bytes, F: FnOnce(&B) -> U>(
+        &self,
+        f: F,
+    ) -> InstructionSequence<u64, U> {
+        InstructionSequence {
+            blocks: self.blocks,
+            offset: self.offset.offset(),
+            bytes: f(&self.bytes),
+        }
+    }
 }
 
 impl<O: Offset, B: Bytes> core::fmt::Debug for InstructionSequence<O, B> {

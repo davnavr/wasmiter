@@ -30,7 +30,7 @@ pub use type_parser::{
     val_type,
 };
 
-pub use elems_component::{ElemsComponent, ElementExpressions, ElementInit, ElementKind};
+pub use elems_component::{ElementExpressions, ElementInit, ElementMode, ElemsComponent};
 pub use exports_component::{Export, ExportKind, ExportsComponent};
 pub use function_section::FunctionSection;
 pub use globals_component::GlobalsComponent;
