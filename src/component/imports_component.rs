@@ -101,6 +101,7 @@ impl<'a> Import<'a> {
 /// [**imports** component](https://webassembly.github.io/spec/core/syntax/modules.html#imports) of
 /// a WebAssembly module, stored in and parsed from the
 /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
+#[derive(Clone, Copy)]
 pub struct ImportsComponent<B: Bytes, A: Allocator> {
     count: u32,
     offset: u64,

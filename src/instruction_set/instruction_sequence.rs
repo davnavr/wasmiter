@@ -651,6 +651,7 @@ fn instruction<'a, 'b, B: Bytes>(
 /// Represents an expression or
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
+#[derive(Clone, Copy)]
 pub struct InstructionSequence<O: Offset, B: Bytes> {
     blocks: u32,
     offset: O,

@@ -194,3 +194,34 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
         }
     }
 }
+
+impl<B, A> Clone for KnownSection<B, A>
+where
+    B: Bytes + Clone,
+    A: Allocator + Clone,
+    A::Buf: Clone,
+{
+    fn clone(&self) -> Self {
+        match self {
+            Self::Type(types) => Self::Type(types.clone()),
+            Self::Import(imports) => Self::Import(imports.clone()),
+            Self::Function(functions) => Self::Function(functions.clone()),
+            Self::Table(tables) => Self::Table(tables.clone()),
+            Self::Memory(memories) => Self::Memory(memories.clone()),
+            Self::Global(globals) => Self::Global(globals.clone()),
+            Self::Export(exports) => Self::Export(exports.clone()),
+            Self::Start(start) => Self::Start(*start),
+            Self::Element(elements) => Self::Element(elements.clone()),
+            Self::Code(code) => Self::Code(code.clone()),
+            Self::Data(data) => Self::Data(data.clone()),
+        }
+    }
+}
+
+impl<B, A> Copy for KnownSection<B, A>
+where
+    B: Bytes + Copy,
+    A: Allocator + Copy,
+    A::Buf: Copy,
+{
+}

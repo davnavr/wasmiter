@@ -63,6 +63,7 @@ impl<'a> Export<'a> {
 /// [**exports** component](https://webassembly.github.io/spec/core/syntax/modules.html#exports) of
 /// a WebAssembly module, stored in and parsed from the
 /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
+#[derive(Clone, Copy)]
 pub struct ExportsComponent<B: Bytes, A: Allocator> {
     count: u32,
     offset: u64,

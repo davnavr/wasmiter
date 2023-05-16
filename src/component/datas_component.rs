@@ -6,6 +6,7 @@ use core::fmt::{Debug, Formatter};
 
 /// Specifies the mode of a
 /// [data segment](https://webassembly.github.io/spec/core/syntax/modules.html#data-segments).
+#[derive(Clone, Copy)]
 pub enum DataMode<O: Offset, B: Bytes> {
     /// A **passive** data segment's elements are copied to a memory using the
     /// [`memory.init`](crate::instruction_set::Instruction::MemoryInit) instruction.
