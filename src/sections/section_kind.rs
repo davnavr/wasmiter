@@ -17,6 +17,20 @@ pub enum SectionKind<S: AsRef<str>> {
     Custom(OwnOrRef<'static, str, S>),
 }
 
+impl<S: AsRef<str>> SectionKind<S> {
+    pub(crate) fn borrowed(&self) -> SectionKind<&str> {
+        match self {
+            Self::Id(id) => SectionKind::Id(*id),
+            Self::Custom(OwnOrRef::Reference(reference)) => {
+                SectionKind::Custom(OwnOrRef::Owned(reference))
+            }
+            Self::Custom(OwnOrRef::Owned(owned)) => {
+                SectionKind::Custom(OwnOrRef::Owned(owned.as_ref()))
+            }
+        }
+    }
+}
+
 impl<S: AsRef<str>> core::fmt::Debug for SectionKind<S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {

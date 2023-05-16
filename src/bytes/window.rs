@@ -31,6 +31,14 @@ impl<B: Bytes> Window<B> {
     pub fn length(&self) -> u64 {
         self.length
     }
+
+    pub(crate) fn borrowed(&self) -> Window<&B> {
+        Window {
+            base: self.base,
+            length: self.length,
+            inner: &self.inner,
+        }
+    }
 }
 
 impl<B: Bytes + Clone> Window<&B> {

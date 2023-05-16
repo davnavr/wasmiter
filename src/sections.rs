@@ -34,6 +34,12 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
         self.contents.length()
     }
 
+    /// Returns a [`Window`] into the contents of the section.
+    #[inline]
+    pub fn contents(&self) -> Window<&B> {
+        self.contents.borrowed()
+    }
+
     /// Consumes the section, returning its contents as a [`Window`].
     ///
     /// The offset to the first byte of the section's content can be obtained by calling
@@ -42,10 +48,25 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     pub fn into_contents(self) -> Window<B> {
         self.contents
     }
+
+    fn borrowed(&self) -> Section<&B, &str> {
+        Section {
+            kind: self.kind.borrowed(),
+            contents: self.contents.borrowed(),
+        }
+    }
 }
 
 impl<B: Bytes + Debug, S: AsRef<str>> Debug for Section<B, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        #[cfg(feature = "alloc")]
+        if let Ok(Ok(known)) = crate::component::KnownSection::try_from_with_allocator(
+            self.borrowed(),
+            crate::allocator::Global,
+        ) {
+            return Debug::fmt(&known, f);
+        }
+
         f.debug_struct("Section")
             .field("kind", &self.kind)
             .field("contents", &self.contents)
