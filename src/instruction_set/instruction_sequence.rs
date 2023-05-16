@@ -7,14 +7,23 @@ fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemA
     let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
     let o = leb128::u32(offset, bytes).context("memory argument offset")?;
 
+    let (a, memory) = if a < 64 {
+        (a, component::MemIdx::from(0u8))
+    } else {
+        (
+            a - 64,
+            component::index(offset, bytes).context("memory argument target")?,
+        )
+    };
+
     let align = u8::try_from(a)
         .ok()
-        .and_then(core::num::NonZeroU8::new)
+        .and_then(instruction_set::Align::new)
         .ok_or_else(|| {
             crate::parser_bad_format!("{a} is too large to be a valid alignment power")
         })?;
 
-    Ok(instruction_set::MemArg::new(o, align))
+    Ok(instruction_set::MemArg::new(o, align, memory))
 }
 
 /// Parses a WebAssembly [`Instruction`].

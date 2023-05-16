@@ -14,7 +14,7 @@ pub use crate::component::{BlockType, LabelIdx, LocalIdx};
 pub use instruction::{Instruction, LaneIdx};
 pub use instruction_sequence::InstructionSequence;
 pub use is_constant::IsConstant;
-pub use memarg::MemArg;
+pub use memarg::{Align, MemArg};
 pub use opcode::{InvalidOpcode, Opcode};
 pub use prefix_fc::FCPrefixedOpcode;
 pub use vector_opcode::VectorOpcode;

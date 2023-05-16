@@ -42,6 +42,12 @@ macro_rules! indices {
             fn error_too_large(index: impl core::fmt::Display) -> parser::Error {
                 crate::parser_bad_format!("{} {index} is too large", $descriptor)
             }
+
+            /// Returns the index as a `u32`.
+            #[inline]
+            pub const fn to_u32(self) -> u32 {
+                self.0
+            }
         }
 
         impl Debug for $name {
