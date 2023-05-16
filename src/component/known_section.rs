@@ -1,7 +1,7 @@
 use crate::allocator::Allocator;
 use crate::bytes::{Bytes, Window};
 use crate::component;
-use crate::parser;
+use crate::parser::{self, ResultExt as _};
 use crate::sections::id as section_id;
 use crate::{Section, SectionKind};
 
@@ -28,6 +28,11 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     /// The
     /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section)
     Export(component::ExportsComponent<B, A>),
+    /// Represents the
+    /// [**start** component](https://webassembly.github.io/spec/core/syntax/modules.html#start-function)
+    /// of a WebAssembly module, encoded in the
+    /// [*start section*](https://webassembly.github.io/spec/core/binary/modules.html#start-section).
+    Start(component::FuncIdx),
 }
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
@@ -66,6 +71,12 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                 section_id::GLOBAL => {
                     let contents = section.into_contents();
                     component::GlobalsComponent::new(contents.base(), contents).map(Self::from)
+                }
+                section_id::START => {
+                    let contents = section.into_contents();
+                    component::index(&mut contents.base(), contents)
+                        .context("start section")
+                        .map(|index| Self::Start(index))
                 }
                 _ => return Err(section),
             })
@@ -134,6 +145,7 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
             Self::Memory(memories) => f.debug_tuple("Memory").field(memories).finish(),
             Self::Global(globals) => f.debug_tuple("Global").field(globals).finish(),
             Self::Export(exports) => f.debug_tuple("Export").field(exports).finish(),
+            Self::Start(start) => f.debug_tuple("Start").field(start).finish(),
         }
     }
 }
