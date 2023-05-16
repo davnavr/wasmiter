@@ -12,7 +12,7 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     Type(component::TypesComponent<B>),
     /// The
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-    Import(component::ImportsComponent<B, A::Buf>),
+    Import(component::ImportsComponent<B, A>),
     /// The
     /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section)
     Function(component::FunctionSection<B>),
@@ -41,10 +41,10 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                 }
                 section_id::IMPORT => {
                     let contents = section.into_contents();
-                    component::ImportsComponent::with_buffer(
+                    component::ImportsComponent::with_allocator(
                         contents.base(),
                         contents,
-                        allocator.allocate_buffer(),
+                        allocator,
                     )
                 }
                 .map(Self::from),
@@ -79,9 +79,9 @@ impl<B: Bytes, A: Allocator> From<component::TypesComponent<B>> for KnownSection
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::ImportsComponent<B, A::Buf>> for KnownSection<B, A> {
+impl<B: Bytes, A: Allocator> From<component::ImportsComponent<B, A>> for KnownSection<B, A> {
     #[inline]
-    fn from(imports: component::ImportsComponent<B, A::Buf>) -> Self {
+    fn from(imports: component::ImportsComponent<B, A>) -> Self {
         Self::Import(imports)
     }
 }
