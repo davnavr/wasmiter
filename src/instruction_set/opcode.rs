@@ -64,6 +64,8 @@ opcodes! {
     Return = 0xF,
     Call = 0x10,
     CallIndirect = 0x11,
+    ReturnCall = 0x12,
+    ReturnCallIndirect = 0x13,
 
     Drop = 0x1A,
     Select = 0x1B,

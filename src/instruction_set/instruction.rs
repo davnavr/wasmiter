@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::{self, BlockType, LabelIdx, LocalIdx, MemIdx, TableIdx};
+use crate::component::{self, BlockType, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx};
 use crate::instruction_set::MemArg;
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
@@ -110,7 +110,7 @@ instructions! {
         /// The
         /// [**call**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
         /// instruction calls a function.
-        Call[(component::FuncIdx)] = "call",
+        Call[(FuncIdx)] = "call",
         /// The
         /// [**call_indirect**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
         /// instruction calls a function from a `funcref` stored in a table.
@@ -612,7 +612,7 @@ instructions! {
         /// The
         /// [**ref.func**](https://webassembly.github.io/spec/core/syntax/instructions.html#reference-instructions)
         /// instruction produces a reference to a given function (a `funcref`).
-        RefFunc[(component::FuncIdx)] = "ref.func",
+        RefFunc[(FuncIdx)] = "ref.func",
 
         // Table Instructions
 
@@ -1205,6 +1205,15 @@ instructions! {
         F32x4DemoteF64x2Zero = "f32x4.demote_f64x2_zero",
         /// [**f64x2.promote_low_f32x4**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
         F64x2PromoteLowF32x4 = "f64x2.promote_low_f32x4",
+    }
+
+    /// Returns `true` if the [`Instruction`] was introduced as part of the
+    /// [tail call proposal](https://github.com/WebAssembly/tail-call).
+    is_from_tail_call {
+        /// [**return_call**](https://webassembly.github.io/tail-call/core/syntax/instructions.html#control-instructions)
+        ReturnCall[(FuncIdx)] = "return_call",
+        /// [**return_call_indirect**](https://webassembly.github.io/tail-call/core/syntax/instructions.html#control-instructions)
+        ReturnCallIndirect[(component::TypeIdx, TableIdx)] = "return_call_indirect",
     }
 }
 

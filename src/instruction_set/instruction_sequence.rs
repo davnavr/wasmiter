@@ -47,6 +47,13 @@ fn instruction<'a, 'b, B: Bytes>(
             component::index(offset, bytes).context("indirect call signature")?,
             component::index(offset, bytes).context("indirect call target")?,
         ),
+        Opcode::ReturnCall => {
+            Instruction::ReturnCall(component::index(offset, bytes).context("tail call target")?)
+        }
+        Opcode::ReturnCallIndirect => Instruction::ReturnCallIndirect(
+            component::index(offset, bytes).context("indirect tail call signature")?,
+            component::index(offset, bytes).context("indirect tail call target")?,
+        ),
         Opcode::Else => Instruction::Else,
         Opcode::End => Instruction::End,
 
