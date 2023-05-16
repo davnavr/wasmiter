@@ -2,6 +2,7 @@
 
 mod buf_bytes;
 mod bytes_debug;
+mod bytes_slice;
 mod error;
 mod window;
 
@@ -12,6 +13,7 @@ mod shared_bytes;
 
 pub use buf_bytes::BufBytes;
 pub use bytes_debug::BytesDebug;
+pub use bytes_slice::BytesSlice;
 pub use error::{Error, ErrorKind};
 pub use window::Window;
 
