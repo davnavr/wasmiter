@@ -27,12 +27,12 @@ impl<B: Bytes> GlobalsComponent<B> {
 
     fn next_inner<T, F>(&mut self, f: F) -> Result<T>
     where
-        F: FnOnce(GlobalType, &mut InstructionSequence<&B>) -> Result<T>,
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
         let global_type = component::global_type(&mut self.offset, &self.bytes)?;
-        let mut expression = InstructionSequence::new(self.offset, &self.bytes);
+        let mut expression = InstructionSequence::new(&mut self.offset, &self.bytes);
         let result = f(global_type, &mut expression).context("global expression")?;
-        self.offset = expression.finish().context("global expression")?;
+        expression.finish().context("global expression")?;
         Ok(result)
     }
 
@@ -40,7 +40,7 @@ impl<B: Bytes> GlobalsComponent<B> {
     /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
     pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
     where
-        F: FnOnce(GlobalType, &mut InstructionSequence<&B>) -> Result<T>,
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
         if self.count == 0 {
             return Ok(None);

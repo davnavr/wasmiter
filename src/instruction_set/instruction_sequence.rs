@@ -1,7 +1,7 @@
 use crate::bytes::Bytes;
 use crate::component;
 use crate::instruction_set::{self, FCPrefixedOpcode, Instruction, Opcode, VectorOpcode};
-use crate::parser::{self, leb128, Result, ResultExt, Vector};
+use crate::parser::{self, leb128, Offset, Result, ResultExt, Vector};
 
 fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
     let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
@@ -651,16 +651,16 @@ fn instruction<'a, 'b, B: Bytes>(
 /// Represents an expression or
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
-pub struct InstructionSequence<B: Bytes> {
+pub struct InstructionSequence<O: Offset, B: Bytes> {
     blocks: u32,
-    offset: u64,
+    offset: O,
     bytes: B,
 }
 
-impl<B: Bytes> InstructionSequence<B> {
+impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     /// Uses the given [`Bytes`] to read a sequence of instructions, starting at the given
     /// `offset`.
-    pub fn new(offset: u64, bytes: B) -> Self {
+    pub fn new(offset: O, bytes: B) -> Self {
         Self {
             blocks: 1,
             offset,
@@ -679,7 +679,7 @@ impl<B: Bytes> InstructionSequence<B> {
     where
         F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<()>,
     {
-        let mut instruction = self::instruction(&mut self.offset, &self.bytes)?;
+        let mut instruction = self::instruction(self.offset.offset_mut(), &self.bytes)?;
         f(&mut instruction)?;
 
         match instruction {
@@ -716,7 +716,7 @@ impl<B: Bytes> InstructionSequence<B> {
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> Result<u64> {
+    pub fn finish(mut self) -> Result<O> {
         loop {
             match self.next(|_| Ok(())) {
                 Some(Ok(())) => (),
@@ -744,7 +744,7 @@ impl<B: Bytes> InstructionSequence<B> {
     // }
 }
 
-impl<B: Bytes> core::fmt::Debug for InstructionSequence<B> {
+impl<O: Offset, B: Bytes> core::fmt::Debug for InstructionSequence<O, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("InstructionSequence")
             .finish_non_exhaustive()
