@@ -18,6 +18,7 @@ pub enum SectionKind<S: AsRef<str>> {
 }
 
 impl<S: AsRef<str>> SectionKind<S> {
+    #[cfg(feature = "alloc")]
     pub(crate) fn borrowed(&self) -> SectionKind<&str> {
         match self {
             Self::Id(id) => SectionKind::Id(*id),

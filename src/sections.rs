@@ -49,6 +49,7 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
         self.contents
     }
 
+    #[cfg(feature = "alloc")]
     fn borrowed(&self) -> Section<&B, &str> {
         Section {
             kind: self.kind.borrowed(),
