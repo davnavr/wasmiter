@@ -40,10 +40,10 @@ impl<B: Bytes> TypesComponent<B> {
         self.len() == 0
     }
 
-    /// Gets the next function type in the section. Returns `Ok(true)` if a type was parsed; or
+    /// Parses the next function type in the section. Returns `Ok(true)` if a type was parsed; or
     /// `Ok(false)` if there are no more types remaining.
     #[inline]
-    pub fn next<P, R>(&mut self, parameter_types: P, result_types: R) -> Result<bool>
+    pub fn parse<P, R>(&mut self, parameter_types: P, result_types: R) -> Result<bool>
     where
         P: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()>,
         R: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()>,
@@ -93,7 +93,7 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
         let mut last_results = empty_types;
 
         loop {
-            let result = types.next(
+            let result = types.parse(
                 |parameter_types| {
                     last_parameters = parameter_types.dereferenced();
                     Ok(())

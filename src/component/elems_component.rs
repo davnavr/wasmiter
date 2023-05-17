@@ -194,7 +194,7 @@ impl<B: Bytes> ElemsComponent<B> {
     }
 
     #[inline]
-    fn next_inner<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Z>
+    fn parse_inner<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Z>
     where
         M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
         I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
@@ -315,8 +315,8 @@ impl<B: Bytes> ElemsComponent<B> {
         Ok(result)
     }
 
-    /// Gets the next element segment in the section.
-    pub fn next<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Option<Z>>
+    /// Parses the next element segment in the section.
+    pub fn parse<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Option<Z>>
     where
         M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
         I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
@@ -325,7 +325,7 @@ impl<B: Bytes> ElemsComponent<B> {
             return Ok(None);
         }
 
-        let result = self.next_inner(mode_f, init_f);
+        let result = self.parse_inner(mode_f, init_f);
 
         if result.is_ok() {
             self.count -= 1;
@@ -363,7 +363,7 @@ impl<B: Bytes> Debug for ElemsComponent<B> {
         }
 
         while elems.count > 0 {
-            let result = elems.next(
+            let result = elems.parse(
                 |mode| {
                     Ok(match mode {
                         ElementMode::Passive => ElementMode::Passive,

@@ -31,7 +31,7 @@ fn basic_module() {
 
     let mut types = types.unwrap();
     assert!(types
-        .next(
+        .parse(
             |params| {
                 assert_eq!(Some(ValType::I32), params.next().transpose().unwrap());
                 assert!(params.is_empty());
@@ -47,14 +47,14 @@ fn basic_module() {
     assert!(types.is_empty());
 
     let mut exports = exports.unwrap();
-    let ex = exports.parse_next().unwrap().unwrap();
+    let ex = exports.parse().unwrap().unwrap();
     assert_eq!("add_five", ex.name());
     assert!(
         matches!(ex.kind(), component::ExportKind::Function(i) if i.to_u32() == 0),
         "incorrect kind {:?}",
         ex.kind()
     );
-    assert!(exports.parse_next().unwrap().is_none());
+    assert!(exports.parse().unwrap().is_none());
 
     let mut code = code.unwrap();
     let entry = code.parse().unwrap().unwrap();

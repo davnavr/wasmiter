@@ -66,7 +66,7 @@ impl<B: Bytes> DatasComponent<B> {
     }
 
     #[inline]
-    fn next_inner<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Z>
+    fn parse_inner<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Z>
     where
         M: FnOnce(&mut DataMode<&mut u64, &B>) -> Result<Y>,
         D: FnOnce(Y, Window<&B>) -> Result<Z>,
@@ -96,14 +96,16 @@ impl<B: Bytes> DatasComponent<B> {
         let result = data_f(data_arg, data)?;
 
         self.offset = self.offset.checked_add(data_length).ok_or_else(|| {
-            crate::parser_bad_format!("expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached")
+            crate::parser_bad_format!(
+                "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached"
+            )
         })?;
 
         Ok(result)
     }
 
-    /// Gets the next data segment in the section.
-    pub fn next<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Option<Z>>
+    /// Parses the next data segment in the section.
+    pub fn parse<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Option<Z>>
     where
         M: FnOnce(&mut DataMode<&mut u64, &B>) -> Result<Y>,
         D: FnOnce(Y, Window<&B>) -> Result<Z>,
@@ -112,7 +114,7 @@ impl<B: Bytes> DatasComponent<B> {
             return Ok(None);
         }
 
-        let result = self.next_inner(mode_f, data_f);
+        let result = self.parse_inner(mode_f, data_f);
 
         if result.is_ok() {
             self.count -= 1;
@@ -148,7 +150,7 @@ impl<B: Bytes> Debug for DatasComponent<B> {
 
         let mut list = f.debug_list();
         loop {
-            let result = datas.next(
+            let result = datas.parse(
                 |mode| {
                     Ok(match mode {
                         DataMode::Passive => DataMode::Passive,

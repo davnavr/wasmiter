@@ -137,7 +137,7 @@ impl<B: Bytes, A: Allocator> ImportsComponent<B, A> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse_next(&mut self) -> Result<Option<Import<'_>>> {
+    pub fn parse(&mut self) -> Result<Option<Import<'_>>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -176,7 +176,7 @@ impl<B: Bytes, A: Allocator> Debug for ImportsComponent<B, A> {
         };
 
         let mut list = f.debug_list();
-        while let Some(import) = borrowed.parse_next().transpose() {
+        while let Some(import) = borrowed.parse().transpose() {
             list.entry(&import);
         }
         list.finish()

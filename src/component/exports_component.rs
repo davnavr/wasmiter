@@ -87,7 +87,7 @@ impl<B: Bytes, A: Allocator> ExportsComponent<B, A> {
     }
 
     /// Parses the next export in the section.
-    pub fn parse_next(&mut self) -> Result<Option<Export<'_>>> {
+    pub fn parse(&mut self) -> Result<Option<Export<'_>>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -125,7 +125,7 @@ impl<B: Bytes, A: Allocator> Debug for ExportsComponent<B, A> {
         };
 
         let mut list = f.debug_list();
-        while let Some(import) = borrowed.parse_next().transpose() {
+        while let Some(import) = borrowed.parse().transpose() {
             list.entry(&import);
         }
         list.finish()

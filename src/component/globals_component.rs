@@ -25,7 +25,7 @@ impl<B: Bytes> GlobalsComponent<B> {
         })
     }
 
-    fn next_inner<T, F>(&mut self, f: F) -> Result<T>
+    fn parse_inner<T, F>(&mut self, f: F) -> Result<T>
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
@@ -38,7 +38,7 @@ impl<B: Bytes> GlobalsComponent<B> {
 
     /// Parses a
     /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
-    pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn parse<T, F>(&mut self, f: F) -> Result<Option<T>>
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
@@ -46,7 +46,7 @@ impl<B: Bytes> GlobalsComponent<B> {
             return Ok(None);
         }
 
-        let result = self.next_inner(f);
+        let result = self.parse_inner(f);
 
         if result.is_ok() {
             self.count -= 1;
@@ -58,20 +58,6 @@ impl<B: Bytes> GlobalsComponent<B> {
     }
 }
 
-struct Global<'a, B: Bytes> {
-    r#type: GlobalType,
-    init: InstructionSequence<u64, &'a B>,
-}
-
-impl<B: Bytes> core::fmt::Debug for Global<'_, B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Global")
-            .field("type", &self.r#type)
-            .field("init", &self.init)
-            .finish()
-    }
-}
-
 impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut globals = GlobalsComponent {
@@ -80,9 +66,23 @@ impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
             bytes: &self.bytes,
         };
 
+        struct Global<'a, B: Bytes> {
+            r#type: GlobalType,
+            init: InstructionSequence<u64, &'a B>,
+        }
+
+        impl<B: Bytes> core::fmt::Debug for Global<'_, B> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct("Global")
+                    .field("type", &self.r#type)
+                    .field("init", &self.init)
+                    .finish()
+            }
+        }
+
         let mut list = f.debug_list();
         loop {
-            let result = globals.next(|ty, init| Ok((ty, init.map_bytes(|_| &self.bytes))));
+            let result = globals.parse(|ty, init| Ok((ty, init.map_bytes(|_| &self.bytes))));
 
             list.entry(&match result {
                 Ok(None) => break,

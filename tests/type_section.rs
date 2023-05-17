@@ -15,7 +15,7 @@ fn basic_type() {
 
     assert_eq!(types.len(), 1);
     assert!(types
-        .next(
+        .parse(
             |parameters| {
                 assert_eq!(parameters.next().transpose().unwrap(), Some(ValType::I32));
                 assert_eq!(parameters.next().transpose().unwrap(), None);
