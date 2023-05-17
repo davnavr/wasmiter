@@ -122,11 +122,19 @@ impl<O: Offset, B: Bytes> Debug for Locals<O, B> {
 /// size, in bytes, of its contents.
 #[derive(Clone, Copy)]
 pub struct Func<B: Bytes> {
+    index: u32,
     content: Window<B>,
 }
 
 impl<B: Bytes> Func<B> {
+    /// The index of this *code section* entry.
+    #[inline]
+    pub fn index(&self) -> u32 {
+        self.index
+    }
+
     /// Gets the binary contents of this *code section* entry.
+    #[inline]
     pub fn content(&self) -> &Window<B> {
         &self.content
     }
@@ -149,7 +157,15 @@ impl<B: Bytes> Func<B> {
 
         let mut code = InstructionSequence::new(&mut offset, &self.content);
         let result = code_f(code_arg, &mut code)?;
-        code.finish()?;
+
+        let final_length = *code.finish()? - self.content.base();
+        if final_length != self.content.length() {
+            return Err(crate::parser_bad_format!(
+                "expected code entry content to have a length of {} bytes, but got {final_length}",
+                self.content.length()
+            ));
+        }
+
         Ok(result)
     }
 }
@@ -218,7 +234,10 @@ impl<B: Bytes> CodeSection<B> {
                     )
                 })?;
 
-                Ok(Some(Func { content }))
+                Ok(Some(Func {
+                    index: self.count,
+                    content,
+                }))
             }
             Err(e) => {
                 self.count = 0;
