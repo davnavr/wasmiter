@@ -210,6 +210,14 @@ impl<B: Bytes> CodeSection<B> {
             Ok(size) => {
                 self.count -= 1;
                 let content = Window::new(&self.bytes, self.offset, u64::from(size));
+
+                self.offset = self.offset.checked_add(u64::from(size)).ok_or_else(|| {
+                    crate::parser_bad_input!(
+                        crate::bytes::offset_overflowed(),
+                        "unable to advance offset to read next code section entry"
+                    )
+                })?;
+
                 Ok(Some(Func { content }))
             }
             Err(e) => {
