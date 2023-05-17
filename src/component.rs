@@ -32,7 +32,7 @@ pub use type_parser::{
     val_type,
 };
 
-pub use code_section::{CodeSection, Locals};
+pub use code_section::{CodeSection, Func, Locals};
 pub use datas_component::{DataMode, DatasComponent};
 pub use elems_component::{ElementExpressions, ElementInit, ElementMode, ElemsComponent};
 pub use exports_component::{Export, ExportKind, ExportsComponent};

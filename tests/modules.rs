@@ -57,8 +57,9 @@ fn basic_module() {
     assert!(exports.parse_next().unwrap().is_none());
 
     let mut code = code.unwrap();
-    assert!(code
-        .next(
+    let entry = code.parse().unwrap().unwrap();
+    entry
+        .read(
             |locals| {
                 assert_eq!(locals.count(), 0);
                 Ok(())
@@ -97,9 +98,8 @@ fn basic_module() {
                     .unwrap();
                 assert!(instrs.next(|_| Ok(())).is_none());
                 Ok(())
-            }
+            },
         )
-        .unwrap()
-        .is_some());
-    assert!(code.next(|_| Ok(()), |(), _| Ok(())).unwrap().is_none());
+        .unwrap();
+    assert!(code.parse().unwrap().is_none());
 }

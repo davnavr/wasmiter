@@ -113,6 +113,66 @@ impl<O: Offset, B: Bytes> Debug for Locals<O, B> {
     }
 }
 
+/// Represents a
+/// [`func`](https://webassembly.github.io/spec/core/binary/modules.html#code-section), an entry
+/// in the
+/// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
+///
+/// To allow reading the code section in parallel and skipping of entries, a [`Func`] stores the
+/// size, in bytes, of its contents.
+#[derive(Clone, Copy)]
+pub struct Func<B: Bytes> {
+    content: Window<B>,
+}
+
+impl<B: Bytes> Func<B> {
+    /// Gets the binary contents of this *code section* entry.
+    pub fn content(&self) -> &Window<B> {
+        &self.content
+    }
+
+    /// Reads the contents of this code entry.
+    ///
+    /// The first closure is given a [`Locals`] used to read the compressed local variable declarations.
+    ///
+    /// The second closure is given the output of the first closure, along with an
+    /// [`InstructionSequence`] used to read the function *body*.
+    pub fn read<Y, Z, L, C>(&self, locals_f: L, code_f: C) -> Result<Z>
+    where
+        L: FnOnce(&mut Locals<&mut u64, &Window<B>>) -> Result<Y>,
+        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<B>>) -> Result<Z>,
+    {
+        let mut offset = self.content.base();
+        let mut locals = Locals::new(&mut offset, &self.content)?;
+        let code_arg = locals_f(&mut locals)?;
+        locals.finish()?;
+
+        let mut code = InstructionSequence::new(&mut offset, &self.content);
+        let result = code_f(code_arg, &mut code)?;
+        code.finish()?;
+        Ok(result)
+    }
+}
+
+impl<B: Bytes> Debug for Func<B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let mut s = f.debug_struct("Func");
+        let result = self.read(
+            |locals| Ok(s.field("locals", locals)),
+            |s, body| {
+                s.field("body", body);
+                Ok(())
+            },
+        );
+
+        if let Err(e) = result {
+            s.field("error", &e);
+        }
+
+        s.finish()
+    }
+}
+
 /// Represents the
 /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
 /// which corresponds to the
@@ -139,58 +199,24 @@ impl<B: Bytes> CodeSection<B> {
         })
     }
 
-    fn next_inner<Y, Z, L, C>(&mut self, locals_f: L, code_f: C) -> Result<Z>
-    where
-        L: FnOnce(&mut Locals<&mut u64, &Window<&B>>) -> Result<Y>,
-        C: FnOnce(Y, &mut InstructionSequence<&mut u64, Window<&B>>) -> Result<Z>,
-    {
-        // Get size for data after size field
-        let size = parser::leb128::u32(&mut self.offset, &self.bytes).context("code entry size")?;
-        let window = Window::new(&self.bytes, self.offset, u64::from(size));
-
-        let mut locals = Locals::new(&mut self.offset, &window)?;
-        let code_arg = locals_f(&mut locals)?;
-        locals.finish()?;
-
-        let mut code = InstructionSequence::new(&mut self.offset, window);
-        let result = code_f(code_arg, &mut code)?;
-        code.finish()?;
-        Ok(result)
-    }
-
     /// Parses the next entry in the **code section**.
-    pub fn next<Y, Z, L, C>(&mut self, locals_f: L, code_f: C) -> Result<Option<Z>>
-    where
-        L: FnOnce(&mut Locals<&mut u64, &Window<&B>>) -> Result<Y>,
-        C: FnOnce(Y, &mut InstructionSequence<&mut u64, Window<&B>>) -> Result<Z>,
-    {
+    pub fn parse(&mut self) -> Result<Option<Func<&B>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        let result = self.next_inner(locals_f, code_f);
-
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
+        let result = parser::leb128::u32(&mut self.offset, &self.bytes).context("code entry size");
+        match result {
+            Ok(size) => {
+                self.count -= 1;
+                let content = Window::new(&self.bytes, self.offset, u64::from(size));
+                Ok(Some(Func { content }))
+            }
+            Err(e) => {
+                self.count = 0;
+                Err(e)
+            }
         }
-
-        result.map(Some)
-    }
-}
-
-struct Func<'a, 'b, 'c, 'd, B: Bytes> {
-    locals: Locals<u64, &'a B>,
-    code: &'b mut InstructionSequence<&'c mut u64, Window<&'d &'a B>>,
-}
-
-impl<B: Bytes> Debug for Func<'_, '_, '_, '_, B> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Func")
-            .field("locals", &self.locals)
-            .field("code", self.code)
-            .finish()
     }
 }
 
@@ -203,24 +229,9 @@ impl<B: Bytes> Debug for CodeSection<B> {
         };
 
         let mut list = f.debug_list();
-        while code.count > 0 {
-            let result = code.next(
-                |locals| {
-                    Ok(Locals {
-                        offset: locals.offset.offset(),
-                        bytes: &self.bytes,
-                        count: locals.count,
-                        current: locals.current,
-                    })
-                },
-                |locals, code| {
-                    list.entry(&Func { locals, code });
-                    Ok(())
-                },
-            );
-
-            if let Err(e) = result {
-                list.entry(&Result::<()>::Err(e));
+        while let Some(func) = code.parse().transpose() {
+            list.entry(&func);
+            if func.is_err() {
                 break;
             }
         }
