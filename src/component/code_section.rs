@@ -215,7 +215,20 @@ impl<B: Bytes> CodeSection<B> {
         })
     }
 
-    /// Parses the next entry in the **code section**.
+    /// Gets the expected remaining number of entries in the *code section* that have yet to be
+    /// parsed.
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.count
+    }
+
+    /// Returns a value indicating if the *code section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+
+    /// Parses the next entry in the *code section*.
     pub fn parse(&mut self) -> Result<Option<Func<&B>>> {
         if self.count == 0 {
             return Ok(None);
