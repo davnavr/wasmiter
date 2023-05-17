@@ -108,15 +108,15 @@ pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits
 /// Parses a
 /// [WebAssembly function type](https://webassembly.github.io/spec/core/syntax/types.html#function-types),
 /// which specifies the parameter and result types of a function.
-pub fn func_type<B: Bytes, P, R>(
+pub fn func_type<Y, Z, B: Bytes, P, R>(
     offset: &mut u64,
     bytes: &B,
     parameter_types: P,
     result_types: R,
-) -> Result<()>
+) -> Result<Z>
 where
-    P: FnOnce(&mut component::ResultType<&mut u64, &B>) -> Result<()>,
-    R: FnOnce(&mut component::ResultType<&mut u64, &B>) -> Result<()>,
+    P: FnOnce(&mut component::ResultType<&mut u64, &B>) -> Result<Y>,
+    R: FnOnce(Y, &mut component::ResultType<&mut u64, &B>) -> Result<Z>,
 {
     let tag = parser::one_byte_exact(offset, bytes).context("function type")?;
     if tag != 0x60 {
@@ -127,12 +127,12 @@ where
 
     let offset_reborrow: &mut u64 = offset;
     let mut parameters = component::ResultType::new(offset_reborrow, bytes, Default::default())?;
-    parameter_types(&mut parameters)?;
+    let result_types_closure_argument = parameter_types(&mut parameters)?;
     parameters.finish()?;
     let mut results = component::ResultType::new(offset, bytes, Default::default())?;
-    result_types(&mut results)?;
+    let ret = result_types(result_types_closure_argument, &mut results)?;
     results.finish()?;
-    Ok(())
+    Ok(ret)
 }
 
 macro_rules! type_parse_impls {

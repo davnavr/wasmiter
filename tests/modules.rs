@@ -37,13 +37,14 @@ fn basic_module() {
                 assert!(params.is_empty());
                 Ok(())
             },
-            |result_types| {
+            |(), result_types| {
                 assert_eq!(Some(ValType::I32), result_types.next().transpose().unwrap());
                 assert!(result_types.is_empty());
                 Ok(())
             }
         )
-        .unwrap());
+        .unwrap()
+        .is_some());
     assert!(types.is_empty());
 
     let mut exports = exports.unwrap();

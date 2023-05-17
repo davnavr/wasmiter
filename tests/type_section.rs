@@ -21,11 +21,12 @@ fn basic_type() {
                 assert_eq!(parameters.next().transpose().unwrap(), None);
                 Ok(())
             },
-            |results| {
+            |(), results| {
                 assert_eq!(results.next().transpose().unwrap(), Some(ValType::I64));
                 assert_eq!(results.next().transpose().unwrap(), None);
                 Ok(())
             }
         )
-        .unwrap());
+        .unwrap()
+        .is_some());
 }

@@ -40,16 +40,15 @@ impl<B: Bytes> TypesComponent<B> {
         self.len() == 0
     }
 
-    /// Parses the next function type in the section. Returns `Ok(true)` if a type was parsed; or
-    /// `Ok(false)` if there are no more types remaining.
+    /// Parses the next function type in the section.
     #[inline]
-    pub fn parse<P, R>(&mut self, parameter_types: P, result_types: R) -> Result<bool>
+    pub fn parse<Y, Z, P, R>(&mut self, parameter_types: P, result_types: R) -> Result<Option<Z>>
     where
-        P: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()>,
-        R: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<()>,
+        P: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<Y>,
+        R: FnOnce(Y, &mut ResultType<&mut u64, &B>) -> Result<Z>,
     {
         if self.count == 0 {
-            return Ok(false);
+            return Ok(None);
         }
 
         let result =
@@ -61,7 +60,7 @@ impl<B: Bytes> TypesComponent<B> {
             self.count = 0;
         }
 
-        result.map(|()| true)
+        result.map(Some)
     }
 }
 
@@ -98,14 +97,14 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
                     last_parameters = parameter_types.dereferenced();
                     Ok(())
                 },
-                |result_types| {
+                |(), result_types| {
                     last_results = result_types.dereferenced();
                     Ok(())
                 },
             );
 
             match result {
-                Ok(true) => {
+                Ok(Some(())) => {
                     let parameters = core::mem::replace(&mut last_parameters, empty_types);
                     let results = core::mem::replace(&mut last_results, empty_types);
                     list.entry(&FuncType {
@@ -113,7 +112,7 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
                         results,
                     });
                 }
-                Ok(false) => break,
+                Ok(None) => break,
                 Err(e) => {
                     list.entry(&Result::<()>::Err(e));
                     break;
