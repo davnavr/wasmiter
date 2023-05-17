@@ -123,14 +123,23 @@ fn signed<N: SignedInteger, B: Bytes>(offset: &mut u64, bytes: B) -> Result<N> {
 
         // Check for overflowing bits in last byte
         if i == N::MAX_LENGTH - 1 {
-            // TODO: Fix, may not handle bytes w/ sign bit correctly
-            let leading_zeroes = (bits & 0x3F).leading_zeros() as u8;
-            if leading_zeroes < 8 - (N::BITS - shift) {
-                // Overflow, the number of value bits will not fit in the destination
-                return Err(crate::parser_bad_format!(
-                    "encoded value requires {} bits, which cannot fit in the destination",
-                    shift + (8 - leading_zeroes)
-                ));
+            if !has_sign {
+                let leading_zeroes = (bits & 0x3F).leading_zeros() as u8;
+                if leading_zeroes < 8 - (N::BITS - shift) {
+                    return Err(crate::parser_bad_format!(
+                        "encoded positive value requires {} bits, which cannot fit in the destination",
+                        shift + (8 - leading_zeroes)
+                    ));
+                }
+            } else {
+                // TODO: Is the amount to check for correct here?
+                let leading_ones = (bits | 0xC0).leading_ones() as u8;
+                if leading_ones > (N::BITS - shift) + 1 {
+                    return Err(crate::parser_bad_format!(
+                        "negative value cannot be encoded in {} bits",
+                        N::BITS
+                    ));
+                }
             }
         }
 
