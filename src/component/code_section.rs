@@ -115,12 +115,15 @@ impl<O: Offset, B: Bytes> Debug for Locals<O, B> {
 
 /// Represents an entry
 /// in the
-/// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
-/// also known as a
+/// [*code section*], also known as a
 /// [`func`](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
 ///
-/// To allow reading the code section in parallel and skipping of entries, a [`Func`] stores the
+/// To allow reading the code section in parallel and skipping of entries, a [`Code`] stores the
 /// size, in bytes, of its contents.
+///
+/// To read [`Code`] from the [*code section*], see the [`CodeSection`] struct.
+///
+/// [*code section*]: https://webassembly.github.io/spec/core/binary/modules.html#code-section
 #[derive(Clone, Copy)]
 pub struct Code<B: Bytes> {
     index: u32,
