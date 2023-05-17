@@ -1,4 +1,5 @@
 use wasmiter::component::{self, KnownSection, ValType};
+use wasmiter::instruction_set::Instruction;
 
 #[test]
 fn basic_module() {
@@ -63,8 +64,38 @@ fn basic_module() {
                 Ok(())
             },
             |(), instrs| {
-                //instrs.next(f).unwrap().unwrap();
-                // TODO: Have a collect method for instructions?
+                instrs
+                    .next(|i| {
+                        assert!(
+                            matches!(i, Instruction::LocalGet(l) if l.to_u32() == 0),
+                            "{i:?}"
+                        );
+                        Ok(())
+                    })
+                    .unwrap()
+                    .unwrap();
+                instrs
+                    .next(|i| {
+                        assert!(matches!(i, Instruction::I32Const(5)), "{i:?}");
+                        Ok(())
+                    })
+                    .unwrap()
+                    .unwrap();
+                instrs
+                    .next(|i| {
+                        assert!(matches!(i, Instruction::I32Add), "{i:?}");
+                        Ok(())
+                    })
+                    .unwrap()
+                    .unwrap();
+                instrs
+                    .next(|i| {
+                        assert!(matches!(i, Instruction::End), "{i:?}");
+                        Ok(())
+                    })
+                    .unwrap()
+                    .unwrap();
+                assert!(instrs.next(|_| Ok(())).is_none());
                 Ok(())
             }
         )
