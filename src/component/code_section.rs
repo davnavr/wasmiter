@@ -113,20 +113,21 @@ impl<O: Offset, B: Bytes> Debug for Locals<O, B> {
     }
 }
 
-/// Represents a
-/// [`func`](https://webassembly.github.io/spec/core/binary/modules.html#code-section), an entry
+/// Represents an entry
 /// in the
-/// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
+/// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
+/// also known as a
+/// [`func`](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
 ///
 /// To allow reading the code section in parallel and skipping of entries, a [`Func`] stores the
 /// size, in bytes, of its contents.
 #[derive(Clone, Copy)]
-pub struct Func<B: Bytes> {
+pub struct Code<B: Bytes> {
     index: u32,
     content: Window<B>,
 }
 
-impl<B: Bytes> Func<B> {
+impl<B: Bytes> Code<B> {
     /// The index of this *code section* entry.
     #[inline]
     pub fn index(&self) -> u32 {
@@ -170,7 +171,7 @@ impl<B: Bytes> Func<B> {
     }
 }
 
-impl<B: Bytes> Debug for Func<B> {
+impl<B: Bytes> Debug for Code<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut s = f.debug_struct("Func");
         let result = self.read(
@@ -229,7 +230,7 @@ impl<B: Bytes> CodeSection<B> {
     }
 
     /// Parses the next entry in the *code section*.
-    pub fn parse(&mut self) -> Result<Option<Func<&B>>> {
+    pub fn parse(&mut self) -> Result<Option<Code<&B>>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -247,7 +248,7 @@ impl<B: Bytes> CodeSection<B> {
                     )
                 })?;
 
-                Ok(Some(Func {
+                Ok(Some(Code {
                     index: self.count,
                     content,
                 }))
@@ -258,16 +259,19 @@ impl<B: Bytes> CodeSection<B> {
             }
         }
     }
+
+    pub(super) fn borrowed(&self) -> CodeSection<&B> {
+        CodeSection {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
+    }
 }
 
 impl<B: Bytes> Debug for CodeSection<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut code = CodeSection {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        };
-
+        let mut code = self.borrowed();
         let mut list = f.debug_list();
         while let Some(func) = code.parse().transpose() {
             list.entry(&func);
