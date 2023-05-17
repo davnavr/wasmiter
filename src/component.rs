@@ -37,7 +37,7 @@ pub use code_section::{Code, CodeSection, Locals};
 pub use datas_component::{DataMode, DatasComponent};
 pub use elems_component::{ElementExpressions, ElementInit, ElementMode, ElemsComponent};
 pub use exports_component::{Export, ExportKind, ExportsComponent};
-pub use funcs_component::FuncsComponent;
+pub use funcs_component::{Func, FuncsComponent};
 pub use function_section::FunctionSection;
 pub use globals_component::GlobalsComponent;
 pub use imports_component::{Import, ImportKind, ImportsComponent};
