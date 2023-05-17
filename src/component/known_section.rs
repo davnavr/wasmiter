@@ -85,6 +85,15 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                     let contents = section.into_contents();
                     component::GlobalsComponent::new(contents.base(), contents).map(Self::from)
                 }
+                section_id::EXPORT => {
+                    let contents = section.into_contents();
+                    component::ExportsComponent::with_allocator(
+                        contents.base(),
+                        contents,
+                        allocator,
+                    )
+                    .map(Self::from)
+                }
                 section_id::START => {
                     let contents = section.into_contents();
                     component::index(&mut contents.base(), contents)
