@@ -13,6 +13,7 @@ backtrace = ["std"]
 
 [dev-dependencies]
 criterion = "0.4.0"
+wat = "1.0.64"
 
 [[bench]]
 name = "bytes"
