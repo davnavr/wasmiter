@@ -61,6 +61,16 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     }
 }
 
+impl<B: Bytes + Clone, S: AsRef<str> + Clone> Section<&B, S> {
+    /// Returns a version of the [`Section`] with the contents cloned.
+    pub fn cloned(&self) -> Section<B, S> {
+        Section {
+            kind: self.kind.clone(),
+            contents: self.contents.cloned(),
+        }
+    }
+}
+
 impl<B: Bytes, S: AsRef<str>> Debug for Section<B, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         #[cfg(feature = "alloc")]
