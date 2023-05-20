@@ -1,9 +1,10 @@
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
-/// [`Section`](crate::Section).
+/// [`Section`](crate::sections::Section).
 pub type SectionId = core::num::NonZeroU8;
 
-/// Indicates what kind of contents are contained within a WebAssembly [`Section`](crate::Section).
+/// Indicates what kind of contents are contained within a WebAssembly
+/// [`Section`](crate::sections::Section).
 #[derive(Clone, Copy, Eq, Hash)]
 pub enum SectionKind<S: AsRef<str>> {
     /// The section is a known value documented in the
