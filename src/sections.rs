@@ -58,6 +58,7 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     }
 }
 
+/*
 impl<B: Bytes + Debug, S: AsRef<str>> Debug for Section<B, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         #[cfg(feature = "alloc")]
@@ -74,6 +75,7 @@ impl<B: Bytes + Debug, S: AsRef<str>> Debug for Section<B, S> {
             .finish()
     }
 }
+*/
 
 /// Represents the
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
@@ -97,7 +99,10 @@ impl<B: Bytes> SectionSequence<B> {
     ///
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
-    pub fn parse<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Section<&B, &'n str>>> {
+    pub fn parse<'n, N: Buffer>(
+        &mut self,
+        name_buffer: &'n mut N,
+    ) -> Result<Option<Section<&B, &'n str>>> {
         let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, &self.bytes)? {
             id
         } else {
@@ -134,3 +139,7 @@ impl<B: Bytes> SectionSequence<B> {
         Ok(Some(Section { kind: id, contents }))
     }
 }
+
+/*
+impl<B: Bytes> core::fmt::Debug for SectionSequence
+*/

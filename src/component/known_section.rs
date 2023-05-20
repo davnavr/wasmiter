@@ -1,4 +1,3 @@
-use crate::allocator::Allocator;
 use crate::bytes::{Bytes, Window};
 use crate::component;
 use crate::parser::{self, ResultExt as _};
@@ -6,13 +5,13 @@ use crate::sections::id as section_id;
 use crate::{Section, SectionKind};
 
 /// Represents a well-known WebAssembly [`Section`].
-pub enum KnownSection<B: Bytes, A: Allocator> {
+pub enum KnownSection<B: Bytes> {
     /// The
     /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
     Type(component::TypesComponent<B>),
     /// The
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-    Import(component::ImportsComponent<B, A>),
+    Import(component::ImportsComponent<B>),
     /// The
     /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section)
     Function(component::FunctionSection<B>),
@@ -27,7 +26,7 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     Global(component::GlobalsComponent<B>),
     /// The
     /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section)
-    Export(component::ExportsComponent<B, A>),
+    Export(component::ExportsComponent<B>),
     /// Represents the
     /// [**start** component](https://webassembly.github.io/spec/core/syntax/modules.html#start-function)
     /// of a WebAssembly module, encoded in the
@@ -48,11 +47,10 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
     DataCount(u32),
 }
 
-impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
+impl<B: Bytes> KnownSection<Window<B>> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
-    pub fn try_from_with_allocator(
+    pub fn try_from_section(
         section: Section<B, &str>,
-        allocator: A,
     ) -> Result<parser::Result<Self>, Section<B, &str>> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
@@ -62,11 +60,7 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                 }
                 section_id::IMPORT => {
                     let contents = section.into_contents();
-                    component::ImportsComponent::with_allocator(
-                        contents.base(),
-                        contents,
-                        allocator,
-                    )
+                    component::ImportsComponent::new(contents.base(), contents)
                 }
                 .map(Self::from),
                 section_id::FUNC => {
@@ -87,12 +81,7 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
                 }
                 section_id::EXPORT => {
                     let contents = section.into_contents();
-                    component::ExportsComponent::with_allocator(
-                        contents.base(),
-                        contents,
-                        allocator,
-                    )
-                    .map(Self::from)
+                    component::ExportsComponent::new(contents.base(), contents).map(Self::from)
                 }
                 section_id::START => {
                     let contents = section.into_contents();
@@ -126,77 +115,78 @@ impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::TypesComponent<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::TypesComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(types: component::TypesComponent<B>) -> Self {
         Self::Type(types)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::ImportsComponent<B, A>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::ImportsComponent<B>> for KnownSection<B> {
     #[inline]
-    fn from(imports: component::ImportsComponent<B, A>) -> Self {
+    fn from(imports: component::ImportsComponent<B>) -> Self {
         Self::Import(imports)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::FunctionSection<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::FunctionSection<B>> for KnownSection<B> {
     #[inline]
     fn from(functions: component::FunctionSection<B>) -> Self {
         Self::Function(functions)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::TablesComponent<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::TablesComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(tables: component::TablesComponent<B>) -> Self {
         Self::Table(tables)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::MemsComponent<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::MemsComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(memories: component::MemsComponent<B>) -> Self {
         Self::Memory(memories)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::GlobalsComponent<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::GlobalsComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(globals: component::GlobalsComponent<B>) -> Self {
         Self::Global(globals)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::ExportsComponent<B, A>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::ExportsComponent<B>> for KnownSection<B> {
     #[inline]
-    fn from(exports: component::ExportsComponent<B, A>) -> Self {
+    fn from(exports: component::ExportsComponent<B>) -> Self {
         Self::Export(exports)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::ElemsComponent<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::ElemsComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(elements: component::ElemsComponent<B>) -> Self {
         Self::Element(elements)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::CodeSection<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::CodeSection<B>> for KnownSection<B> {
     #[inline]
     fn from(code: component::CodeSection<B>) -> Self {
         Self::Code(code)
     }
 }
 
-impl<B: Bytes, A: Allocator> From<component::DatasComponent<B>> for KnownSection<B, A> {
+impl<B: Bytes> From<component::DatasComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(data: component::DatasComponent<B>) -> Self {
         Self::Data(data)
     }
 }
 
-impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
+/*
+impl<B: Bytes> core::fmt::Debug for KnownSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Type(types) => f.debug_tuple("Type").field(types).finish(),
@@ -214,13 +204,9 @@ impl<B: Bytes, A: Allocator> core::fmt::Debug for KnownSection<B, A> {
         }
     }
 }
+*/
 
-impl<B, A> Clone for KnownSection<B, A>
-where
-    B: Bytes + Clone,
-    A: Allocator + Clone,
-    A::Buf: Clone,
-{
+impl<B: Bytes + Clone> Clone for KnownSection<B> {
     fn clone(&self) -> Self {
         match self {
             Self::Type(types) => Self::Type(types.clone()),
@@ -239,10 +225,4 @@ where
     }
 }
 
-impl<B, A> Copy for KnownSection<B, A>
-where
-    B: Bytes + Copy,
-    A: Allocator + Copy,
-    A::Buf: Copy,
-{
-}
+impl<B: Bytes + Copy> Copy for KnownSection<B> {}

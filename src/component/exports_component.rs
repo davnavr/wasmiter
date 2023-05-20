@@ -1,4 +1,4 @@
-use crate::allocator::{Allocator, Buffer};
+use crate::allocator::Buffer;
 use crate::bytes::Bytes;
 use crate::component;
 use crate::parser::{self, Result, ResultExt};
@@ -64,35 +64,30 @@ impl<'a> Export<'a> {
 /// a WebAssembly module, stored in and parsed from the
 /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
 #[derive(Clone, Copy)]
-pub struct ExportsComponent<B: Bytes, A: Allocator> {
+pub struct ExportsComponent<B: Bytes> {
     count: u32,
     offset: u64,
     bytes: B,
-    buffer: A::Buf,
-    allocator: A,
 }
 
-impl<B: Bytes, A: Allocator> ExportsComponent<B, A> {
-    /// Uses the given [`Bytes`] to read the contents of the *export section* of a
-    /// module, starting at the given `offset`, using a buffer from the [`Allocator`] to contain
-    /// any parsed UTF-8 strings.
-    pub fn with_allocator(mut offset: u64, bytes: B, allocator: A) -> Result<Self> {
+impl<B: Bytes> ExportsComponent<B> {
+    /// Uses the given [`Bytes`] to read the contents of the *export section* of a module, starting
+    /// at the given `offset`.
+    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
             count: parser::leb128::u32(&mut offset, &bytes).context("export count")?,
             offset,
             bytes,
-            buffer: allocator.allocate_buffer(),
-            allocator,
         })
     }
 
     /// Parses the next export in the section.
-    pub fn parse(&mut self) -> Result<Option<Export<'_>>> {
+    pub fn parse<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Export<'n>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        match Export::parse(&mut self.offset, &self.bytes, &mut self.buffer) {
+        match Export::parse(&mut self.offset, &self.bytes, name_buffer) {
             Ok(export) => {
                 self.count -= 1;
                 Ok(Some(export))
@@ -105,29 +100,10 @@ impl<B: Bytes, A: Allocator> ExportsComponent<B, A> {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl<B: Bytes> ExportsComponent<B, crate::allocator::Global> {
-    /// Uses the given [`Bytes`] to read the contents of the *export section* of a module,
-    /// starting at the given `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Self::with_allocator(offset, bytes, Default::default())
-    }
-}
-
+/*
 impl<B: Bytes, A: Allocator> Debug for ExportsComponent<B, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut borrowed = ExportsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-            buffer: self.allocator.allocate_buffer(),
-            allocator: &self.allocator,
-        };
 
-        let mut list = f.debug_list();
-        while let Some(import) = borrowed.parse().transpose() {
-            list.entry(&import);
-        }
-        list.finish()
     }
 }
+*/

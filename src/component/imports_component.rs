@@ -1,4 +1,4 @@
-use crate::allocator::{Allocator, Buffer};
+use crate::allocator::Buffer;
 use crate::bytes::Bytes;
 use crate::component;
 use crate::parser::{self, Result, ResultExt};
@@ -46,10 +46,10 @@ impl<'a> Import<'a> {
     }
 
     #[inline]
-    fn parse<'b: 'a, B: Bytes, U: Buffer>(
+    fn parse<'b: 'a, B: Bytes, N: Buffer>(
         offset: &mut u64,
         bytes: &B,
-        buffer: &'b mut U,
+        buffer: &'b mut N,
     ) -> Result<Self> {
         let module_name = parser::name(offset, &bytes, buffer)
             .context("module name")?
@@ -102,25 +102,20 @@ impl<'a> Import<'a> {
 /// a WebAssembly module, stored in and parsed from the
 /// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
 #[derive(Clone, Copy)]
-pub struct ImportsComponent<B: Bytes, A: Allocator> {
+pub struct ImportsComponent<B: Bytes> {
     count: u32,
     offset: u64,
     bytes: B,
-    buffer: A::Buf,
-    allocator: A,
 }
 
-impl<B: Bytes, A: Allocator> ImportsComponent<B, A> {
+impl<B: Bytes> ImportsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *imports section* of a
-    /// module, starting at the given `offset`, using a buffer from the [`Allocator`] to contain
-    /// any parsed UTF-8 strings.
-    pub fn with_allocator(mut offset: u64, bytes: B, allocator: A) -> Result<Self> {
+    /// module, starting at the given `offset`.
+    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
             count: parser::leb128::u32(&mut offset, &bytes).context("import count")?,
             offset,
             bytes,
-            buffer: allocator.allocate_buffer(),
-            allocator,
         })
     }
 
@@ -137,13 +132,13 @@ impl<B: Bytes, A: Allocator> ImportsComponent<B, A> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse(&mut self) -> Result<Option<Import<'_>>> {
+    pub fn parse<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Import<'n>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        self.buffer.clear();
-        match Import::parse(&mut self.offset, &self.bytes, &mut self.buffer) {
+        name_buffer.clear();
+        match Import::parse(&mut self.offset, &self.bytes, name_buffer) {
             Ok(import) => {
                 self.count -= 1;
                 Ok(Some(import))
@@ -156,29 +151,10 @@ impl<B: Bytes, A: Allocator> ImportsComponent<B, A> {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl<B: Bytes> ImportsComponent<B, crate::allocator::Global> {
-    /// Uses the given [`Bytes`] to read the contents of the *imports section* of a module,
-    /// starting at the given `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Self::with_allocator(offset, bytes, Default::default())
-    }
-}
-
-impl<B: Bytes, A: Allocator> Debug for ImportsComponent<B, A> {
+/*
+impl<B: Bytes> Debug for ImportsComponent<B, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut borrowed = ImportsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-            buffer: self.allocator.allocate_buffer(),
-            allocator: &self.allocator,
-        };
 
-        let mut list = f.debug_list();
-        while let Some(import) = borrowed.parse().transpose() {
-            list.entry(&import);
-        }
-        list.finish()
     }
 }
+*/
