@@ -99,7 +99,7 @@ impl<B: Bytes> SectionSequence<B> {
     ///
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
-    pub fn parse<'n, N: Buffer>(
+    pub fn parse_with_buffer<'n, N: Buffer>(
         &mut self,
         name_buffer: &'n mut N,
     ) -> Result<Option<Section<&B, &'n str>>> {

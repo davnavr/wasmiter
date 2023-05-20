@@ -82,7 +82,7 @@ impl<B: Bytes> ExportsComponent<B> {
     }
 
     /// Parses the next export in the section.
-    pub fn parse<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Export<'n>>> {
+    pub fn parse_with_buffer<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Export<'n>>> {
         if self.count == 0 {
             return Ok(None);
         }

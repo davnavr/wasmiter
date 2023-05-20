@@ -132,7 +132,7 @@ impl<B: Bytes> ImportsComponent<B> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Import<'n>>> {
+    pub fn parse_with_buffer<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Import<'n>>> {
         if self.count == 0 {
             return Ok(None);
         }
