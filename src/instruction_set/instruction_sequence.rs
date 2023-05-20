@@ -7,7 +7,7 @@ use crate::parser::{self, leb128, Offset, Result, ResultExt, Vector};
 
 fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
     let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
-    let o = leb128::u32(offset, bytes).context("memory argument offset")?;
+    let o = leb128::u64(offset, bytes).context("memory argument offset")?;
 
     let (a, memory) = if a < 64 {
         (a, component::MemIdx::from(0u8))

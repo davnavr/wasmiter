@@ -44,14 +44,14 @@ impl Align {
 /// specifies an address **offset** and expected **alignment** for a memory load or store.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct MemArg {
-    offset: u32,
+    offset: u64,
     align: Align,
     memory: MemIdx,
 }
 
 impl MemArg {
     /// Creates a new [`MemArg`].
-    pub const fn new(offset: u32, align: Align, memory: MemIdx) -> Self {
+    pub const fn new(offset: u64, align: Align, memory: MemIdx) -> Self {
         Self {
             offset,
             align,
@@ -60,7 +60,7 @@ impl MemArg {
     }
 
     /// Gets the offset.
-    pub const fn offset(&self) -> u32 {
+    pub const fn offset(&self) -> u64 {
         self.offset
     }
 
@@ -81,6 +81,12 @@ impl MemArg {
     /// information.
     pub const fn requires_multi_memory(&self) -> bool {
         self.memory.to_u32() != 0
+    }
+
+    /// Returns `true` if the `memarg` requires the
+    /// [64-bit memory proposal](https://github.com/WebAssembly/memory64).
+    pub const fn requires_memory_64(&self) -> bool {
+        self.offset > u32::MAX as u64
     }
 }
 

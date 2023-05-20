@@ -81,10 +81,10 @@ impl Limits {
 
     /// Returns `true` if the [`Limits`] would require the
     /// [64-bit memory proposal](https://github.com/WebAssembly/memory64).
-    pub fn requires_memory64(&self) -> bool {
-        self.minimum > (u32::MAX as u64)
+    pub fn requires_memory_64(&self) -> bool {
+        self.minimum > u64::from(u32::MAX)
             || matches!(self.index_type, IdxType::I64)
-            || matches!(self.maximum, Some(max) if max > (u32::MAX as u64))
+            || matches!(self.maximum, Some(max) if max > u64::from(u32::MAX))
     }
 }
 
