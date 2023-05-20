@@ -92,7 +92,7 @@ impl<B: Bytes> core::fmt::Debug for Window<B> {
             .field("length", &self.length)
             .field(
                 "content",
-                &bytes::BytesDebug::from(bytes::BytesSlice::new(
+                &bytes::DebugBytes::from(bytes::BytesSlice::new(
                     &self.inner,
                     self.base,
                     self.length,

@@ -60,7 +60,7 @@ impl<B: Bytes> core::fmt::Debug for BytesSlice<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("BytesSlice")
             .field("length", &self.length)
-            .field("content", &crate::bytes::BytesDebug::from(self))
+            .field("content", &crate::bytes::DebugBytes::from(self))
             .finish()
     }
 }

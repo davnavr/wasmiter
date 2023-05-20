@@ -1,8 +1,8 @@
 //! Traits and type definitions for reading bytes from a source.
 
 mod buf_bytes;
-mod bytes_debug;
 mod bytes_slice;
+mod debug_bytes;
 mod error;
 mod window;
 
@@ -12,8 +12,8 @@ mod reader;
 mod shared_bytes;
 
 pub use buf_bytes::BufBytes;
-pub use bytes_debug::BytesDebug;
 pub use bytes_slice::BytesSlice;
+pub use debug_bytes::DebugBytes;
 pub use error::{Error, ErrorKind};
 pub use window::Window;
 

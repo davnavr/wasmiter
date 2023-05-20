@@ -131,7 +131,7 @@ impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
             .debug_struct("ExportsComponent")
             .field("count", &self.count)
             .field("offset", &self.offset)
-            .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
+            .field("bytes", &crate::bytes::DebugBytes::from(&self.bytes))
             .finish();
     }
 }
