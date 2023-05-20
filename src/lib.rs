@@ -3,8 +3,9 @@
 #![deny(missing_docs)]
 #![deny(unreachable_pub)]
 #![deny(unsafe_op_in_unsafe_fn)]
-#![warn(clippy::alloc_instead_of_core)]
 #![deny(clippy::undocumented_unsafe_blocks)]
+#![warn(clippy::alloc_instead_of_core)]
+#![warn(clippy::std_instead_of_alloc)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "alloc")]
