@@ -114,7 +114,7 @@ impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // This is COMPLETELY duplicated from crate::sections::SectionSequence
         #[cfg(feature = "alloc")]
-        {
+        return {
             let mut buffer = smallvec::smallvec_inline![0u8; 64];
             let mut list = f.debug_list();
 
@@ -123,17 +123,15 @@ impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
                 list.entry(&section);
             }
 
-            return list.finish();
-        }
+            list.finish()
+        };
 
         #[cfg(not(feature = "alloc"))]
-        {
-            return f
-                .debug_struct("ExportsComponent")
-                .field("count", &self.count)
-                .field("offset", &self.offset)
-                .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
-                .finish();
-        }
+        return f
+            .debug_struct("ExportsComponent")
+            .field("count", &self.count)
+            .field("offset", &self.offset)
+            .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
+            .finish();
     }
 }

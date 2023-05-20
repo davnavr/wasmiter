@@ -48,9 +48,9 @@ pub enum KnownSection<B: Bytes> {
 
 impl<B: Bytes> KnownSection<Window<B>> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
-    pub fn try_from_section(
-        section: Section<B, &str>,
-    ) -> Result<parser::Result<Self>, Section<B, &str>> {
+    pub fn try_from_section<S: AsRef<str>>(
+        section: Section<B, S>,
+    ) -> Result<parser::Result<Self>, Section<B, S>> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
                 section_id::TYPE => {
@@ -86,7 +86,7 @@ impl<B: Bytes> KnownSection<Window<B>> {
                     let contents = section.into_contents();
                     component::index(&mut contents.base(), contents)
                         .context("start section")
-                        .map(|index| Self::Start(index))
+                        .map(Self::Start)
                 }
                 section_id::ELEMENT => {
                     let contents = section.into_contents();
@@ -104,7 +104,7 @@ impl<B: Bytes> KnownSection<Window<B>> {
                     let contents = section.into_contents();
                     parser::leb128::u32(&mut contents.base(), contents)
                         .context("data count section")
-                        .map(|count| Self::DataCount(count))
+                        .map(Self::DataCount)
                 }
                 _ => return Err(section),
             })

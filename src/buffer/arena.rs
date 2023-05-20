@@ -48,7 +48,7 @@ impl Arena for GlobalArena {
         Vec::with_capacity(capacity)
     }
 
-    type String = Box<str>;
+    type String = alloc::boxed::Box<str>;
 
     #[inline]
     fn allocate_string(&self, s: &str) -> Self::String {

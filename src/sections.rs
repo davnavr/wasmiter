@@ -52,8 +52,8 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
         self.contents
     }
 
-    #[cfg(feature = "alloc")]
-    fn borrowed(&self) -> Section<&B, &str> {
+    /// Returns a borrowed version of the [`Section`].
+    pub fn borrowed(&self) -> Section<&B, &str> {
         Section {
             kind: self.kind.into_borrowed(),
             contents: self.contents.borrowed(),
@@ -232,7 +232,7 @@ impl<B: Bytes + Clone> IntoIterator for SectionSequence<B> {
 impl<B: Bytes> Debug for SectionSequence<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         #[cfg(feature = "alloc")]
-        {
+        return {
             let mut buffer = smallvec::smallvec_inline![0u8; 64];
             let mut list = f.debug_list();
 
@@ -241,16 +241,14 @@ impl<B: Bytes> Debug for SectionSequence<B> {
                 list.entry(&section);
             }
 
-            return list.finish();
-        }
+            list.finish()
+        };
 
         #[cfg(not(feature = "alloc"))]
-        {
-            return f
-                .debug_struct("SectionSequence")
-                .field("offset", &self.offset)
-                .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
-                .finish();
-        }
+        return f
+            .debug_struct("SectionSequence")
+            .field("offset", &self.offset)
+            .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
+            .finish();
     }
 }

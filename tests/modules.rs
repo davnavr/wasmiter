@@ -17,9 +17,7 @@ fn basic_module() {
     let mut code = None;
 
     for section in module {
-        if let Ok(known_section) =
-            KnownSection::try_from_with_allocator(section.unwrap(), wasmiter::buffer::Global)
-        {
+        if let Ok(known_section) = KnownSection::try_from_section(section.unwrap()) {
             match known_section.unwrap() {
                 KnownSection::Type(ty) => types = Some(ty),
                 KnownSection::Export(ex) => exports = Some(ex),
@@ -47,15 +45,22 @@ fn basic_module() {
         .is_some());
     assert!(types.is_empty());
 
+    let mut name_buffer = std::vec::Vec::with_capacity(8);
     let mut exports = exports.unwrap();
-    let ex = exports.parse().unwrap().unwrap();
+    let ex = exports
+        .parse_with_buffer(&mut name_buffer)
+        .unwrap()
+        .unwrap();
     assert_eq!("add_five", ex.name());
     assert!(
         matches!(ex.kind(), component::ExportKind::Function(i) if i.to_u32() == 0),
         "incorrect kind {:?}",
         ex.kind()
     );
-    assert!(exports.parse().unwrap().is_none());
+    assert!(exports
+        .parse_with_buffer(&mut name_buffer)
+        .unwrap()
+        .is_none());
 
     let mut code = code.unwrap();
     let entry = code.parse().unwrap().unwrap();
