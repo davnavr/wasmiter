@@ -1,9 +1,5 @@
 //! Types and traits for handling allocations during WebAssembly parsing.
 
-mod own_or_ref;
-
-pub use own_or_ref::OwnOrRef;
-
 /// Trait for byte buffers.
 pub trait Buffer: AsRef<[u8]> + AsMut<[u8]> {
     /// Sets the buffer's length to zero.
@@ -33,7 +29,7 @@ pub trait Allocator {
     fn allocate_buffer(&self) -> Self::Buf;
 
     /// A type for allocated strings.
-    type String: AsRef<str> + AsMut<str>;
+    type String: AsRef<str> + AsMut<str>; // TODO: Get rid of string
 
     /// Allocates a new string.
     fn allocate_string(&self, s: &str) -> Self::String;

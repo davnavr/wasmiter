@@ -50,10 +50,10 @@ pub enum KnownSection<B: Bytes, A: Allocator> {
 
 impl<B: Bytes, A: Allocator> KnownSection<Window<B>, A> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
-    pub fn try_from_with_allocator<S: AsRef<str>>(
-        section: Section<B, S>,
+    pub fn try_from_with_allocator(
+        section: Section<B, &str>,
         allocator: A,
-    ) -> Result<parser::Result<Self>, Section<B, S>> {
+    ) -> Result<parser::Result<Self>, Section<B, &str>> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
                 section_id::TYPE => {

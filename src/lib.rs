@@ -53,12 +53,12 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
 pub fn parse_module_sections_with_allocator<B: bytes::Bytes, A: allocator::Allocator>(
     binary: B,
     allocator: A,
-) -> Result<SectionSequence<B, A>> {
+) -> Result<SectionSequence<B, A::Buf>> {
     parse_module_preamble(&binary)?;
-    Ok(SectionSequence::new_with_allocator(
+    Ok(SectionSequence::new_with_buffer(
         u64::from(PREAMBLE_LENGTH),
         binary,
-        allocator,
+        allocator.allocate_buffer(),
     ))
 }
 
@@ -68,8 +68,8 @@ pub fn parse_module_sections_with_allocator<B: bytes::Bytes, A: allocator::Alloc
 #[cfg(feature = "alloc")]
 pub fn parse_module_sections<B: bytes::Bytes>(
     binary: B,
-) -> Result<SectionSequence<B, allocator::Global>> {
-    parse_module_sections_with_allocator(binary, Default::default())
+) -> Result<SectionSequence<B, alloc::vec::Vec<u8>>> {
+    parse_module_sections_with_allocator(binary, allocator::Global)
 }
 
 /*

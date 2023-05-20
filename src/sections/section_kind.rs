@@ -1,12 +1,10 @@
-use crate::allocator::OwnOrRef;
-
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
 /// [`Section`](crate::Section).
 pub type SectionId = core::num::NonZeroU8;
 
 /// Indicates what kind of contents are contained within a WebAssembly [`Section`](crate::Section).
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub enum SectionKind<S: AsRef<str>> {
     /// The section is a known value documented in the
     /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/modules.html#sections)
@@ -14,20 +12,16 @@ pub enum SectionKind<S: AsRef<str>> {
     /// The section is a
     /// [custom section](https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec)
     /// with the given name.
-    Custom(OwnOrRef<'static, str, S>),
+    Custom(S),
 }
 
 impl<S: AsRef<str>> SectionKind<S> {
-    #[cfg(feature = "alloc")]
-    pub(crate) fn borrowed(&self) -> SectionKind<&str> {
+    /// Converts the [`SectionKind`], copying the section ID or borrowing the custom section name.
+    #[inline]
+    pub fn into_borrowed(&self) -> SectionKind<&str> {
         match self {
             Self::Id(id) => SectionKind::Id(*id),
-            Self::Custom(OwnOrRef::Reference(reference)) => {
-                SectionKind::Custom(OwnOrRef::Owned(reference))
-            }
-            Self::Custom(OwnOrRef::Owned(owned)) => {
-                SectionKind::Custom(OwnOrRef::Owned(owned.as_ref()))
-            }
+            Self::Custom(name) => SectionKind::Custom(name.as_ref()),
         }
     }
 }
@@ -115,10 +109,10 @@ macro_rules! known_custom_ids {
             }
         }
 
-        impl<S: AsRef<str>> SectionKind<S> {
+        impl SectionKind<&'static str> {
             $(
                 $(#[$meta])*
-                pub const $name: Self = Self::Custom(OwnOrRef::Reference($value));
+                pub const $name: Self = Self::Custom($value);
             )*
         }
     };

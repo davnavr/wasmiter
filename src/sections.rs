@@ -1,4 +1,4 @@
-use crate::allocator::{Allocator, Buffer, OwnOrRef};
+use crate::allocator::Buffer;
 use crate::bytes::{Bytes, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
@@ -11,7 +11,7 @@ pub(crate) use section_kind::section_id as id;
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Section<B: Bytes, S: AsRef<str>> {
     kind: SectionKind<S>,
     contents: Window<B>,
@@ -52,7 +52,7 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     #[cfg(feature = "alloc")]
     fn borrowed(&self) -> Section<&B, &str> {
         Section {
-            kind: self.kind.borrowed(),
+            kind: self.kind.into_borrowed(),
             contents: self.contents.borrowed(),
         }
     }
@@ -79,22 +79,21 @@ impl<B: Bytes + Debug, S: AsRef<str>> Debug for Section<B, S> {
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
 /// in a WebAssembly module.
 #[must_use]
-pub struct SectionSequence<B: Bytes, A: Allocator> {
+pub struct SectionSequence<B: Bytes, U: Buffer> {
     offset: u64,
     bytes: B,
-    allocator: A,
-    buffer: A::Buf,
+    buffer: U,
 }
 
-impl<B: Bytes, A: Allocator> SectionSequence<B, A> {
-    /// Uses the given [`Bytes`] to read a sequence of sections with the given [`Allocator`]
-    /// starting at the specified `offset`.
-    pub fn new_with_allocator(offset: u64, bytes: B, allocator: A) -> Self {
+impl<B: Bytes, U: Buffer> SectionSequence<B, U> {
+    /// Uses the given [`Bytes`] to read a sequence of sections starting at the specified `offset`.
+    ///
+    /// Uses the [`Buffer`] as a place to temporarily store custom section names.
+    pub fn new_with_buffer(offset: u64, bytes: B, buffer: U) -> Self {
         Self {
             offset,
             bytes,
-            buffer: allocator.allocate_buffer(),
-            allocator,
+            buffer,
         }
     }
 
@@ -104,7 +103,7 @@ impl<B: Bytes, A: Allocator> SectionSequence<B, A> {
     ///
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
-    pub fn parse(&mut self) -> Result<Option<Section<&B, A::String>>> {
+    pub fn parse(&mut self) -> Result<Option<Section<&B, &str>>> {
         let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, &self.bytes)? {
             id
         } else {
@@ -122,18 +121,12 @@ impl<B: Bytes, A: Allocator> SectionSequence<B, A> {
             let name_start = self.offset;
 
             self.buffer.clear();
-            let name = parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
+            let name: &str = parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
                 .context("custom section name")?;
 
             content_length -= self.offset - name_start;
 
-            SectionKind::Custom(
-                if let Some(known) = section_kind::cached_custom_name(name) {
-                    OwnOrRef::Reference(known)
-                } else {
-                    OwnOrRef::Owned(self.allocator.allocate_string(name))
-                },
-            )
+            SectionKind::Custom(name)
         };
 
         let contents = Window::new(&self.bytes, self.offset, content_length);
@@ -149,39 +142,10 @@ impl<B: Bytes, A: Allocator> SectionSequence<B, A> {
 }
 
 #[cfg(feature = "alloc")]
-impl<B: Bytes> SectionSequence<B, crate::allocator::Global> {
+impl<B: Bytes> SectionSequence<B, alloc::vec::Vec<u8>> {
     /// Uses the given [`Bytes`] to read a sequence of sections starting at the specified `offset`.
     #[inline]
     pub fn new(offset: u64, bytes: B) -> Self {
-        Self::new_with_allocator(offset, bytes, Default::default())
-    }
-}
-
-impl<B: Bytes + Clone, A: Allocator> Iterator for SectionSequence<B, A> {
-    type Item = Result<Section<B, A::String>>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.parse() {
-            Ok(None) => None,
-            Ok(Some(section)) => Some(Ok(Section {
-                kind: section.kind,
-                contents: section.contents.cloned(),
-            })),
-            Err(e) => Some(Err(e)),
-        }
-    }
-}
-
-impl<B: Bytes + Debug, A: Allocator> Debug for SectionSequence<B, A> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let clone = SectionSequence {
-            offset: self.offset,
-            bytes: &self.bytes,
-            buffer: self.allocator.allocate_buffer(),
-            allocator: &self.allocator,
-        };
-
-        f.debug_list().entries(clone).finish()
+        Self::new_with_buffer(offset, bytes, Default::default())
     }
 }
