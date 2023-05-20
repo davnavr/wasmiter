@@ -40,8 +40,12 @@ macro_rules! known_ids {
         $(#[$meta:meta])*
         $name:ident = $value:literal;
     )*) => {
-        pub(crate) mod section_id {
-            use crate::SectionId;
+        /// Contains well-known integer constants representing
+        /// [WebAssembly section *id*s](https://webassembly.github.io/spec/core/binary/modules.html#sections).
+        pub mod section_id {
+            use crate::sections::SectionId;
+
+            pub use crate::sections::section_kind::cached_custom_name;
 
             $(
                 pub(crate) const $name: SectionId = {
@@ -102,7 +106,10 @@ macro_rules! known_custom_ids {
         $(#[$meta:meta])*
         $name:ident = $value:literal;
     )*) => {
-        pub(in crate::sections) fn cached_custom_name(s: &str) -> Option<&'static str> {
+        /// Checks if the given string is a recognized custom section name.
+        ///
+        /// This allows avoiding allocations for well-known custom section names.
+        pub fn cached_custom_name(s: &str) -> Option<&'static str> {
             match s {
                 $($value => Some($value),)*
                 _ => None,

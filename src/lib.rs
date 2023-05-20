@@ -16,10 +16,7 @@ pub mod bytes;
 pub mod component;
 pub mod instruction_set;
 pub mod parser;
-
-mod sections;
-
-pub use sections::{Section, SectionId, SectionKind, SectionSequence, SectionsIter};
+pub mod sections;
 
 use parser::{Error, Result, ResultExt};
 
@@ -52,9 +49,9 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
 /// returning the sequence of sections.
 #[inline]
 #[cfg(feature = "alloc")]
-pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<SectionSequence<B>> {
+pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::SectionSequence<B>> {
     parse_module_preamble(&binary)?;
-    Ok(SectionSequence::new(u64::from(PREAMBLE_LENGTH), binary))
+    Ok(sections::SectionSequence::new(u64::from(PREAMBLE_LENGTH), binary))
 }
 
 /*

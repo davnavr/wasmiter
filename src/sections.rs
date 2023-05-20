@@ -1,3 +1,5 @@
+//! Contains types for reading the sections of a WebAssembly module.
+
 use crate::buffer::{Arena, Buffer};
 use crate::bytes::{Bytes, Window};
 use crate::parser::{self, Result, ResultExt};
@@ -8,9 +10,7 @@ use crate::buffer::GlobalArena;
 
 mod section_kind;
 
-pub use section_kind::{SectionId, SectionKind};
-
-pub(crate) use section_kind::section_id as id;
+pub use section_kind::{section_id as id, SectionId, SectionKind};
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
