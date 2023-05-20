@@ -78,23 +78,17 @@ impl<B: Bytes + Debug, S: AsRef<str>> Debug for Section<B, S> {
 /// Represents the
 /// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
 /// in a WebAssembly module.
+#[derive(Clone, Copy)]
 #[must_use]
-pub struct SectionSequence<B: Bytes, U: Buffer> {
+pub struct SectionSequence<B: Bytes> {
     offset: u64,
     bytes: B,
-    buffer: U,
 }
 
-impl<B: Bytes, U: Buffer> SectionSequence<B, U> {
+impl<B: Bytes> SectionSequence<B> {
     /// Uses the given [`Bytes`] to read a sequence of sections starting at the specified `offset`.
-    ///
-    /// Uses the [`Buffer`] as a place to temporarily store custom section names.
-    pub fn new_with_buffer(offset: u64, bytes: B, buffer: U) -> Self {
-        Self {
-            offset,
-            bytes,
-            buffer,
-        }
+    pub fn new(offset: u64, bytes: B) -> Self {
+        Self { offset, bytes }
     }
 
     /// Parses the next section. If there are no more sections remaining, returns `Ok(None)`.
@@ -103,7 +97,7 @@ impl<B: Bytes, U: Buffer> SectionSequence<B, U> {
     ///
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
-    pub fn parse(&mut self) -> Result<Option<Section<&B, &str>>> {
+    pub fn parse<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Section<&B, &'n str>>> {
         let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, &self.bytes)? {
             id
         } else {
@@ -120,8 +114,8 @@ impl<B: Bytes, U: Buffer> SectionSequence<B, U> {
         } else {
             let name_start = self.offset;
 
-            self.buffer.clear();
-            let name: &str = parser::name(&mut self.offset, &self.bytes, &mut self.buffer)
+            name_buffer.clear();
+            let name: &str = parser::name(&mut self.offset, &self.bytes, name_buffer)
                 .context("custom section name")?;
 
             content_length -= self.offset - name_start;
@@ -138,14 +132,5 @@ impl<B: Bytes, U: Buffer> SectionSequence<B, U> {
         self.offset += content_length;
 
         Ok(Some(Section { kind: id, contents }))
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<B: Bytes> SectionSequence<B, alloc::vec::Vec<u8>> {
-    /// Uses the given [`Bytes`] to read a sequence of sections starting at the specified `offset`.
-    #[inline]
-    pub fn new(offset: u64, bytes: B) -> Self {
-        Self::new_with_buffer(offset, bytes, Default::default())
     }
 }

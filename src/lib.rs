@@ -48,28 +48,13 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
     Ok(())
 }
 
-/// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html)
-/// with the given [`Allocator`](allocator::Allocator), returning the sequence of sections.
-pub fn parse_module_sections_with_allocator<B: bytes::Bytes, A: allocator::Allocator>(
-    binary: B,
-    allocator: A,
-) -> Result<SectionSequence<B, A::Buf>> {
-    parse_module_preamble(&binary)?;
-    Ok(SectionSequence::new_with_buffer(
-        u64::from(PREAMBLE_LENGTH),
-        binary,
-        allocator.allocate_buffer(),
-    ))
-}
-
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
 #[inline]
 #[cfg(feature = "alloc")]
-pub fn parse_module_sections<B: bytes::Bytes>(
-    binary: B,
-) -> Result<SectionSequence<B, alloc::vec::Vec<u8>>> {
-    parse_module_sections_with_allocator(binary, allocator::Global)
+pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<SectionSequence<B>> {
+    parse_module_preamble(&binary)?;
+    Ok(SectionSequence::new(u64::from(PREAMBLE_LENGTH), binary))
 }
 
 /*
