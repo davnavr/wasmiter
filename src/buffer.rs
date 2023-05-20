@@ -24,20 +24,47 @@ pub trait Buffer: AsRef<[u8]> + AsMut<[u8]> {
     fn grow(&mut self, length: usize);
 }
 
+#[inline]
+fn calculate_new_length_for_grow(current: usize, additional: usize) -> usize {
+    current.checked_add(additional).unwrap_or(usize::MAX)
+}
+
 #[cfg(feature = "alloc")]
 impl Buffer for Vec<u8> {
     #[inline]
     fn clear(&mut self) {
-        Vec::clear(self)
+        <Vec<u8>>::clear(self)
     }
 
     #[inline]
     fn capacity(&self) -> Option<usize> {
-        Some(Vec::capacity(self))
+        Some(<Vec<u8>>::capacity(self))
     }
 
     #[inline]
     fn grow(&mut self, length: usize) {
-        self.resize(self.len().checked_add(length).unwrap_or(usize::MAX), 0u8)
+        <Vec<u8>>::resize(self, calculate_new_length_for_grow(self.len(), length), 0u8)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> Buffer for smallvec::SmallVec<[u8; N]> {
+    #[inline]
+    fn clear(&mut self) {
+        <smallvec::SmallVec<[u8; N]>>::clear(self)
+    }
+
+    #[inline]
+    fn capacity(&self) -> Option<usize> {
+        Some(<smallvec::SmallVec<[u8; N]>>::capacity(self))
+    }
+
+    #[inline]
+    fn grow(&mut self, length: usize) {
+        <smallvec::SmallVec<[u8; N]>>::resize(
+            self,
+            calculate_new_length_for_grow(self.len(), length),
+            0u8,
+        )
     }
 }

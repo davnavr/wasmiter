@@ -61,7 +61,7 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     }
 }
 
-impl<B: Bytes + Debug, S: AsRef<str>> Debug for Section<B, S> {
+impl<B: Bytes, S: AsRef<str>> Debug for Section<B, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         /*
         #[cfg(feature = "alloc")]
@@ -206,7 +206,7 @@ impl<B: Bytes + Clone, A: Arena> Iterator for SectionsIter<B, A> {
     }
 }
 
-impl<B: Bytes + Debug, A: Arena> Debug for SectionsIter<B, A> {
+impl<B: Bytes, A: Arena> Debug for SectionsIter<B, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let sections = SectionsIter {
             sections: self.sections.borrowed(),
@@ -228,5 +228,30 @@ impl<B: Bytes + Clone> IntoIterator for SectionSequence<B> {
 
     fn into_iter(self) -> Self::IntoIter {
         SectionsIter::new(self)
+    }
+}
+
+impl<B: Bytes> Debug for SectionSequence<B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        #[cfg(feature = "alloc")]
+        {
+            let mut buffer = smallvec::smallvec_inline![0u8; 64];
+            let mut list = f.debug_list();
+
+            let mut sequence = self.borrowed();
+            while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
+                list.entry(&section);
+            }
+
+            return list.finish();
+        }
+
+        #[cfg(not(feature = "alloc"))]
+        {
+            return f.debug_struct("SectionSequence")
+                .field("offset", &self.offset)
+                .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
+                .finish();
+        }
     }
 }

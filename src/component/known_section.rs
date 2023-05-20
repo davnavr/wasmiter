@@ -1,7 +1,7 @@
 use crate::bytes::{Bytes, Window};
 use crate::component;
 use crate::parser::{self, ResultExt as _};
-use crate::sections::{Section, SectionKind, id as section_id};
+use crate::sections::{id as section_id, Section, SectionKind};
 
 /// Represents a well-known WebAssembly [`Section`].
 pub enum KnownSection<B: Bytes> {

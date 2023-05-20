@@ -51,7 +51,10 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
 #[cfg(feature = "alloc")]
 pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::SectionSequence<B>> {
     parse_module_preamble(&binary)?;
-    Ok(sections::SectionSequence::new(u64::from(PREAMBLE_LENGTH), binary))
+    Ok(sections::SectionSequence::new(
+        u64::from(PREAMBLE_LENGTH),
+        binary,
+    ))
 }
 
 /*
