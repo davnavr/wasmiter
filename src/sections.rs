@@ -151,6 +151,7 @@ impl<B: Bytes> SectionSequence<B> {
     }
 
     /// Returns an iterator over the sections.
+    #[cfg(feature = "alloc")]
     pub fn iter(&self) -> SectionsIter<&B, GlobalArena> {
         self.iter_with_arena(GlobalArena)
     }

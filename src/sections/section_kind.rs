@@ -4,7 +4,7 @@
 pub type SectionId = core::num::NonZeroU8;
 
 /// Indicates what kind of contents are contained within a WebAssembly [`Section`](crate::Section).
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash)]
 pub enum SectionKind<S: AsRef<str>> {
     /// The section is a known value documented in the
     /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/modules.html#sections)
@@ -147,4 +147,14 @@ known_custom_ids! {
     /// [The `linking` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#linking-metadata-section),
     /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for static linking.
     LINKING = "linking";
+}
+
+impl<A: AsRef<str>, B: AsRef<str>> core::cmp::PartialEq<SectionKind<B>> for SectionKind<A> {
+    fn eq(&self, other: &SectionKind<B>) -> bool {
+        match (self, other) {
+            (Self::Id(a), SectionKind::Id(b)) => a == b,
+            (Self::Custom(a), SectionKind::Custom(b)) => a.as_ref() == b.as_ref(),
+            _ => false,
+        }
+    }
 }
