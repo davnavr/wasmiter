@@ -2,7 +2,6 @@ use crate::buffer::Buffer;
 use crate::bytes::Bytes;
 use crate::component;
 use crate::parser::{self, Result, ResultExt};
-use core::fmt::{Debug, Formatter};
 
 /// Describes what kind of entity is specified by an [`Import`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -132,7 +131,10 @@ impl<B: Bytes> ImportsComponent<B> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse_with_buffer<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Import<'n>>> {
+    pub fn parse_with_buffer<'n, N: Buffer>(
+        &mut self,
+        name_buffer: &'n mut N,
+    ) -> Result<Option<Import<'n>>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -149,12 +151,40 @@ impl<B: Bytes> ImportsComponent<B> {
             }
         }
     }
-}
 
-/*
-impl<B: Bytes> Debug for ImportsComponent<B, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-
+    fn borrowed(&self) -> ImportsComponent<&B> {
+        ImportsComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
     }
 }
-*/
+
+impl<B: Bytes> core::fmt::Debug for ImportsComponent<B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // This is COMPLETELY duplicated from crate::sections::SectionSequence
+        #[cfg(feature = "alloc")]
+        {
+            let mut buffer = smallvec::smallvec_inline![0u8; 64];
+            let mut list = f.debug_list();
+
+            let mut sequence = self.borrowed();
+            while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
+                list.entry(&section);
+            }
+
+            return list.finish();
+        }
+
+        #[cfg(not(feature = "alloc"))]
+        {
+            return f
+                .debug_struct("ImportsComponent")
+                .field("count", &self.count)
+                .field("offset", &self.offset)
+                .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
+                .finish();
+        }
+    }
+}

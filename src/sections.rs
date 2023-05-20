@@ -63,12 +63,10 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
 
 impl<B: Bytes, S: AsRef<str>> Debug for Section<B, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        /*
         #[cfg(feature = "alloc")]
         if let Ok(Ok(known)) = crate::component::KnownSection::try_from_section(self.borrowed()) {
             return Debug::fmt(&known, f);
         }
-        */
 
         f.debug_struct("Section")
             .field("kind", &self.kind)
@@ -248,7 +246,8 @@ impl<B: Bytes> Debug for SectionSequence<B> {
 
         #[cfg(not(feature = "alloc"))]
         {
-            return f.debug_struct("SectionSequence")
+            return f
+                .debug_struct("SectionSequence")
                 .field("offset", &self.offset)
                 .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
                 .finish();

@@ -2,7 +2,6 @@ use crate::buffer::Buffer;
 use crate::bytes::Bytes;
 use crate::component;
 use crate::parser::{self, Result, ResultExt};
-use core::fmt::{Debug, Formatter};
 
 /// Describes what kind of entity is specified by an [`Export`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -82,7 +81,10 @@ impl<B: Bytes> ExportsComponent<B> {
     }
 
     /// Parses the next export in the section.
-    pub fn parse_with_buffer<'n, N: Buffer>(&mut self, name_buffer: &'n mut N) -> Result<Option<Export<'n>>> {
+    pub fn parse_with_buffer<'n, N: Buffer>(
+        &mut self,
+        name_buffer: &'n mut N,
+    ) -> Result<Option<Export<'n>>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -98,12 +100,40 @@ impl<B: Bytes> ExportsComponent<B> {
             }
         }
     }
-}
 
-/*
-impl<B: Bytes, A: Allocator> Debug for ExportsComponent<B, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-
+    fn borrowed(&self) -> ExportsComponent<&B> {
+        ExportsComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
     }
 }
-*/
+
+impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // This is COMPLETELY duplicated from crate::sections::SectionSequence
+        #[cfg(feature = "alloc")]
+        {
+            let mut buffer = smallvec::smallvec_inline![0u8; 64];
+            let mut list = f.debug_list();
+
+            let mut sequence = self.borrowed();
+            while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
+                list.entry(&section);
+            }
+
+            return list.finish();
+        }
+
+        #[cfg(not(feature = "alloc"))]
+        {
+            return f
+                .debug_struct("ExportsComponent")
+                .field("count", &self.count)
+                .field("offset", &self.offset)
+                .field("bytes", &crate::bytes::BytesDebug::from(&self.bytes))
+                .finish();
+        }
+    }
+}

@@ -184,7 +184,6 @@ impl<B: Bytes> From<component::DatasComponent<B>> for KnownSection<B> {
     }
 }
 
-/*
 impl<B: Bytes> core::fmt::Debug for KnownSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -203,7 +202,6 @@ impl<B: Bytes> core::fmt::Debug for KnownSection<B> {
         }
     }
 }
-*/
 
 impl<B: Bytes + Clone> Clone for KnownSection<B> {
     fn clone(&self) -> Self {
