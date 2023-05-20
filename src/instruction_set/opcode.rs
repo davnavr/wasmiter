@@ -262,10 +262,15 @@ opcodes! {
     ///
     /// See [`FCPrefixedOpcode`](crate::instruction_set::FCPrefixedOpcode) for more information.
     PrefixFC = 0xFC,
-    /// Prefix for fixed-width 128-bit vector instructions (`v128.`).
+    /// Prefix for fixed-width 128-bit vector instructions (`v128.`), whose actual opcode is stored
+    /// in a `u32` value.
     ///
     /// See [`VectorOpcode`](crate::instruction_set::VectorOpcode) for more information.
     PrefixV128 = 0xFD,
+    /// Prefix for atomic memory instructions (`memory.atomic.*` and `*.atomic.*`).
+    ///
+    /// See [`FEPrefixedOpcode`](crate::instruction_set::FEPrefixedOpcode) for more information.
+    PrefixFE = 0xFE,
 }
 
 impl Default for Opcode {

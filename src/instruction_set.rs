@@ -6,7 +6,7 @@ mod instruction_sequence;
 mod is_constant;
 mod memarg;
 mod opcode;
-mod prefix_fc;
+mod prefixed_opcode;
 mod vector_opcode;
 
 #[doc(no_inline)]
@@ -16,7 +16,7 @@ pub use instruction_sequence::InstructionSequence;
 pub use is_constant::IsConstant;
 pub use memarg::{Align, MemArg};
 pub use opcode::{InvalidOpcode, Opcode};
-pub use prefix_fc::FCPrefixedOpcode;
+pub use prefixed_opcode::FCPrefixedOpcode;
 pub use vector_opcode::VectorOpcode;
 
 /// Error type used when an encoded `u32` value is not a valid prefixed opcode.
