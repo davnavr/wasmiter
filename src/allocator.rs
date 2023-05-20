@@ -27,12 +27,6 @@ pub trait Allocator {
 
     /// Allocates a new buffer.
     fn allocate_buffer(&self) -> Self::Buf;
-
-    /// A type for allocated strings.
-    type String: AsRef<str> + AsMut<str>; // TODO: Get rid of string
-
-    /// Allocates a new string.
-    fn allocate_string(&self, s: &str) -> Self::String;
 }
 
 impl<A: Allocator> Allocator for &A {
@@ -41,13 +35,6 @@ impl<A: Allocator> Allocator for &A {
     #[inline]
     fn allocate_buffer(&self) -> Self::Buf {
         A::allocate_buffer(self)
-    }
-
-    type String = A::String;
-
-    #[inline]
-    fn allocate_string(&self, s: &str) -> Self::String {
-        A::allocate_string(self, s)
     }
 }
 
@@ -63,12 +50,5 @@ impl Allocator for Global {
     #[inline]
     fn allocate_buffer(&self) -> Self::Buf {
         Default::default()
-    }
-
-    type String = alloc::string::String;
-
-    #[inline]
-    fn allocate_string(&self, s: &str) -> Self::String {
-        alloc::string::ToString::to_string(s)
     }
 }
