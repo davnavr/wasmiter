@@ -18,7 +18,7 @@ fn basic_module() {
 
     for section in module {
         if let Ok(known_section) =
-            KnownSection::try_from_with_allocator(section.unwrap(), wasmiter::allocator::Global)
+            KnownSection::try_from_with_allocator(section.unwrap(), wasmiter::buffer::Global)
         {
             match known_section.unwrap() {
                 KnownSection::Type(ty) => types = Some(ty),

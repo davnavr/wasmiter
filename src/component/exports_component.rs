@@ -1,4 +1,4 @@
-use crate::allocator::Buffer;
+use crate::buffer::Buffer;
 use crate::bytes::Bytes;
 use crate::component;
 use crate::parser::{self, Result, ResultExt};
