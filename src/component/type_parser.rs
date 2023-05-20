@@ -86,25 +86,42 @@ pub fn mem_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::MemT
 /// Parses [`Limits`](component::Limits).
 pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits> {
     let flag = parser::one_byte_exact(offset, bytes).context("limit flag")?;
-    let minimum = leb128::u32(offset, bytes).context("32-bit limit minimum")?;
+
+    if (0u8..=7).contains(&flag) {
+        return Err(crate::parser_bad_format!(
+            "{flag:#02X} is not a known limit flag"
+        ));
+    }
+
+    let index_type = match flag {
+        0..=3 => component::IdxType::I32,
+        4..=7 => component::IdxType::I64,
+        _ => unreachable!(),
+    };
+
+    let minimum = match flag {
+        0..=3 | 6 | 7 => u64::from(leb128::u32(offset, bytes).context("32-bit limit minimum")?),
+        4 | 5 => leb128::u64(offset, bytes).context("64-bit limit minimum")?,
+        _ => unreachable!(),
+    };
+
     let maximum = match flag {
-        0 | 2 => None,
-        1 | 3 => Some(leb128::u32(offset, bytes).context("32-bit limit maximum")?),
-        _ => {
-            return Err(crate::parser_bad_format!(
-                "{flag:#02X} is not a known limit flag"
-            ))
-        }
+        0 | 2 | 4 | 6 => None,
+        1 | 3 | 7 => Some(u64::from(
+            leb128::u32(offset, bytes).context("32-bit limit maximum")?,
+        )),
+        5 => Some(leb128::u64(offset, bytes).context("64-bit limit maximum")?),
+        _ => unreachable!(),
     };
 
     // Note that only 2 and 3 is introduced in the threads proposal overview
-    let share = if matches!(flag, 2 | 3 | 6 | 7) {
-        component::Sharing::Shared
-    } else {
-        component::Sharing::Unshared
+    let share = match flag {
+        0 | 1 | 4 | 5 => component::Sharing::Unshared,
+        2 | 3 | 6 | 7 => component::Sharing::Shared,
+        _ => unreachable!(),
     };
 
-    component::Limits::new(minimum, maximum, share).ok_or_else(|| {
+    component::Limits::new(minimum, maximum, share, index_type).ok_or_else(|| {
         crate::parser_bad_format!(
             "the limit maximum {} cannot be less than the minimum {minimum}",
             maximum.unwrap()
