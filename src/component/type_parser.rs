@@ -86,10 +86,10 @@ pub fn mem_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::MemT
 /// Parses [`Limits`](component::Limits).
 pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits> {
     let flag = parser::one_byte_exact(offset, bytes).context("limit flag")?;
-    let minimum = leb128::u32(offset, bytes).context("limit minimum")?;
+    let minimum = leb128::u32(offset, bytes).context("32-bit limit minimum")?;
     let maximum = match flag {
-        0 => None,
-        1 => Some(leb128::u32(offset, bytes).context("limit maximum")?),
+        0 | 2 => None,
+        1 | 3 => Some(leb128::u32(offset, bytes).context("32-bit limit maximum")?),
         _ => {
             return Err(crate::parser_bad_format!(
                 "{flag:#02X} is not a known limit flag"
@@ -97,7 +97,14 @@ pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits
         }
     };
 
-    component::Limits::new(minimum, maximum).ok_or_else(|| {
+    // Note that only 2 and 3 is introduced in the threads proposal overview
+    let share = if matches!(flag, 2 | 3 | 6 | 7) {
+        component::Sharing::Shared
+    } else {
+        component::Sharing::Unshared
+    };
+
+    component::Limits::new(minimum, maximum, share).ok_or_else(|| {
         crate::parser_bad_format!(
             "the limit maximum {} cannot be less than the minimum {minimum}",
             maximum.unwrap()
