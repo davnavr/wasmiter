@@ -1249,6 +1249,152 @@ instructions! {
         /// [**return_call_indirect**](https://webassembly.github.io/tail-call/core/syntax/instructions.html#control-instructions)
         ReturnCallIndirect[(component::TypeIdx, TableIdx)] = "return_call_indirect",
     }
+
+    /// Returns `true` if the [`Instruction`] is an atomic memory instruction, introduced as part
+    /// of the [threads proposal](https://github.com/webassembly/threads).
+    is_from_threads {
+        /// [**memory.atomic.notify**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        MemoryAtomicNotify[(MemArg)] = "memory.atomic.notify",
+        /// [**memory.atomic.wait32**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        MemoryAtomicWait32[(MemArg)] = "memory.atomic.wait32",
+        /// [**memory.atomic.wait64**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        MemoryAtomicWait64[(MemArg)] = "memory.atomic.wait64",
+
+        /// [**i32.atomic.load**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicLoad[(MemArg)] = "i32.atomic.load",
+        /// [**i64.atomic.load**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicLoad[(MemArg)] = "i64.atomic.load",
+        /// [**i32.atomic.load8_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicLoad8U[(MemArg)] = "i32.atomic.load8_u",
+        /// [**i32.atomic.load16_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicLoad16U[(MemArg)] = "i32.atomic.load16_u",
+        /// [**i64.atomic.load8_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicLoad8U[(MemArg)] = "i64.atomic.load8_u",
+        /// [**i64.atomic.load16_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicLoad16U[(MemArg)] = "i64.atomic.load16_u",
+        /// [**i64.atomic.load32_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicLoad32U[(MemArg)] = "i64.atomic.load32_u",
+
+        /// [**i32.atomic.store**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicStore[(MemArg)] = "i32.atomic.store",
+        /// [**i64.atomic.store**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicStore[(MemArg)] = "i64.atomic.store",
+        /// [**i32.atomic.store8_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicStore8U[(MemArg)] = "i32.atomic.store8_u",
+        /// [**i32.atomic.store16_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicStore16U[(MemArg)] = "i32.atomic.store16_u",
+        /// [**i64.atomic.store8_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicStore8U[(MemArg)] = "i64.atomic.store8_u",
+        /// [**i64.atomic.store16_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicStore16U[(MemArg)] = "i64.atomic.store16_u",
+        /// [**i64.atomic.store32_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicStore32U[(MemArg)] = "i64.atomic.store32_u",
+
+        /// [**i32.atomic.rmw.add**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwAdd[(MemArg)] = "i32.atomic.rmw.add",
+        /// [**i64.atomic.rmw.add**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwAdd[(MemArg)] = "i64.atomic.rmw.add",
+        /// [**i32.atomic.rmw8.add_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8AddU[(MemArg)] = "i32.atomic.rmw8.add_u",
+        /// [**i32.atomic.rmw16.add_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16AddU[(MemArg)] = "i32.atomic.rmw16.add_u",
+        /// [**i64.atomic.rmw8.add_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8AddU[(MemArg)] = "i64.atomic.rmw8.add_u",
+        /// [**i64.atomic.rmw16.add_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16AddU[(MemArg)] = "i64.atomic.rmw16.add_u",
+        /// [**i64.atomic.rmw32.add_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32AddU[(MemArg)] = "i64.atomic.rmw32.add_u",
+
+        /// [**i32.atomic.rmw.sub**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwSub[(MemArg)] = "i32.atomic.rmw.sub",
+        /// [**i64.atomic.rmw.sub**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwSub[(MemArg)] = "i64.atomic.rmw.sub",
+        /// [**i32.atomic.rmw8.sub_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8SubU[(MemArg)] = "i32.atomic.rmw8.sub_u",
+        /// [**i32.atomic.rmw16.sub_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16SubU[(MemArg)] = "i32.atomic.rmw16.sub_u",
+        /// [**i64.atomic.rmw8.sub_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8SubU[(MemArg)] = "i64.atomic.rmw8.sub_u",
+        /// [**i64.atomic.rmw16.sub_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16SubU[(MemArg)] = "i64.atomic.rmw16.sub_u",
+        /// [**i64.atomic.rmw32.sub_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32SubU[(MemArg)] = "i64.atomic.rmw32.sub_u",
+
+        /// [**i32.atomic.rmw.and**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwAnd[(MemArg)] = "i32.atomic.rmw.and",
+        /// [**i64.atomic.rmw.and**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwAnd[(MemArg)] = "i64.atomic.rmw.and",
+        /// [**i32.atomic.rmw8.and_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8AndU[(MemArg)] = "i32.atomic.rmw8.and_u",
+        /// [**i32.atomic.rmw16.and_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16AndU[(MemArg)] = "i32.atomic.rmw16.and_u",
+        /// [**i64.atomic.rmw8.and_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8AndU[(MemArg)] = "i64.atomic.rmw8.and_u",
+        /// [**i64.atomic.rmw16.and_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16AndU[(MemArg)] = "i64.atomic.rmw16.and_u",
+        /// [**i64.atomic.rmw32.and_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32AndU[(MemArg)] = "i64.atomic.rmw32.and_u",
+
+        /// [**i32.atomic.rmw.or**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwOr[(MemArg)] = "i32.atomic.rmw.or",
+        /// [**i64.atomic.rmw.or**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwOr[(MemArg)] = "i64.atomic.rmw.or",
+        /// [**i32.atomic.rmw8.or_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8OrU[(MemArg)] = "i32.atomic.rmw8.or_u",
+        /// [**i32.atomic.rmw16.or_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16OrU[(MemArg)] = "i32.atomic.rmw16.or_u",
+        /// [**i64.atomic.rmw8.or_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8OrU[(MemArg)] = "i64.atomic.rmw8.or_u",
+        /// [**i64.atomic.rmw16.or_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16OrU[(MemArg)] = "i64.atomic.rmw16.or_u",
+        /// [**i64.atomic.rmw32.or_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32OrU[(MemArg)] = "i64.atomic.rmw32.or_u",
+
+        /// [**i32.atomic.rmw.xor**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwXor[(MemArg)] = "i32.atomic.rmw.xor",
+        /// [**i64.atomic.rmw.xor**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwXor[(MemArg)] = "i64.atomic.rmw.xor",
+        /// [**i32.atomic.rmw8.xor_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8XorU[(MemArg)] = "i32.atomic.rmw8.xor_u",
+        /// [**i32.atomic.rmw16.xor_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16XorU[(MemArg)] = "i32.atomic.rmw16.xor_u",
+        /// [**i64.atomic.rmw8.xor_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8XorU[(MemArg)] = "i64.atomic.rmw8.xor_u",
+        /// [**i64.atomic.rmw16.xor_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16XorU[(MemArg)] = "i64.atomic.rmw16.xor_u",
+        /// [**i64.atomic.rmw32.xor_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32XorU[(MemArg)] = "i64.atomic.rmw32.xor_u",
+
+        /// [**i32.atomic.rmw.xchg**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwXchg[(MemArg)] = "i32.atomic.rmw.xchg",
+        /// [**i64.atomic.rmw.xchg**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwXchg[(MemArg)] = "i64.atomic.rmw.xchg",
+        /// [**i32.atomic.rmw8.xchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8XchgU[(MemArg)] = "i32.atomic.rmw8.xchg_u",
+        /// [**i32.atomic.rmw16.xchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16XchgU[(MemArg)] = "i32.atomic.rmw16.xchg_u",
+        /// [**i64.atomic.rmw8.xchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8XchgU[(MemArg)] = "i64.atomic.rmw8.xchg_u",
+        /// [**i64.atomic.rmw16.xchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16XchgU[(MemArg)] = "i64.atomic.rmw16.xchg_u",
+        /// [**i64.atomic.rmw32.xchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32XchgU[(MemArg)] = "i64.atomic.rmw32.xchg_u",
+
+        /// [**i32.atomic.rmw.cmpxchg**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmwCmpxchg[(MemArg)] = "i32.atomic.rmw.cmpxchg",
+        /// [**i64.atomic.rmw.cmpxchg**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmwCmpxchg[(MemArg)] = "i64.atomic.rmw.cmpxchg",
+        /// [**i32.atomic.rmw8.cmpxchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw8CmpxchgU[(MemArg)] = "i32.atomic.rmw8.cmpxchg_u",
+        /// [**i32.atomic.rmw16.cmpxchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I32AtomicRmw16CmpxchgU[(MemArg)] = "i32.atomic.rmw16.cmpxchg_u",
+        /// [**i64.atomic.rmw8.cmpxchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw8CmpxchgU[(MemArg)] = "i64.atomic.rmw8.cmpxchg_u",
+        /// [**i64.atomic.rmw16.cmpxchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw16CmpxchgU[(MemArg)] = "i64.atomic.rmw16.cmpxchg_u",
+        /// [**i64.atomic.rmw32.cmpxchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
+        I64AtomicRmw32CmpxchgU[(MemArg)] = "i64.atomic.rmw32.cmpxchg_u",
+    }
 }
 
 impl<B: Bytes> Instruction<'_, B> {

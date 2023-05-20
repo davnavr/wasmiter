@@ -64,6 +64,7 @@ opcodes! {
         MemoryAtomicNotify = 0,
         MemoryAtomicWait32 = 1,
         MemoryAtomicWait64 = 2,
+        //AtomicFence = 3,
 
         I32AtomicLoad = 0x10,
         I64AtomicLoad = 0x11,

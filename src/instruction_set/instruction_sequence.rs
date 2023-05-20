@@ -1,6 +1,8 @@
 use crate::bytes::Bytes;
 use crate::component;
-use crate::instruction_set::{self, FCPrefixedOpcode, Instruction, Opcode, VectorOpcode};
+use crate::instruction_set::{
+    self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
+};
 use crate::parser::{self, leb128, Offset, Result, ResultExt, Vector};
 
 fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
@@ -643,6 +645,213 @@ fn instruction<'a, 'b, B: Bytes>(
                 VectorOpcode::F64x2ConvertLowI32x4U => Instruction::F64x2ConvertLowI32x4U,
                 VectorOpcode::F32x4DemoteF64x2Zero => Instruction::F32x4DemoteF64x2Zero,
                 VectorOpcode::F64x2PromoteLowF32x4 => Instruction::F64x2PromoteLowF32x4,
+            }
+        }
+        Opcode::PrefixFE => {
+            // This will eventually be a leb128::u32
+            let actual_opcode =
+                u32::from(parser::one_byte_exact(offset, bytes).context("actual opcode")?)
+                    .try_into()?;
+
+            match actual_opcode {
+                FEPrefixedOpcode::MemoryAtomicNotify => {
+                    Instruction::MemoryAtomicNotify(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::MemoryAtomicWait32 => {
+                    Instruction::MemoryAtomicWait32(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::MemoryAtomicWait64 => {
+                    Instruction::MemoryAtomicWait64(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicLoad => {
+                    Instruction::I32AtomicLoad(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicLoad => {
+                    Instruction::I64AtomicLoad(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicLoad8U => {
+                    Instruction::I32AtomicLoad8U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicLoad16U => {
+                    Instruction::I32AtomicLoad16U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicLoad8U => {
+                    Instruction::I64AtomicLoad8U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicLoad16U => {
+                    Instruction::I64AtomicLoad16U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicLoad32U => {
+                    Instruction::I64AtomicLoad32U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicStore => {
+                    Instruction::I32AtomicStore(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicStore => {
+                    Instruction::I64AtomicStore(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicStore8U => {
+                    Instruction::I32AtomicStore8U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicStore16U => {
+                    Instruction::I32AtomicStore16U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicStore8U => {
+                    Instruction::I64AtomicStore8U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicStore16U => {
+                    Instruction::I64AtomicStore16U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicStore32U => {
+                    Instruction::I64AtomicStore32U(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwAdd => {
+                    Instruction::I32AtomicRmwAdd(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwAdd => {
+                    Instruction::I64AtomicRmwAdd(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8AddU => {
+                    Instruction::I32AtomicRmw8AddU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16AddU => {
+                    Instruction::I32AtomicRmw16AddU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8AddU => {
+                    Instruction::I64AtomicRmw8AddU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16AddU => {
+                    Instruction::I64AtomicRmw16AddU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32AddU => {
+                    Instruction::I64AtomicRmw32AddU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwSub => {
+                    Instruction::I32AtomicRmwSub(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwSub => {
+                    Instruction::I64AtomicRmwSub(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8SubU => {
+                    Instruction::I32AtomicRmw8SubU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16SubU => {
+                    Instruction::I32AtomicRmw16SubU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8SubU => {
+                    Instruction::I64AtomicRmw8SubU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16SubU => {
+                    Instruction::I64AtomicRmw16SubU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32SubU => {
+                    Instruction::I64AtomicRmw32SubU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwAnd => {
+                    Instruction::I32AtomicRmwAnd(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwAnd => {
+                    Instruction::I64AtomicRmwAnd(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8AndU => {
+                    Instruction::I32AtomicRmw8AndU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16AndU => {
+                    Instruction::I32AtomicRmw16AndU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8AndU => {
+                    Instruction::I64AtomicRmw8AndU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16AndU => {
+                    Instruction::I64AtomicRmw16AndU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32AndU => {
+                    Instruction::I64AtomicRmw32AndU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwOr => {
+                    Instruction::I32AtomicRmwOr(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwOr => {
+                    Instruction::I64AtomicRmwOr(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8OrU => {
+                    Instruction::I32AtomicRmw8OrU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16OrU => {
+                    Instruction::I32AtomicRmw16OrU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8OrU => {
+                    Instruction::I64AtomicRmw8OrU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16OrU => {
+                    Instruction::I64AtomicRmw16OrU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32OrU => {
+                    Instruction::I64AtomicRmw32OrU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwXor => {
+                    Instruction::I32AtomicRmwXor(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwXor => {
+                    Instruction::I64AtomicRmwXor(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8XorU => {
+                    Instruction::I32AtomicRmw8XorU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16XorU => {
+                    Instruction::I32AtomicRmw16XorU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8XorU => {
+                    Instruction::I64AtomicRmw8XorU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16XorU => {
+                    Instruction::I64AtomicRmw16XorU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32XorU => {
+                    Instruction::I64AtomicRmw32XorU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwXchg => {
+                    Instruction::I32AtomicRmwXchg(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwXchg => {
+                    Instruction::I64AtomicRmwXchg(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8XchgU => {
+                    Instruction::I32AtomicRmw8XchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16XchgU => {
+                    Instruction::I32AtomicRmw16XchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8XchgU => {
+                    Instruction::I64AtomicRmw8XchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16XchgU => {
+                    Instruction::I64AtomicRmw16XchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32XchgU => {
+                    Instruction::I64AtomicRmw32XchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmwCmpxchg => {
+                    Instruction::I32AtomicRmwCmpxchg(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmwCmpxchg => {
+                    Instruction::I64AtomicRmwCmpxchg(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw8CmpxchgU => {
+                    Instruction::I32AtomicRmw8CmpxchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I32AtomicRmw16CmpxchgU => {
+                    Instruction::I32AtomicRmw16CmpxchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw8CmpxchgU => {
+                    Instruction::I64AtomicRmw8CmpxchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw16CmpxchgU => {
+                    Instruction::I64AtomicRmw16CmpxchgU(memarg(offset, bytes)?)
+                }
+                FEPrefixedOpcode::I64AtomicRmw32CmpxchgU => {
+                    Instruction::I64AtomicRmw32CmpxchgU(memarg(offset, bytes)?)
+                }
             }
         }
     }) //.context() // the opcode name
