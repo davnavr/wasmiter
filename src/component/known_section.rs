@@ -112,6 +112,25 @@ impl<B: Bytes> KnownSection<Window<B>> {
             Err(section)
         }
     }
+
+    /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
+    /// the section.
+    pub const fn id(&self) -> crate::sections::SectionId {
+        match self {
+            Self::Type(_) => section_id::TYPE,
+            Self::Import(_) => section_id::IMPORT,
+            Self::Function(_) => section_id::FUNC,
+            Self::Table(_) => section_id::TABLE,
+            Self::Memory(_) => section_id::MEMORY,
+            Self::Global(_) => section_id::GLOBAL,
+            Self::Export(_) => section_id::EXPORT,
+            Self::Start(_) => section_id::START,
+            Self::Element(_) => section_id::ELEMENT,
+            Self::Code(_) => section_id::CODE,
+            Self::Data(_) => section_id::DATA,
+            Self::DataCount(_) => section_id::DATA_COUNT,
+        }
+    }
 }
 
 impl<B: Bytes> From<component::TypesComponent<B>> for KnownSection<B> {
