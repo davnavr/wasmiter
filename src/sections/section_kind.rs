@@ -49,7 +49,8 @@ macro_rules! known_ids {
             pub use crate::sections::section_kind::cached_custom_name;
 
             $(
-                pub(crate) const $name: SectionId = {
+                $(#[$meta])*
+                pub const $name: SectionId = {
                     // Safety: value should not be zero
                     unsafe {
                         core::num::NonZeroU8::new_unchecked($value)
