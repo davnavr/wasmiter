@@ -1,6 +1,6 @@
 /// Provides a [`Parse`](crate::parser::Parse) implementation.
-pub struct SimpleParse<T> {
-    _phantom: core::marker::PhantomData<*const T>,
+pub struct SimpleParse<T: 'static> {
+    _phantom: core::marker::PhantomData<&'static T>,
 }
 
 impl<T> Clone for SimpleParse<T> {
