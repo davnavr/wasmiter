@@ -132,23 +132,6 @@ pub trait Bytes {
     }
 }
 
-impl<B: Bytes> Bytes for &B {
-    #[inline]
-    fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        B::read_at(self, offset, buffer)
-    }
-
-    #[inline]
-    fn length_at(&self, offset: u64) -> Result<u64> {
-        B::length_at(self, offset)
-    }
-
-    #[inline]
-    fn read_exact_at(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
-        B::read_exact_at(self, offset, buffer)
-    }
-}
-
 impl Bytes for &[u8] {
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
         let source = usize::try_from(offset)
@@ -171,3 +154,45 @@ impl Bytes for &[u8] {
         })
     }
 }
+
+macro_rules! delegated_bytes_impl {
+    ($b:ident in $implementor:ty) => {
+        impl<$b: Bytes + ?Sized> Bytes for $implementor {
+            #[inline]
+            fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+                <$b as Bytes>::read_at(self, offset, buffer)
+            }
+
+            #[inline]
+            fn length_at(&self, offset: u64) -> Result<u64> {
+                <$b as Bytes>::length_at(self, offset)
+            }
+
+            #[inline]
+            fn read_exact_at(&self, offset: u64, buffer: &mut [u8]) -> Result<()> {
+                <$b as Bytes>::read_exact_at(self, offset, buffer)
+            }
+
+            #[inline]
+            fn read<'b>(&self, offset: &mut u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+                <$b as Bytes>::read(self, offset, buffer)
+            }
+
+            #[inline]
+            fn read_exact(&self, offset: &mut u64, buffer: &mut [u8]) -> Result<()> {
+                <$b as Bytes>::read_exact(self, offset, buffer)
+            }
+        }
+    };
+}
+
+delegated_bytes_impl!(B in &B);
+
+#[cfg(feature = "alloc")]
+delegated_bytes_impl!(B in alloc::sync::Arc<B>);
+
+#[cfg(feature = "alloc")]
+delegated_bytes_impl!(B in alloc::rc::Rc<B>);
+
+#[cfg(feature = "alloc")]
+delegated_bytes_impl!(B in alloc::boxed::Box<B>);
