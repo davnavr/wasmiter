@@ -4,6 +4,7 @@ use crate::parser::{self, ResultExt as _};
 use crate::sections::{id as section_id, Section, SectionKind};
 
 /// Represents a well-known WebAssembly [`Section`].
+#[non_exhaustive]
 pub enum KnownSection<B: Bytes> {
     /// The
     /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
