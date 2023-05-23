@@ -175,7 +175,8 @@ impl<B: Bytes> Code<B> {
 }
 
 impl<B: Bytes + Clone> Code<&B> {
-    pub(crate) fn cloned(&self) -> Code<B> {
+    /// Clones the underlying [`Bytes`] of this *code section* entry.
+    pub fn cloned(&self) -> Code<B> {
         Code {
             index: self.index,
             content: self.content.cloned(),
