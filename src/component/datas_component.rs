@@ -1,5 +1,5 @@
 use crate::bytes::{Bytes, Window};
-use crate::component::MemIdx;
+use crate::index::MemIdx;
 use crate::instruction_set::InstructionSequence;
 use crate::parser::{self, Offset, Result, ResultExt};
 use core::fmt::{Debug, Formatter};

@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
 use crate::component;
+use crate::index;
 use crate::instruction_set::{
     self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
 };
@@ -10,7 +11,7 @@ fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemA
     let o = leb128::u64(offset, bytes).context("memory argument offset")?;
 
     let (a, memory) = if a < 64 {
-        (a, component::MemIdx::from(0u8))
+        (a, index::MemIdx::from(0u8))
     } else {
         (
             a - 64,

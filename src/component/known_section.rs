@@ -31,7 +31,7 @@ pub enum KnownSection<B: Bytes> {
     /// [**start** component](https://webassembly.github.io/spec/core/syntax/modules.html#start-function)
     /// of a WebAssembly module, encoded in the
     /// [*start section*](https://webassembly.github.io/spec/core/binary/modules.html#start-section).
-    Start(component::FuncIdx),
+    Start(crate::index::FuncIdx),
     /// The
     /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section)
     Element(component::ElemsComponent<B>),

@@ -10,7 +10,7 @@ pub enum IsConstant {
     Constant,
     /// The instruction can be used in a constant expression **only if** the value of the given
     /// global is also a constant.
-    Global(crate::component::GlobalIdx),
+    Global(crate::index::GlobalIdx),
     /// The instruction **cannot** be used in a constant expression.
     NotConstant,
 }

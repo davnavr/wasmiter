@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
-use crate::component::{Code, CodeSection, FunctionSection, TypeIdx};
+use crate::component::{Code, CodeSection, FunctionSection};
+use crate::index::TypeIdx;
 use crate::parser::Result;
 
 /// A WebAssembly function, defined in the

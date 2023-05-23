@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::TypeIdx;
+use crate::index::TypeIdx;
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
 /// Represents the

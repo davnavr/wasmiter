@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
-use crate::component::{self, TableIdx};
+use crate::component;
+use crate::index::{self, TableIdx};
 use crate::instruction_set::InstructionSequence;
 use crate::parser::{self, Offset, Result, ResultExt, Vector};
 use core::fmt::{Debug, Formatter};
@@ -91,7 +92,7 @@ impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
 pub enum ElementInit<O: Offset, B: Bytes> {
     /// A vector of functions to create `funcref` elements from.
-    Functions(Vector<O, B, parser::SimpleParse<component::FuncIdx>>),
+    Functions(Vector<O, B, parser::SimpleParse<index::FuncIdx>>),
     /// A vector of expressions that evaluate to references.
     Expressions(Option<component::RefType>, ElementExpressions<O, B>),
 }

@@ -1,6 +1,27 @@
+//! Contains types representing
+//! [indices in WebAssembly](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-index).
+
 use crate::bytes::Bytes;
-use crate::parser::{self, ResultExt as _};
-use core::fmt::Debug;
+
+/// Error type used when an attempt to convert an integer into an [`Index`] fails.
+#[derive(Debug)]
+pub struct IndexConversionError(&'static &'static str);
+
+impl core::fmt::Display for IndexConversionError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "cannot convert into a {}", self.0)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for IndexConversionError {}
+
+impl From<IndexConversionError> for crate::parser::Error {
+    #[inline]
+    fn from(err: IndexConversionError) -> Self {
+        crate::parser_bad_format!("{err}")
+    }
+}
 
 /// A [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
 pub trait Index:
@@ -8,23 +29,19 @@ pub trait Index:
     + From<u16>
     + Into<u32>
     + Into<usize>
-    + TryFrom<u32, Error = parser::Error>
-    + Debug
+    + TryFrom<u32, Error = IndexConversionError>
+    + core::fmt::Debug
     + Eq
     + core::hash::Hash
     + Copy
     + Ord
+    + PartialEq<u32>
+    + PartialOrd<u32>
+    + PartialEq<usize>
+    + PartialOrd<usize>
 {
     /// A human readable string that indicates what this [`Index`] refers to.
     const NAME: &'static str;
-}
-
-/// Parses a
-/// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
-pub fn index<N: Index, B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<N> {
-    parser::leb128::u32(offset, bytes)
-        .context(N::NAME)
-        .and_then(N::try_from)
 }
 
 macro_rules! indices {
@@ -38,11 +55,6 @@ macro_rules! indices {
         pub struct $name(u32);
 
         impl $name {
-            #[inline]
-            fn error_too_large(index: impl core::fmt::Display) -> parser::Error {
-                crate::parser_bad_format!("{} {index} is too large", $descriptor)
-            }
-
             /// Returns the index as a `u32`.
             #[inline]
             pub const fn to_u32(self) -> u32 {
@@ -50,9 +62,13 @@ macro_rules! indices {
             }
         }
 
-        impl Debug for $name {
+        impl Index for $name {
+            const NAME: &'static str = $descriptor;
+        }
+
+        impl core::fmt::Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                Debug::fmt(&self.0, f)
+                core::fmt::Debug::fmt(&self.0, f)
             }
         }
 
@@ -85,40 +101,36 @@ macro_rules! indices {
         }
 
         impl TryFrom<u32> for $name {
-            type Error = parser::Error;
+            type Error = IndexConversionError;
 
-            fn try_from(index: u32) -> parser::Result<Self> {
+            fn try_from(index: u32) -> Result<Self, Self::Error> {
                 if usize::try_from(index).is_ok() {
                     Ok(Self(index))
                 } else {
-                    Err(Self::error_too_large(index))
+                    Err(IndexConversionError(&Self::NAME))
                 }
             }
         }
 
         impl TryFrom<u64> for $name {
-            type Error = parser::Error;
+            type Error = IndexConversionError;
 
-            fn try_from(index: u64) -> parser::Result<Self> {
+            fn try_from(index: u64) -> Result<Self, Self::Error> {
                 match u32::try_from(index) {
                     Ok(actual_index) if usize::try_from(index).is_ok() => {
                         Ok(Self(actual_index))
                     }
-                    _ => Err(Self::error_too_large(index)),
+                    _ => Err(IndexConversionError(&Self::NAME)),
                 }
             }
         }
 
-        impl Index for $name {
-            const NAME: &'static str = $descriptor;
-        }
-
-        impl parser::Parse for parser::SimpleParse<$name> {
+        impl crate::parser::Parse for crate::parser::SimpleParse<$name> {
             type Output = $name;
 
             #[inline]
-            fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> parser::Result<$name> {
-                index::<$name, B>(offset, bytes)
+            fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> crate::parser::Result<$name> {
+                crate::component::index::<$name, B>(offset, bytes)
             }
         }
 

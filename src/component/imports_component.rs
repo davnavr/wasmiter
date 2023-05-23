@@ -7,7 +7,7 @@ use crate::parser::{self, Result, ResultExt};
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ImportKind {
     /// An imported function with the specified signature.
-    Function(component::TypeIdx),
+    Function(crate::index::TypeIdx),
     /// An imported table with the specified limits and element type.
     Table(component::TableType),
     /// An imported table with the specified limits.

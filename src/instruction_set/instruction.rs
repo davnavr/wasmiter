@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
-use crate::component::{self, BlockType, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx};
+use crate::component::{self, BlockType};
+use crate::index::{self, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx};
 use crate::instruction_set::MemArg;
 use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 
@@ -148,7 +149,7 @@ instructions! {
         /// The
         /// [**call_indirect**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
         /// instruction calls a function from a `funcref` stored in a table.
-        CallIndirect[(component::TypeIdx, TableIdx)] = "call_indirect",
+        CallIndirect[(index::TypeIdx, TableIdx)] = "call_indirect",
         /// The
         /// [**else**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
         /// instruction marks the start of the block control flow is transferred to if the
@@ -193,7 +194,7 @@ instructions! {
         /// The
         /// [**global.get**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
         /// instruction loads the value of a global variable onto the stack.
-        GlobalGet[(component::GlobalIdx)] = "global.get",
+        GlobalGet[(index::GlobalIdx)] = "global.get",
         /// The
         /// [**global.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
         /// instruction pops a value from the stack and stores it into a global variable.
@@ -705,26 +706,26 @@ instructions! {
         /// instruction copies bytes from a
         /// [passive data segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-data)
         /// into the given memory.
-        MemoryInit[(component::DataIdx, MemIdx)] = "memory.init",
+        MemoryInit[(index::DataIdx, MemIdx)] = "memory.init",
         /// The
         /// [**table.init**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
         /// instruction copies elements from a
         /// [passive element segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-elem)
         /// into the specified table.
-        TableInit[(component::ElemIdx, TableIdx)] = "table.init",
+        TableInit[(index::ElemIdx, TableIdx)] = "table.init",
 
         /// The
         /// [**data.drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
         /// instruction serves as a hint that the given
         /// [data segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-data)
         /// will no longer be used.
-        DataDrop[(component::DataIdx)] = "data.drop",
+        DataDrop[(index::DataIdx)] = "data.drop",
         /// The
         /// [**elem.drop**](https://webassembly.github.io/spec/core/syntax/instructions.html#table-instructions)
         /// instruction serves as a hint that the given
         /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-elem)
         /// will no longer be used.
-        ElemDrop[(component::ElemIdx)] = "elem.drop",
+        ElemDrop[(index::ElemIdx)] = "elem.drop",
     }
 
     /// Returns `true` if the [`Instruction`] was introduced as part of the
@@ -1247,7 +1248,7 @@ instructions! {
         /// [**return_call**](https://webassembly.github.io/tail-call/core/syntax/instructions.html#control-instructions)
         ReturnCall[(FuncIdx)] = "return_call",
         /// [**return_call_indirect**](https://webassembly.github.io/tail-call/core/syntax/instructions.html#control-instructions)
-        ReturnCallIndirect[(component::TypeIdx, TableIdx)] = "return_call_indirect",
+        ReturnCallIndirect[(index::TypeIdx, TableIdx)] = "return_call_indirect",
     }
 
     /// Returns `true` if the [`Instruction`] is an atomic memory instruction, introduced as part

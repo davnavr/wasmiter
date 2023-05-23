@@ -11,7 +11,6 @@ mod funcs_component;
 mod function_section;
 mod globals_component;
 mod imports_component;
-mod index;
 mod known_section;
 mod limits;
 mod mems_component;
@@ -19,10 +18,6 @@ mod tables_component;
 mod type_parser;
 mod types;
 mod types_component;
-
-pub use index::{
-    index, DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
-};
 
 pub use types::{
     BlockType, GlobalMutability, GlobalType, NumType, RefType, TableType, ValType, VecType,
@@ -46,3 +41,15 @@ pub use limits::{IdxType, Limits, MemType, Sharing};
 pub use mems_component::MemsComponent;
 pub use tables_component::TablesComponent;
 pub use types_component::{ResultType, TypesComponent};
+
+/// Parses a
+/// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
+pub fn index<N: crate::index::Index, B: crate::bytes::Bytes>(
+    offset: &mut u64,
+    bytes: B,
+) -> crate::parser::Result<N> {
+    use crate::parser::{leb128, ResultExt as _};
+
+    let index = leb128::u32(offset, bytes).context(N::NAME)?;
+    Ok(N::try_from(index)?)
+}

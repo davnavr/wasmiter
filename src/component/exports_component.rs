@@ -1,16 +1,17 @@
 use crate::buffer::Buffer;
 use crate::bytes::Bytes;
 use crate::component;
+use crate::index;
 use crate::parser::{self, Result, ResultExt};
 
 /// Describes what kind of entity is specified by an [`Export`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[allow(missing_docs)]
 pub enum ExportKind {
-    Function(component::FuncIdx),
-    Table(component::TableIdx),
-    Memory(component::MemIdx),
-    Global(component::GlobalIdx),
+    Function(index::FuncIdx),
+    Table(index::TableIdx),
+    Memory(index::MemIdx),
+    Global(index::GlobalIdx),
 }
 
 /// Represents a

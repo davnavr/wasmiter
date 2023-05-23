@@ -1,4 +1,4 @@
-use crate::component::MemIdx;
+use crate::index::MemIdx;
 
 /// Specifies the alignment for a [`memarg`](MemArg).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

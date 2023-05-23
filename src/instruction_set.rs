@@ -10,7 +10,11 @@ mod prefixed_opcode;
 mod vector_opcode;
 
 #[doc(no_inline)]
-pub use crate::component::{BlockType, LabelIdx, LocalIdx};
+pub use crate::index::{LabelIdx, LocalIdx};
+
+#[doc(no_inline)]
+pub use crate::component::BlockType;
+
 pub use instruction::{Instruction, LaneIdx};
 pub use instruction_sequence::InstructionSequence;
 pub use is_constant::IsConstant;

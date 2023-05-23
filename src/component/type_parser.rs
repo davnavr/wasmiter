@@ -19,7 +19,7 @@ pub fn block_type<B: Bytes>(offset: &mut u64, bytes: B) -> Result<BlockType> {
                 "{value} is not a valid value type or block type"
             ))
         }
-        _ => BlockType::from(component::TypeIdx::try_from(value as u64)?),
+        _ => BlockType::from(crate::index::TypeIdx::try_from(value as u64)?),
     })
 }
 
