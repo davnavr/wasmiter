@@ -174,6 +174,15 @@ impl<B: Bytes> Code<B> {
     }
 }
 
+impl<B: Bytes + Clone> Code<&B> {
+    pub(crate) fn cloned(&self) -> Code<B> {
+        Code {
+            index: self.index,
+            content: self.content.cloned(),
+        }
+    }
+}
+
 impl<B: Bytes> Debug for Code<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut s = f.debug_struct("Func");

@@ -25,6 +25,17 @@ impl<C: Bytes> Func<C> {
     }
 }
 
+impl<C: Bytes + Clone> Func<&C> {
+    /// Returns a version of the [`Func`] with the code contents cloned.
+    #[inline]
+    pub fn cloned(&self) -> Func<C> {
+        Func {
+            r#type: self.r#type,
+            code: self.code.cloned(),
+        }
+    }
+}
+
 impl<C: Bytes> core::fmt::Debug for Func<C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Func")
@@ -69,10 +80,7 @@ impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
             Some(Err(e)) => Err(e),
             Some(Ok(r#type)) => {
                 let code = self.code.parse()?.unwrap();
-                Ok(Some(Func {
-                    r#type,
-                    code,
-                }))
+                Ok(Some(Func { r#type, code }))
             }
         }
     }
