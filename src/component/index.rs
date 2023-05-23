@@ -135,6 +135,20 @@ macro_rules! indices {
                 core::cmp::PartialOrd::partial_cmp(&self.0, other)
             }
         }
+
+        impl core::cmp::PartialEq<usize> for $name {
+            #[inline]
+            fn eq(&self, other: &usize) -> bool {
+                usize::from(*self) == *other
+            }
+        }
+
+        impl core::cmp::PartialOrd<usize> for $name {
+            #[inline]
+            fn partial_cmp(&self, other: &usize) -> Option<core::cmp::Ordering> {
+                core::cmp::PartialOrd::partial_cmp(&usize::from(*self), other)
+            }
+        }
     )*};
 }
 
