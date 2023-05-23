@@ -63,6 +63,12 @@ macro_rules! indices {
             pub const fn to_u32(self) -> u32 {
                 self.0
             }
+
+            /// Returns the index as a `usize`.
+            #[inline]
+            pub const fn to_usize(self) -> usize {
+                self.0 as usize
+            }
         }
 
         impl Index for $name {
@@ -92,14 +98,14 @@ macro_rules! indices {
         impl From<$name> for usize {
             #[inline]
             fn from(index: $name) -> usize {
-                index.0 as usize
+                index.to_usize()
             }
         }
 
         impl From<$name> for u32 {
             #[inline]
             fn from(index: $name) -> u32 {
-                index.0
+                index.to_u32()
             }
         }
 
