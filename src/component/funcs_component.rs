@@ -24,6 +24,12 @@ impl<C: Bytes> Func<C> {
     pub fn code(&self) -> &Code<C> {
         &self.code
     }
+
+    /// Returns the function body.
+    #[inline]
+    pub fn into_code(self) -> Code<C> {
+        self.code
+    }
 }
 
 impl<C: Bytes + Clone> Func<&C> {
