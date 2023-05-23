@@ -26,6 +26,19 @@ impl<B: Bytes> MemsComponent<B> {
             .map(Self::from)
             .context("memory section")
     }
+
+    /// Gets the expected remaining number of entries in the *memory section* that have yet to be
+    /// parsed.
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.limits.len()
+    }
+
+    /// Returns a value indicating if the *memory section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.limits.is_empty()
+    }
 }
 
 impl<B: Bytes> core::iter::Iterator for MemsComponent<B> {

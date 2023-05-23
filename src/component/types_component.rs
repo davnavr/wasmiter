@@ -34,7 +34,7 @@ impl<B: Bytes> TypesComponent<B> {
         self.count
     }
 
-    /// Returns a value indicating if the type section is empty.
+    /// Returns a value indicating if the *type section* is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0

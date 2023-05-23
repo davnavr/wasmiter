@@ -108,6 +108,18 @@ impl<B: Bytes> ExportsComponent<B> {
             bytes: &self.bytes,
         }
     }
+
+    /// Gets the expected remaining number of entires in the *export section* that have yet to be parsed.
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.count
+    }
+
+    /// Returns a value indicating if the *export section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {

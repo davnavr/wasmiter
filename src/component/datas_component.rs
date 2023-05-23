@@ -49,7 +49,7 @@ impl<O: Offset, B: Bytes> Debug for DataMode<O, B> {
 /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section).
 #[derive(Clone, Copy)]
 pub struct DatasComponent<B: Bytes> {
-    count: usize,
+    count: u32,
     offset: u64,
     bytes: B,
 }
@@ -59,7 +59,7 @@ impl<B: Bytes> DatasComponent<B> {
     /// at the specified `offset`.
     pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
-            count: parser::leb128::usize(&mut offset, &bytes).context("data section count")?,
+            count: parser::leb128::u32(&mut offset, &bytes).context("data section count")?,
             bytes,
             offset,
         })
@@ -123,6 +123,18 @@ impl<B: Bytes> DatasComponent<B> {
         }
 
         result.map(Some)
+    }
+
+    /// Gets the expected remaining number of entires in the *data section* that have yet to be parsed.
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.count
+    }
+
+    /// Returns a value indicating if the *data section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

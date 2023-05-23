@@ -168,7 +168,7 @@ impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
 /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
 #[derive(Clone, Copy)]
 pub struct ElemsComponent<B: Bytes> {
-    count: usize,
+    count: u32,
     offset: u64,
     bytes: B,
 }
@@ -187,7 +187,7 @@ impl<B: Bytes> ElemsComponent<B> {
     /// at the specified `offset`.
     pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
-            count: parser::leb128::usize(&mut offset, &bytes).context("element section count")?,
+            count: parser::leb128::u32(&mut offset, &bytes).context("element section count")?,
             bytes,
             offset,
         })
@@ -334,6 +334,18 @@ impl<B: Bytes> ElemsComponent<B> {
         }
 
         result.map(Some)
+    }
+
+    /// Gets the expected remaining number of entires in the *element section* that have yet to be parsed.
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.count
+    }
+
+    /// Returns a value indicating if the *element section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

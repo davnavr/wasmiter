@@ -26,6 +26,19 @@ impl<B: Bytes> TablesComponent<B> {
             .map(Self::from)
             .context("table section")
     }
+
+    /// Gets the expected remaining number of entries in the *table section* that have yet to be
+    /// parsed.
+    #[inline]
+    pub fn len(&self) -> u32 {
+        self.types.len()
+    }
+
+    /// Returns a value indicating if the *table section* is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.types.is_empty()
+    }
 }
 
 impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {
