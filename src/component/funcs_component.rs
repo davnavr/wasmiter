@@ -1,5 +1,5 @@
 use crate::bytes::Bytes;
-use crate::component::{Code, CodeSection, FuncIdx, FunctionSection, TypeIdx};
+use crate::component::{Code, CodeSection, FunctionSection, TypeIdx};
 use crate::parser::Result;
 
 /// A WebAssembly function, defined in the
@@ -7,18 +7,11 @@ use crate::parser::Result;
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
 pub struct Func<C: Bytes> {
-    index: FuncIdx,
     r#type: TypeIdx,
     code: Code<C>,
 }
 
 impl<C: Bytes> Func<C> {
-    /// Gets the index used to refer to this function.
-    #[inline]
-    pub fn index(&self) -> FuncIdx {
-        self.index
-    }
-
     /// Gets an index into the *type section* that specifies the type of this function.
     #[inline]
     pub fn signature(&self) -> TypeIdx {
@@ -75,10 +68,8 @@ impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
             None => Ok(None),
             Some(Err(e)) => Err(e),
             Some(Ok(r#type)) => {
-                let index = FuncIdx::try_from(self.code.len() - 1)?;
                 let code = self.code.parse()?.unwrap();
                 Ok(Some(Func {
-                    index,
                     r#type,
                     code,
                 }))
