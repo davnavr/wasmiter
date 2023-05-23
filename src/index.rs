@@ -41,6 +41,7 @@ pub trait Index:
     + PartialOrd<usize>
     + Send
     + Sync
+    + 'static
 {
     /// A human readable string that indicates what this [`Index`] refers to.
     const NAME: &'static str;
