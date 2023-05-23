@@ -121,6 +121,20 @@ macro_rules! indices {
                 index::<$name, B>(offset, bytes)
             }
         }
+
+        impl core::cmp::PartialEq<u32> for $name {
+            #[inline]
+            fn eq(&self, other: &u32) -> bool {
+                self.0 == *other
+            }
+        }
+
+        impl core::cmp::PartialOrd<u32> for $name {
+            #[inline]
+            fn partial_cmp(&self, other: &u32) -> Option<core::cmp::Ordering> {
+                core::cmp::PartialOrd::partial_cmp(&self.0, other)
+            }
+        }
     )*};
 }
 
