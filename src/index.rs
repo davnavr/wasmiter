@@ -39,6 +39,8 @@ pub trait Index:
     + PartialOrd<u32>
     + PartialEq<usize>
     + PartialOrd<usize>
+    + Send
+    + Sync
 {
     /// A human readable string that indicates what this [`Index`] refers to.
     const NAME: &'static str;
