@@ -12,7 +12,7 @@ pub type ResultType<O, B> = parser::Vector<O, B, parser::SimpleParse<ValType>>;
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 #[derive(Clone, Copy)]
 pub struct TypesComponent<B: Bytes> {
-    count: usize,
+    count: u32,
     offset: u64,
     bytes: B,
 }
@@ -22,7 +22,7 @@ impl<B: Bytes> TypesComponent<B> {
     /// at the specified `offset`.
     pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
         Ok(Self {
-            count: parser::leb128::usize(&mut offset, &bytes).context("type section count")?,
+            count: parser::leb128::u32(&mut offset, &bytes).context("type section count")?,
             bytes,
             offset,
         })
@@ -30,7 +30,7 @@ impl<B: Bytes> TypesComponent<B> {
 
     /// Gets the expected remaining number of types that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> u32 {
         self.count
     }
 
