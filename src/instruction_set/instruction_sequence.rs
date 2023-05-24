@@ -959,6 +959,14 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     }
 }
 
+impl<O: Offset, B: Clone + Bytes> InstructionSequence<O, &B> {
+    /// Clones the underlying [`Bytes`] used when reading this [`InstructionSequence`].
+    #[inline]
+    pub fn cloned(&self) -> InstructionSequence<u64, B> {
+        self.map_bytes(|b| Clone::clone(*b))
+    }
+}
+
 impl<O: Offset, B: Bytes> core::fmt::Debug for InstructionSequence<O, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut instructions = InstructionSequence {
