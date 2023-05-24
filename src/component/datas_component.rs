@@ -71,6 +71,7 @@ impl<B: Bytes> DatasComponent<B> {
         M: FnOnce(&mut DataMode<&mut u64, &B>) -> Result<Y>,
         D: FnOnce(Y, Window<&B>) -> Result<Z>,
     {
+        let mode_offset = self.offset;
         let mode_tag =
             parser::leb128::u32(&mut self.offset, &self.bytes).context("data segment mode")?;
 
@@ -80,7 +81,8 @@ impl<B: Bytes> DatasComponent<B> {
                 InstructionSequence::new(&mut self.offset, &self.bytes),
             ),
             _ => {
-                return Err(crate::parser_bad_format!(
+                return Err(crate::parser_bad_format_at_offset!(
+                    "file" @ mode_offset,
                     "{mode_tag} is not a supported data segment mode"
                 ))
             }
@@ -96,7 +98,8 @@ impl<B: Bytes> DatasComponent<B> {
         let result = data_f(data_arg, data)?;
 
         self.offset = self.offset.checked_add(data_length).ok_or_else(|| {
-            crate::parser_bad_format!(
+            crate::parser_bad_format_at_offset!(
+                "file" @ self.offset,
                 "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached"
             )
         })?;

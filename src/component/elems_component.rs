@@ -200,6 +200,7 @@ impl<B: Bytes> ElemsComponent<B> {
         M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
         I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
     {
+        let start = self.offset;
         let segment_kind =
             parser::leb128::u32(&mut self.offset, &self.bytes).context("element segment mode")?;
 
@@ -305,7 +306,8 @@ impl<B: Bytes> ElemsComponent<B> {
                 );
             }
             _ => {
-                return Err(crate::parser_bad_format!(
+                return Err(crate::parser_bad_format_at_offset!(
+                    "file" @ start,
                     "{segment_kind} is not a supported element segment mode"
                 ))
             }

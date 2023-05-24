@@ -164,7 +164,8 @@ impl<B: Bytes> Code<B> {
 
         let final_length = *code.finish()? - self.content.base();
         if final_length != self.content.length() {
-            return Err(crate::parser_bad_format!(
+            return Err(crate::parser_bad_format_at_offset!(
+                "file" @ offset,
                 "expected code entry content to have a length of {} bytes, but got {final_length}",
                 self.content.length()
             ));

@@ -38,7 +38,8 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
     let version = <[u8; 4]>::try_from(&preamble[4..8]).unwrap();
     if version != VERSION {
         let version_number = u32::from_le_bytes(version);
-        return Err(parser_bad_format!(
+        return Err(parser_bad_format_at_offset!(
+            "file" @ 0,
             "unsupported WebAssembly version {version_number} ({version_number:#08X})"
         ));
     }

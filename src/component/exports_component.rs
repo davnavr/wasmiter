@@ -43,13 +43,15 @@ impl<'a> Export<'a> {
     ) -> Result<Self> {
         let name = parser::name(offset, bytes, buffer).context("export name")?;
 
+        let kind_offset = *offset;
         let kind = match parser::one_byte_exact(offset, bytes).context("export kind")? {
             0 => ExportKind::Function(component::index(offset, bytes).context("function export")?),
             1 => ExportKind::Table(component::index(offset, bytes).context("table export")?),
             2 => ExportKind::Memory(component::index(offset, bytes).context("memory export")?),
             3 => ExportKind::Global(component::index(offset, bytes).context("global export")?),
             bad => {
-                return Err(crate::parser_bad_format!(
+                return Err(crate::parser_bad_format_at_offset!(
+                    "input" @ kind_offset,
                     "{bad:#04X} is not a known export kind"
                 ))
             }

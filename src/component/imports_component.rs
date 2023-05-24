@@ -58,6 +58,7 @@ impl<'a> Import<'a> {
             .context("import name")?
             .len();
 
+        let kind_offset = *offset;
         let kind = match parser::one_byte_exact(offset, bytes).context("import kind")? {
             0 => ImportKind::Function(
                 component::index(offset, bytes).context("function import type")?,
@@ -72,7 +73,8 @@ impl<'a> Import<'a> {
                 component::global_type(offset, bytes).context("global import type")?,
             ),
             bad => {
-                return Err(crate::parser_bad_format!(
+                return Err(crate::parser_bad_format_at_offset!(
+                    "input" @ kind_offset,
                     "{bad:#04X} is not a known import kind"
                 ))
             }

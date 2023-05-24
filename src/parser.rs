@@ -43,6 +43,25 @@ macro_rules! parser_bad_format {
 
 #[macro_export]
 #[doc(hidden)]
+macro_rules! parser_bad_format_at_offset {
+    ($location:literal @ $offset:expr $(, $($arg:tt)*)?) => {{
+        let err = $crate::parser_bad_format!(concat!("at offset {:#X} in ", $location), $offset);
+
+        $(
+            // Disable warnings for unused variables
+            #[cfg(not(feature = "alloc"))]
+            let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
+
+            #[cfg(feature = "alloc")]
+            let err = err.with_context(alloc::format!($($arg)*));
+        )?
+
+        err
+    }};
+}
+
+#[macro_export]
+#[doc(hidden)]
 macro_rules! parser_bad_input {
     ($error:expr, $($arg:tt)*) => {{
         #[cfg(not(feature = "alloc"))]
@@ -144,12 +163,8 @@ pub fn name<'b, B: Bytes, U: crate::buffer::Buffer>(
     buffer: &'b mut U,
 ) -> Result<&'b mut str> {
     let length = leb128::usize(offset, bytes).context("string length")?;
-    let destination = buffer.as_ref().len()..;
     buffer.grow(length);
-
-    bytes_exact(offset, bytes, &mut buffer.as_mut()[destination.clone()])
-        .context("string contents")?;
-
-    core::str::from_utf8_mut(&mut buffer.as_mut()[destination])
-        .map_err(|e| crate::parser_bad_format!("{e}"))
+    let destination = &mut buffer.as_mut()[..length];
+    bytes_exact(offset, bytes, destination).context("string contents")?;
+    core::str::from_utf8_mut(destination).map_err(|e| crate::parser_bad_format!("{e}"))
 }
