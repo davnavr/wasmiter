@@ -73,7 +73,7 @@ impl<'a> Import<'a> {
             ),
             bad => {
                 return Err(crate::parser_bad_format!(
-                    "{bad:#02X} is not a known import kind"
+                    "{bad:#04X} is not a known import kind"
                 ))
             }
         };

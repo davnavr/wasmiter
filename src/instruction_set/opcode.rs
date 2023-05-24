@@ -5,7 +5,7 @@ pub struct InvalidOpcode(u8);
 
 impl core::fmt::Display for InvalidOpcode {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:#02X} is not a recognized opcode", self.0)
+        write!(f, "{:#04X} is not a recognized opcode", self.0)
     }
 }
 

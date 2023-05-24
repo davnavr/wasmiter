@@ -178,7 +178,7 @@ fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
     match parser::one_byte_exact(offset, bytes).context("elemkind")? {
         0 => Ok(()),
         bad => Err(crate::parser_bad_format!(
-            "{bad:#02X} is not a valid elemkind"
+            "{bad:#04X} is not a valid elemkind"
         )),
     }
 }

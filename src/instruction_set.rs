@@ -37,7 +37,7 @@ impl<const P: u8> InvalidPrefixedOpcode<P> {
 
 impl<const P: u8> core::fmt::Display for InvalidPrefixedOpcode<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:#02X} {} is not a recognized opcode", P, self.opcode)
+        write!(f, "{:#04X} {} is not a recognized opcode", P, self.opcode)
     }
 }
 

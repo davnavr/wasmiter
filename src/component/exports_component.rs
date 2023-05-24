@@ -50,7 +50,7 @@ impl<'a> Export<'a> {
             3 => ExportKind::Global(component::index(offset, bytes).context("global export")?),
             bad => {
                 return Err(crate::parser_bad_format!(
-                    "{bad:#02X} is not a known export kind"
+                    "{bad:#04X} is not a known export kind"
                 ))
             }
         };

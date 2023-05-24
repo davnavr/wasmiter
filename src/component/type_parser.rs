@@ -65,7 +65,7 @@ pub fn global_mutability<B: Bytes>(
         0 => Ok(component::GlobalMutability::Constant),
         1 => Ok(component::GlobalMutability::Variable),
         bad => Err(crate::parser_bad_format!(
-            "{bad:#02X} is not a valid global mutability flag"
+            "{bad:#04X} is not a valid global mutability flag"
         )),
     }
 }
@@ -89,7 +89,7 @@ pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits
 
     if (0u8..=7).contains(&flag) {
         return Err(crate::parser_bad_format!(
-            "{flag:#02X} is not a known limit flag"
+            "{flag:#04X} is not a known limit flag"
         ));
     }
 
@@ -145,7 +145,7 @@ where
     let tag = parser::one_byte_exact(offset, bytes).context("function type")?;
     if tag != 0x60 {
         return Err(crate::parser_bad_format!(
-            "expected function type (0x60) but got {tag:#02X}"
+            "expected function type (0x60) but got {tag:#04X}"
         ));
     }
 
