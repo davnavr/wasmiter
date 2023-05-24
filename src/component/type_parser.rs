@@ -87,7 +87,7 @@ pub fn mem_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::MemT
 pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits> {
     let flag = parser::one_byte_exact(offset, bytes).context("limit flag")?;
 
-    if (0u8..=7).contains(&flag) {
+    if !(0u8..=7).contains(&flag) {
         return Err(crate::parser_bad_format!(
             "{flag:#04X} is not a known limit flag"
         ));
