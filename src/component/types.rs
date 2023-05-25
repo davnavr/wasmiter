@@ -113,6 +113,15 @@ impl Display for ValType {
     }
 }
 
+impl Display for RefType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::Func => "funcref",
+            Self::Extern => "externref",
+        })
+    }
+}
+
 // TODO: maybe make crate::allocator::SmallVec?
 
 /*
