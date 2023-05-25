@@ -923,22 +923,24 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
         Some(self.process_next(f))
     }
 
-    /// Processes the remaining instructions in the sequence. Returns the offset to the byte after
-    /// the last byte of the last instruction.
+    /// Processes the remaining instructions in the sequence. Returns `true` if all instructions
+    /// were already processed, and the offset to the byte after the last byte of the last
+    /// instruction.
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> Result<O> {
+    pub fn finish(mut self) -> Result<(bool, O)> {
+        let mut was_finished = true;
         loop {
             match self.next(|_| Ok(())) {
-                Some(Ok(())) => (),
+                Some(Ok(())) => was_finished = false,
                 Some(Err(e)) => return Err(e),
                 None => break,
             }
         }
 
         match self.blocks {
-            0 => Ok(self.offset),
+            0 => Ok((was_finished, self.offset)),
             1 => Err(crate::parser_bad_format!(
                 "missing end instruction for expression, or blocks were not structured correctly"
             )),

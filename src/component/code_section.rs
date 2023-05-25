@@ -162,7 +162,8 @@ impl<B: Bytes> Code<B> {
         let mut code = InstructionSequence::new(&mut offset, &self.content);
         let result = code_f(code_arg, &mut code)?;
 
-        let final_length = *code.finish()? - self.content.base();
+        let (_, final_offset) = code.finish()?;
+        let final_length = *final_offset - self.content.base();
         if final_length != self.content.length() {
             return Err(crate::parser_bad_format_at_offset!(
                 "file" @ offset,

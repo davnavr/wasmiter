@@ -30,7 +30,8 @@ impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
         let mut offset_cell = self.offset.offset();
         let mut expression = InstructionSequence::new(&mut offset_cell, &self.bytes);
         let result = f(&mut expression)?;
-        *self.offset.offset_mut() = *expression.finish()?;
+        let (_, final_offset) = expression.finish()?;
+        *self.offset.offset_mut() = *final_offset;
         Ok(result)
     }
 
