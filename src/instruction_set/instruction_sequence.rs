@@ -886,12 +886,12 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     }
 
     #[inline]
-    fn process_next<'a, F>(&'a mut self, f: F) -> Result<()>
+    fn process_next<'a, T, F>(&'a mut self, f: F) -> Result<T>
     where
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<()>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T>,
     {
         let mut instruction = self::instruction(self.offset.offset_mut(), &self.bytes)?;
-        f(&mut instruction)?;
+        let result = f(&mut instruction)?;
 
         match instruction {
             Instruction::Block(_) | Instruction::Loop(_) | Instruction::If(_) => {
@@ -907,13 +907,14 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
             _ => {}
         }
 
-        instruction.finish()
+        instruction.finish()?;
+        Ok(result)
     }
 
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
-    pub fn next<'a, F>(&'a mut self, f: F) -> Option<Result<()>>
+    pub fn next<'a, T, F>(&'a mut self, f: F) -> Option<Result<T>>
     where
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<()>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T>,
     {
         if self.is_finished() {
             return None;
