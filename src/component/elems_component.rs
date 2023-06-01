@@ -385,7 +385,7 @@ impl<B: Bytes> Debug for ElemsComponent<B> {
                         ElementMode::Passive => ElementMode::Passive,
                         ElementMode::Declarative => ElementMode::Declarative,
                         ElementMode::Active(table, offset) => {
-                            ElementMode::Active(*table, offset.map_bytes(|_| bytes))
+                            ElementMode::Active(*table, offset.cloned())
                         }
                     })
                 },

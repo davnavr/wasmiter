@@ -913,10 +913,10 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     }
 
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
-    pub fn next<'a, T, F, E>(&'a mut self, f: F) -> Option<Result<T, E>>
+    pub fn next<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
         E: From<parser::Error>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
     {
         if self.is_finished() {
             return None;
@@ -952,23 +952,26 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
         }
     }
 
-    pub(crate) fn map_bytes<U: Bytes, F: FnOnce(&B) -> U>(
-        &self,
-        f: F,
-    ) -> InstructionSequence<u64, U> {
+    /// Clones the [`InstructionSequence`], borrowing the underlying [`Bytes`].
+    #[inline]
+    pub fn borrowed(&self) -> InstructionSequence<u64, &B> {
         InstructionSequence {
             blocks: self.blocks,
             offset: self.offset.offset(),
-            bytes: f(&self.bytes),
+            bytes: &self.bytes,
         }
     }
 }
 
 impl<O: Offset, B: Clone + Bytes> InstructionSequence<O, &B> {
-    /// Clones the underlying [`Bytes`] used when reading this [`InstructionSequence`].
+    /// Clones the [`InstructionSequence`], calling [`Clone::clone`] on the underlying [`Bytes`].
     #[inline]
     pub fn cloned(&self) -> InstructionSequence<u64, B> {
-        self.map_bytes(|b| Clone::clone(*b))
+        InstructionSequence {
+            blocks: self.blocks,
+            offset: self.offset.offset(),
+            bytes: self.bytes.clone(),
+        }
     }
 }
 

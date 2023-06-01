@@ -94,7 +94,7 @@ impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
 
         let mut list = f.debug_list();
         loop {
-            let result = globals.parse(|ty, init| Ok((ty, init.map_bytes(|_| &self.bytes))));
+            let result = globals.parse(|ty, init| Ok((ty, init.cloned())));
 
             list.entry(&match result {
                 Ok(None) => break,

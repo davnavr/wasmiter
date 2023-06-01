@@ -170,7 +170,7 @@ impl<B: Bytes> Debug for DatasComponent<B> {
                     Ok(match mode {
                         DataMode::Passive => DataMode::Passive,
                         DataMode::Active(memory, offset) => {
-                            DataMode::Active(*memory, offset.map_bytes(|_| &self.bytes))
+                            DataMode::Active(*memory, offset.cloned())
                         }
                     })
                 },
