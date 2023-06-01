@@ -113,6 +113,17 @@ impl Display for ValType {
     }
 }
 
+impl Display for NumType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
+        })
+    }
+}
+
 impl Display for RefType {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self {
