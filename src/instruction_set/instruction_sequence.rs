@@ -4,9 +4,9 @@ use crate::index;
 use crate::instruction_set::{
     self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
 };
-use crate::parser::{self, leb128, Offset, Result, ResultExt, Vector};
+use crate::parser::{self, leb128, Offset, ResultExt, Vector};
 
-fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemArg> {
+fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> parser::Result<instruction_set::MemArg> {
     let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
     let o = leb128::u64(offset, bytes).context("memory argument offset")?;
 
@@ -36,7 +36,7 @@ fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<instruction_set::MemA
 fn instruction<'a, 'b, B: Bytes>(
     offset: &'a mut u64,
     bytes: &'b B,
-) -> Result<Instruction<'a, &'b B>> {
+) -> parser::Result<Instruction<'a, &'b B>> {
     let opcode = Opcode::try_from(parser::one_byte_exact(offset, bytes).context("opcode byte")?)?;
     Ok(match opcode {
         Opcode::Unreachable => Instruction::Unreachable,
@@ -886,9 +886,10 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     }
 
     #[inline]
-    fn process_next<'a, T, F>(&'a mut self, f: F) -> Result<T>
+    fn process_next<'a, T, E, F>(&'a mut self, f: F) -> Result<T, E>
     where
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
+        E: From<parser::Error>,
     {
         let mut instruction = self::instruction(self.offset.offset_mut(), &self.bytes)?;
         let result = f(&mut instruction)?;
@@ -912,9 +913,10 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     }
 
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
-    pub fn next<'a, T, F>(&'a mut self, f: F) -> Option<Result<T>>
+    pub fn next<'a, T, F, E>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T>,
+        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
+        E: From<parser::Error>,
     {
         if self.is_finished() {
             return None;
@@ -929,10 +931,10 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> Result<(bool, O)> {
+    pub fn finish(mut self) -> crate::Result<(bool, O)> {
         let mut was_finished = true;
         loop {
-            match self.next(|_| Ok(())) {
+            match self.next(|_| crate::Result::Ok(())) {
                 Some(Ok(())) => was_finished = false,
                 Some(Err(e)) => return Err(e),
                 None => break,
@@ -981,14 +983,14 @@ impl<O: Offset, B: Bytes> core::fmt::Debug for InstructionSequence<O, B> {
         let mut list = f.debug_list();
         loop {
             let result = instructions.next(|i| {
-                list.entry(&Result::Ok(i));
+                list.entry(&crate::Result::Ok(i));
                 Ok(())
             });
 
             match result {
                 None => break,
                 Some(Err(e)) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&crate::Result::<()>::Err(e));
                     break;
                 }
                 Some(Ok(_)) => (),
