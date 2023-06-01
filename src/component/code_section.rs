@@ -1,7 +1,7 @@
 use crate::bytes::{Bytes, Window};
 use crate::component::{self, ValType};
 use crate::instruction_set::InstructionSequence;
-use crate::parser::{self, Offset, Result, ResultExt};
+use crate::parser::{self, Offset, ResultExt};
 use core::fmt::{Debug, Formatter};
 use core::num::NonZeroU32;
 
@@ -19,7 +19,7 @@ pub struct Locals<O: Offset, B: Bytes> {
 }
 
 impl<O: Offset, B: Bytes> Locals<O, B> {
-    fn new(mut offset: O, bytes: B) -> Result<Self> {
+    fn new(mut offset: O, bytes: B) -> parser::Result<Self> {
         Ok(Self {
             count: parser::leb128::u32(offset.offset_mut(), &bytes)
                 .context("locals declaration count")?,
@@ -29,7 +29,7 @@ impl<O: Offset, B: Bytes> Locals<O, B> {
         })
     }
 
-    fn load_next_group(&mut self) -> Result<Option<(NonZeroU32, ValType)>> {
+    fn load_next_group(&mut self) -> parser::Result<Option<(NonZeroU32, ValType)>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -59,12 +59,12 @@ impl<O: Offset, B: Bytes> Locals<O, B> {
     /// locals of that type.
     ///
     /// To save on size, locals of the same type can be grouped together.
-    pub fn next_group(&mut self) -> Result<Option<(NonZeroU32, ValType)>> {
+    pub fn next_group(&mut self) -> parser::Result<Option<(NonZeroU32, ValType)>> {
         self.load_next_group()?;
         Ok(self.current.take())
     }
 
-    fn next_inner(&mut self) -> Result<Option<ValType>> {
+    fn next_inner(&mut self) -> parser::Result<Option<ValType>> {
         match self.load_next_group() {
             Ok(None) => Ok(None),
             Err(e) => Err(e),
@@ -75,14 +75,14 @@ impl<O: Offset, B: Bytes> Locals<O, B> {
         }
     }
 
-    fn finish(mut self) -> Result<O> {
+    fn finish(mut self) -> parser::Result<O> {
         while self.next_group().transpose().is_some() {}
         Ok(self.offset)
     }
 }
 
 impl<O: Offset, B: Bytes> Iterator for Locals<O, B> {
-    type Item = Result<ValType>;
+    type Item = parser::Result<ValType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -149,10 +149,11 @@ impl<B: Bytes> Code<B> {
     ///
     /// The second closure is given the output of the first closure, along with an
     /// [`InstructionSequence`] used to read the function *body*.
-    pub fn read<Y, Z, L, C>(&self, locals_f: L, code_f: C) -> Result<Z>
+    pub fn read<Y, Z, E, L, C>(&self, locals_f: L, code_f: C) -> Result<Z, E>
     where
-        L: FnOnce(&mut Locals<&mut u64, &Window<B>>) -> Result<Y>,
-        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<B>>) -> Result<Z>,
+        E: From<parser::Error>,
+        L: FnOnce(&mut Locals<&mut u64, &Window<B>>) -> Result<Y, E>,
+        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<B>>) -> Result<Z, E>,
     {
         let mut offset = self.content.base();
         let mut locals = Locals::new(&mut offset, &self.content)?;
@@ -169,7 +170,8 @@ impl<B: Bytes> Code<B> {
                 "file" @ offset,
                 "expected code entry content to have a length of {} bytes, but got {final_length}",
                 self.content.length()
-            ));
+            )
+            .into());
         }
 
         Ok(result)
@@ -193,7 +195,7 @@ impl<B: Bytes> Debug for Code<B> {
             |locals| Ok(s.field("locals", locals)),
             |s, body| {
                 s.field("body", body);
-                Ok(())
+                parser::Result::Ok(())
             },
         );
 
@@ -223,7 +225,7 @@ impl<B: Bytes> CodeSection<B> {
     /// Uses the given [`Bytes`] to read the contents of the *code section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
+    pub fn new(mut offset: u64, bytes: B) -> parser::Result<Self> {
         Ok(Self {
             count: parser::leb128::u32(&mut offset, &bytes).context("code section count")?,
             bytes,
@@ -245,7 +247,7 @@ impl<B: Bytes> CodeSection<B> {
     }
 
     /// Parses the next entry in the *code section*.
-    pub fn parse(&mut self) -> Result<Option<Code<&B>>> {
+    pub fn parse(&mut self) -> parser::Result<Option<Code<&B>>> {
         if self.count == 0 {
             return Ok(None);
         }
