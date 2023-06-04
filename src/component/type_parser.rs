@@ -1,6 +1,9 @@
-use crate::bytes::Bytes;
-use crate::component::{self, BlockType, ValType};
-use crate::parser::{self, leb128, Error, Result, ResultExt};
+use crate::{
+    bytes::Bytes,
+    component,
+    parser::{self, leb128, Error, Result, ResultExt},
+    types::{self, BlockType, GlobalMutability, Limits, TableType, ValType},
+};
 
 /// Parses a [`BlockType`].
 pub fn block_type<B: Bytes>(offset: &mut u64, bytes: B) -> Result<BlockType> {
@@ -38,53 +41,50 @@ pub fn val_type<B: Bytes>(offset: &mut u64, bytes: B) -> Result<ValType> {
     }
 }
 
-/// Parses a [`RefType`](component::RefType).
+/// Parses a [`RefType`](types::RefType).
 ///
 /// Returns an error if some other [`ValType`] is parsed instead.
-pub fn ref_type<B: Bytes>(offset: &mut u64, bytes: B) -> Result<component::RefType> {
+pub fn ref_type<B: Bytes>(offset: &mut u64, bytes: B) -> Result<types::RefType> {
     let value_type = val_type(offset, bytes)?;
     value_type
         .try_to_ref_type()
         .ok_or_else(|| crate::parser_bad_format!("expected reference type but got {value_type}"))
 }
 
-/// Parses a [`TableType`](component::TableType).
-pub fn table_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::TableType> {
-    Ok(component::TableType::new(
+/// Parses a [`TableType`].
+pub fn table_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<TableType> {
+    Ok(TableType::new(
         ref_type(offset, bytes).context("table element type")?,
         limits(offset, bytes).context("table limits")?,
     ))
 }
 
 /// Parses a global [`mut`](https://webassembly.github.io/spec/core/binary/types.html#binary-mut) value.
-pub fn global_mutability<B: Bytes>(
-    offset: &mut u64,
-    bytes: B,
-) -> Result<component::GlobalMutability> {
+pub fn global_mutability<B: Bytes>(offset: &mut u64, bytes: B) -> Result<GlobalMutability> {
     match parser::one_byte_exact(offset, bytes).context("global mutability flag")? {
-        0 => Ok(component::GlobalMutability::Constant),
-        1 => Ok(component::GlobalMutability::Variable),
+        0 => Ok(GlobalMutability::Constant),
+        1 => Ok(GlobalMutability::Variable),
         bad => Err(crate::parser_bad_format!(
             "{bad:#04X} is not a valid global mutability flag"
         )),
     }
 }
 
-/// Parses a [`GlobalType`](component::GlobalType)
-pub fn global_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::GlobalType> {
+/// Parses a [`GlobalType`](types::GlobalType)
+pub fn global_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<types::GlobalType> {
     let value_type = val_type(offset, bytes).context("global type")?;
     let mutability = global_mutability(offset, bytes)?;
-    Ok(component::GlobalType::new(mutability, value_type))
+    Ok(types::GlobalType::new(mutability, value_type))
 }
 
-/// Parses a [`MemType`](component::MemType).
+/// Parses a [`MemType`](types::MemType).
 #[inline]
-pub fn mem_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::MemType> {
+pub fn mem_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<types::MemType> {
     limits(offset, bytes)
 }
 
-/// Parses [`Limits`](component::Limits).
-pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits> {
+/// Parses [`Limits`].
+pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<Limits> {
     let flag = parser::one_byte_exact(offset, bytes).context("limit flag")?;
 
     if !(0u8..=7).contains(&flag) {
@@ -94,8 +94,8 @@ pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits
     }
 
     let index_type = match flag {
-        0..=3 => component::IdxType::I32,
-        4..=7 => component::IdxType::I64,
+        0..=3 => types::IdxType::I32,
+        4..=7 => types::IdxType::I64,
         _ => unreachable!(),
     };
 
@@ -116,12 +116,12 @@ pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<component::Limits
 
     // Note that only 2 and 3 is introduced in the threads proposal overview
     let share = match flag {
-        0 | 1 | 4 | 5 => component::Sharing::Unshared,
-        2 | 3 | 6 | 7 => component::Sharing::Shared,
+        0 | 1 | 4 | 5 => types::Sharing::Unshared,
+        2 | 3 | 6 | 7 => types::Sharing::Shared,
         _ => unreachable!(),
     };
 
-    component::Limits::new(minimum, maximum, share, index_type).ok_or_else(|| {
+    Limits::new(minimum, maximum, share, index_type).ok_or_else(|| {
         crate::parser_bad_format!(
             "the limit maximum {} cannot be less than the minimum {minimum}",
             maximum.unwrap()
@@ -174,6 +174,6 @@ macro_rules! type_parse_impls {
 
 type_parse_impls! {
     ValType => val_type,
-    component::TableType => table_type,
-    component::Limits => limits,
+    TableType => table_type,
+    Limits => limits,
 }

@@ -1,9 +1,14 @@
-use crate::bytes::{Bytes, Window};
-use crate::component::{self, ValType};
-use crate::instruction_set::InstructionSequence;
-use crate::parser::{self, Offset, ResultExt};
-use core::fmt::{Debug, Formatter};
-use core::num::NonZeroU32;
+use crate::{
+    bytes::{Bytes, Window},
+    component,
+    instruction_set::InstructionSequence,
+    parser::{self, Offset, ResultExt},
+    types::ValType,
+};
+use core::{
+    fmt::{Debug, Formatter},
+    num::NonZeroU32,
+};
 
 /// Represents the local declarations in the [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
 /// which corresponds to the

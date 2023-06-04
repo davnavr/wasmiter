@@ -1,8 +1,10 @@
-use crate::bytes::Bytes;
-use crate::component;
-use crate::index::{self, TableIdx};
-use crate::instruction_set::InstructionSequence;
-use crate::parser::{self, Offset, Result, ResultExt, Vector};
+use crate::{
+    bytes::Bytes,
+    component,
+    index::{self, TableIdx},
+    instruction_set::InstructionSequence,
+    parser::{self, Offset, Result, ResultExt, Vector},
+};
 use core::fmt::{Debug, Formatter};
 
 /// Represents a vector of expressions that evaluate to references in an
@@ -95,7 +97,7 @@ pub enum ElementInit<O: Offset, B: Bytes> {
     /// A vector of functions to create `funcref` elements from.
     Functions(Vector<O, B, parser::SimpleParse<index::FuncIdx>>),
     /// A vector of expressions that evaluate to references.
-    Expressions(Option<component::RefType>, ElementExpressions<O, B>),
+    Expressions(Option<crate::types::RefType>, ElementExpressions<O, B>),
 }
 
 impl<O: Offset, B: Bytes> ElementInit<O, B> {

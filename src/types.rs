@@ -1,11 +1,15 @@
+//! Types that model the WebAssembly type system.
+
 use core::fmt::{Display, Formatter};
 
 mod block_type;
 mod global_type;
+mod limits;
 mod table_type;
 
 pub use block_type::BlockType;
 pub use global_type::{GlobalMutability, GlobalType};
+pub use limits::{IdxType, Limits, MemType, Sharing};
 pub use table_type::TableType;
 
 /// Represents a
@@ -132,61 +136,3 @@ impl Display for RefType {
         })
     }
 }
-
-// TODO: maybe make crate::allocator::SmallVec?
-
-/*
-enum ResultTypeInner<S: Vector<ValType>> {
-    Inline { length: u8, types: [ValType; 7] },
-    Allocated(S),
-}
-
-/// Represents a
-/// [WebAssembly result type](https://webassembly.github.io/spec/core/syntax/types.html#reference-types).
-pub struct ResultType<S: Vector<ValType>> {
-    inner: ResultTypeInner<S>,
-}
-
-impl<S: Vector<ValType>> ResultType<S> {
-    /// Creates a new `resulttype` from the given `types`, using the specified [`Allocator`] if necessary.
-    pub fn from_slice_in<A: Allocator<Vec<ValType> = S>>(types: &[ValType], allocator: &A) -> Self {
-        Self {
-            inner: if types.len() <= 7 {
-                let mut inline = [ValType::I32; 7];
-                inline[0..types.len()].copy_from_slice(types);
-                ResultTypeInner::Inline {
-                    length: types.len() as u8,
-                    types: inline,
-                }
-            } else {
-                ResultTypeInner::Allocated(allocator.allocate_vector_from_slice(types))
-            },
-        }
-    }
-
-    /// Gets the types.
-    pub fn types(&self) -> &[ValType] {
-        match &self.inner {
-            ResultTypeInner::Inline { length, types } => &types[..usize::from(*length)],
-            ResultTypeInner::Allocated(allocated) => allocated.as_ref(),
-        }
-    }
-}
-
-impl<S: Vector<ValType>> Default for ResultType<S> {
-    fn default() -> Self {
-        Self {
-            inner: ResultTypeInner::Inline {
-                length: 0,
-                types: [ValType::I32; 7],
-            },
-        }
-    }
-}
-
-impl<S: Vector<ValType>> Debug for ResultType<S> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.types()).finish()
-    }
-}
-*/

@@ -18,6 +18,7 @@ pub mod index;
 pub mod instruction_set;
 pub mod parser;
 pub mod sections;
+pub mod types;
 
 use parser::{Error, Result, ResultExt};
 

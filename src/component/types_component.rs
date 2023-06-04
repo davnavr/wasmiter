@@ -1,6 +1,9 @@
-use crate::bytes::Bytes;
-use crate::component::{self, ValType};
-use crate::parser::{self, Result, ResultExt};
+use crate::{
+    bytes::Bytes,
+    component,
+    parser::{self, Result, ResultExt},
+    types::ValType,
+};
 
 /// Parser for a
 /// [WebAssembly result type](https://webassembly.github.io/spec/core/binary/types.html#result-types).

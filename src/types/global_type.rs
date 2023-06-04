@@ -1,4 +1,4 @@
-use crate::component::ValType;
+use crate::types::ValType;
 
 /// Indicates whether a
 /// [WebAssembly global](https://webassembly.github.io/spec/core/syntax/modules.html#globals) is

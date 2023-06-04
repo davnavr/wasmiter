@@ -1,7 +1,10 @@
-use crate::buffer::Buffer;
-use crate::bytes::Bytes;
-use crate::component;
-use crate::parser::{self, Result, ResultExt};
+use crate::{
+    buffer::Buffer,
+    bytes::Bytes,
+    component,
+    parser::{self, Result, ResultExt},
+    types,
+};
 
 /// Describes what kind of entity is specified by an [`Import`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -9,11 +12,11 @@ pub enum ImportKind {
     /// An imported function with the specified signature.
     Function(crate::index::TypeIdx),
     /// An imported table with the specified limits and element type.
-    Table(component::TableType),
+    Table(types::TableType),
     /// An imported table with the specified limits.
-    Memory(component::MemType),
+    Memory(types::MemType),
     /// An imported global with the specified type.
-    Global(component::GlobalType),
+    Global(types::GlobalType),
 }
 
 /// Represents a

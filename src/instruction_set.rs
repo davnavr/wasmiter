@@ -13,7 +13,7 @@ mod vector_opcode;
 pub use crate::index::{LabelIdx, LocalIdx};
 
 #[doc(no_inline)]
-pub use crate::component::BlockType;
+pub use crate::types::BlockType;
 
 pub use instruction::{Instruction, LaneIdx};
 pub use instruction_sequence::InstructionSequence;

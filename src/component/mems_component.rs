@@ -1,6 +1,8 @@
-use crate::bytes::Bytes;
-use crate::component::MemType;
-use crate::parser::{Result, ResultExt, SimpleParse, Vector};
+use crate::{
+    bytes::Bytes,
+    parser::{Result, ResultExt, SimpleParse, Vector},
+    types::MemType,
+};
 
 /// Represents the
 /// [**mems** component](https://webassembly.github.io/spec/core/syntax/modules.html#memories) of a

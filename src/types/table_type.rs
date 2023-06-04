@@ -1,4 +1,4 @@
-use crate::component::{Limits, RefType};
+use crate::types::{Limits, RefType};
 
 /// Represents a
 /// [WebAssembly table type](https://webassembly.github.io/spec/core/binary/types.html#table-types).

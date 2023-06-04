@@ -1,8 +1,10 @@
-use crate::bytes::Bytes;
-use crate::component::{self, BlockType};
-use crate::index::{self, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx};
-use crate::instruction_set::MemArg;
-use crate::parser::{Result, ResultExt, SimpleParse, Vector};
+use crate::{
+    bytes::Bytes,
+    index::{self, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx},
+    instruction_set::MemArg,
+    parser::{Result, ResultExt, SimpleParse, Vector},
+    types::{self, BlockType},
+};
 
 /// A WebAssembly
 /// [`laneidx`](https://webassembly.github.io/spec/core/binary/instructions.html#vector-instructions)
@@ -174,7 +176,7 @@ instructions! {
         ///
         /// The types specify the type of the operand selected. Future versions of WebAssembly may
         /// allow selecting more than one value at a time, requiring more than one type.
-        Select[(Vector<&'a mut u64, B, SimpleParse<component::ValType>>)] = "select",
+        Select[(Vector<&'a mut u64, B, SimpleParse<types::ValType>>)] = "select",
 
         // Variable Instructions
 
@@ -639,7 +641,7 @@ instructions! {
         /// The
         /// [**ref.null**](https://webassembly.github.io/spec/core/syntax/instructions.html#reference-instructions)
         /// instruction produces a `null` value of the specified reference type.
-        RefNull[(component::RefType)] = "ref.null",
+        RefNull[(types::RefType)] = "ref.null",
         /// The
         /// [**ref.is_null**](https://webassembly.github.io/spec/core/syntax/instructions.html#reference-instructions)
         /// instruction checks if an operand is `null`.

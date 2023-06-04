@@ -1,7 +1,9 @@
-use crate::bytes::Bytes;
-use crate::component::{self, GlobalType};
-use crate::instruction_set::InstructionSequence;
-use crate::parser::{self, Result, ResultExt};
+use crate::{
+    bytes::Bytes,
+    instruction_set::InstructionSequence,
+    parser::{self, Result, ResultExt},
+    types::GlobalType,
+};
 
 /// Represents the
 /// [**globals** component](https://webassembly.github.io/spec/core/syntax/modules.html#globals) of
@@ -29,7 +31,7 @@ impl<B: Bytes> GlobalsComponent<B> {
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
-        let global_type = component::global_type(&mut self.offset, &self.bytes)?;
+        let global_type = crate::component::global_type(&mut self.offset, &self.bytes)?;
         let mut expression = InstructionSequence::new(&mut self.offset, &self.bytes);
         let result = f(global_type, &mut expression).context("global expression")?;
         expression.finish().context("global expression")?;

@@ -1,5 +1,4 @@
-use crate::component::ValType;
-use crate::index::TypeIdx;
+use crate::{index::TypeIdx, types::ValType};
 
 /// Represents a
 /// [`blocktype`](https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype),

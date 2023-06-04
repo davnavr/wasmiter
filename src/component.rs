@@ -12,16 +12,10 @@ mod function_section;
 mod globals_component;
 mod imports_component;
 mod known_section;
-mod limits;
 mod mems_component;
 mod tables_component;
 mod type_parser;
-mod types;
 mod types_component;
-
-pub use types::{
-    BlockType, GlobalMutability, GlobalType, NumType, RefType, TableType, ValType, VecType,
-};
 
 pub use type_parser::{
     block_type, func_type, global_mutability, global_type, limits, mem_type, ref_type, table_type,
@@ -37,7 +31,6 @@ pub use function_section::FunctionSection;
 pub use globals_component::GlobalsComponent;
 pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use known_section::KnownSection;
-pub use limits::{IdxType, Limits, MemType, Sharing};
 pub use mems_component::MemsComponent;
 pub use tables_component::TablesComponent;
 pub use types_component::{ResultType, TypesComponent};

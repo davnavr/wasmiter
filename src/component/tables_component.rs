@@ -1,6 +1,8 @@
-use crate::bytes::Bytes;
-use crate::component::TableType;
-use crate::parser::{Result, ResultExt, SimpleParse, Vector};
+use crate::{
+    bytes::Bytes,
+    parser::{Result, ResultExt, SimpleParse, Vector},
+    types::TableType,
+};
 
 /// Represents the
 /// [**tables** component](https://webassembly.github.io/spec/core/syntax/modules.html#tables) of a
