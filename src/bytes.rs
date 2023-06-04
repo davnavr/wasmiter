@@ -11,6 +11,9 @@ mod reader;
 #[cfg(feature = "std")]
 mod shared_bytes;
 
+#[cfg(feature = "mmap")]
+mod mmap_bytes;
+
 pub use buf_bytes::BufBytes;
 pub use bytes_slice::BytesSlice;
 pub use debug_bytes::DebugBytes;
@@ -132,7 +135,7 @@ pub trait Bytes {
     }
 }
 
-impl Bytes for &[u8] {
+impl Bytes for [u8] {
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
         let source = usize::try_from(offset)
             .ok()
