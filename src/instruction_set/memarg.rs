@@ -39,6 +39,18 @@ impl Align {
     }
 }
 
+impl core::fmt::Display for Align {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::None => "1",
+            Self::Two => "2",
+            Self::Four => "4",
+            Self::Eight => "8",
+            Self::Sixteen => "16",
+        })
+    }
+}
+
 /// A WebAssembly
 /// [`memarg`](https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions)
 /// specifies an address **offset** and expected **alignment** for a memory load or store.

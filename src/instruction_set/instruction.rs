@@ -200,7 +200,7 @@ instructions! {
         /// The
         /// [**global.set**](https://webassembly.github.io/spec/core/syntax/instructions.html#variable-instructions)
         /// instruction pops a value from the stack and stores it into a global variable.
-        GlobalSet[(LocalIdx)] = "global.set",
+        GlobalSet[(index::GlobalIdx)] = "global.set",
 
         // Memory Instructions
 

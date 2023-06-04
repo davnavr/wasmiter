@@ -3,11 +3,13 @@
 
 use crate::{
     bytes::Bytes,
-    component,
+    component, index,
     parser::{self, Result as Parsed},
     types::ValType,
 };
 use core::fmt::{Display, Formatter};
+
+mod instruction_text;
 
 type Result<T = ()> = core::result::Result<T, core::fmt::Error>;
 
@@ -70,13 +72,39 @@ fn write_types<I: IntoIterator<Item = Parsed<ValType>>>(types: I, w: &mut Writer
     }
 }
 
-fn write_index(prefix: char, declaration: bool, index: u32, w: &mut Writer) {
+macro_rules! index_format {
+    ($($implementor:ty = $prefix:literal,)*) => {
+        trait IndexFormat: index::Index {
+            const PREFIX: char;
+        }
+
+        $(
+            impl IndexFormat for $implementor {
+                const PREFIX: char = $prefix;
+            }
+        )*
+    };
+}
+
+index_format! {
+    index::TypeIdx = 't',
+    index::FuncIdx = 'f',
+    index::TableIdx = 'T',
+    index::MemIdx = 'M',
+    index::GlobalIdx = 'G',
+    index::ElemIdx = 'E',
+    index::DataIdx = 'D',
+    index::LocalIdx = 'l',
+}
+
+fn write_index<I: IndexFormat>(declaration: bool, index: I, w: &mut Writer) {
+    let idx: u32 = index.into();
     if w.alternate() {
-        write!(w, "${prefix}{index}")
+        write!(w, "${}{idx}", I::PREFIX)
     } else if declaration {
-        write!(w, "(; {index} ;)")
+        write!(w, "(; {idx} ;)")
     } else {
-        write!(w, "{index}")
+        write!(w, "{idx}")
     }
 }
 
@@ -85,12 +113,12 @@ impl<B: Bytes> Display for component::TypesComponent<B> {
         let mut types = self.borrowed();
         let mut w = Writer::new(f);
 
-        for i in 0u32.. {
+        for i in (0u32..).flat_map(index::TypeIdx::try_from) {
             let result = types.parse(
                 |params| Ok(params.dereferenced()),
                 |params, results| {
                     w.write_str("(type ");
-                    write_index('t', true, i, &mut w);
+                    write_index(true, i, &mut w);
                     w.write_str(" (func (param");
                     write_types(params, &mut w);
                     w.write_str(") (result");
