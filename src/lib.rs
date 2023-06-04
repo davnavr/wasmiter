@@ -4,51 +4,61 @@
 #![deny(unreachable_pub)]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(clippy::undocumented_unsafe_blocks)]
+#![deny(clippy::alloc_instead_of_core)]
+#![deny(clippy::std_instead_of_alloc)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+pub mod buffer;
+pub mod bytes;
+pub mod component;
+pub mod index;
+pub mod instruction_set;
 pub mod parser;
+pub mod sections;
 
-mod sections;
+use parser::{Error, Result, ResultExt};
 
-pub use sections::{Section, SectionId, SectionKind, SectionSequence};
+const PREAMBLE_LENGTH: u8 = 8;
 
-const MAGIC: [u8; 4] = *b"\0asm";
+fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
+    const MAGIC: [u8; 4] = *b"\0asm";
+    const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
-const VERSION: [u8; 4] = u32::to_le_bytes(1);
-
-fn parse_module_binary<I: parser::Input>(binary: I) -> parser::Result<SectionSequence<I>> {
-    use parser::{Error, ResultExt};
-
-    let mut parser = parser::Parser::new(binary);
-    let mut preamble = [0u8; 8];
-    parser
-        .bytes_exact(&mut preamble)
+    let mut preamble = [0u8; PREAMBLE_LENGTH as usize];
+    parser::bytes_exact(&mut 0, src, &mut preamble)
         .context("expected WebAssembly module preamble")?;
 
-    if &preamble[0..4] != &MAGIC {
+    if preamble[0..4] != MAGIC {
         return Err(Error::bad_format().with_context("not a valid WebAssembly module"));
     }
 
     let version = <[u8; 4]>::try_from(&preamble[4..8]).unwrap();
     if version != VERSION {
         let version_number = u32::from_le_bytes(version);
-        return Err(Error::bad_format().with_context(format!(
-            "unsupported WebAssembly version {version_number} ({version_number:#X})"
-        )));
+        return Err(parser_bad_format_at_offset!(
+            "file" @ 0,
+            "unsupported WebAssembly version {version_number} ({version_number:#08X})"
+        ));
     }
 
-    // TODO: sections sequence
-    todo!()
+    Ok(())
 }
 
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
 #[inline]
-pub fn parse_module_sections<I: parser::IntoInput>(
-    binary: I,
-) -> parser::Result<SectionSequence<I::In>> {
-    parse_module_binary(binary.into_input())
+pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::SectionSequence<B>> {
+    parse_module_preamble(&binary)?;
+    Ok(sections::SectionSequence::new(
+        u64::from(PREAMBLE_LENGTH),
+        binary,
+    ))
 }
 
+/*
 /// Opens a file containing a
 /// [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html) at the
 /// given [`Path`](std::path::Path).
@@ -57,6 +67,7 @@ pub fn parse_module_sections<I: parser::IntoInput>(
 #[inline]
 pub fn parse_module_sections_from_path<P: AsRef<std::path::Path>>(
     path: P,
-) -> parser::Result<SectionSequence<parser::FileInput>> {
+) -> Result<SectionSequence<parser::FileInput>> {
     parse_module_binary(parser::FileInput::new(std::fs::File::open(path)?))
 }
+*/

@@ -1,225 +1,171 @@
 //! Low-level types and functions for parsing.
 
-mod input;
+mod error;
+mod offset;
+mod result_ext;
+mod simple_parse;
+mod vector;
 
-pub use input::{FileInput, Input, IntoInput, SeekingInput, SharedInput};
+pub mod leb128;
 
-use std::borrow::Cow;
-use std::fmt::Display;
-use std::io::Read;
+pub use error::{Context, Error, ErrorKind};
+pub use offset::Offset;
+pub use result_ext::ResultExt;
+pub use simple_parse::SimpleParse;
+pub use vector::{vector, Sequence, Vector};
 
-/// Specifies what kind of error occured during parsing.
-#[derive(thiserror::Error, Debug)]
-#[non_exhaustive]
-pub enum ErrorKind {
-    /// An I/O error occured.
-    #[error(transparent)]
-    IO(std::io::Error),
-    /// The input is malformed.
-    #[error("input was malformed")]
-    InvalidFormat,
-}
-
-/// Adds additional information to an [`Error`].
-pub struct Context {
-    message: Cow<'static, str>,
-}
-
-impl From<Cow<'static, str>> for Context {
-    #[inline]
-    fn from(message: Cow<'static, str>) -> Self {
-        Self { message }
-    }
-}
-
-impl From<&'static str> for Context {
-    #[inline]
-    fn from(message: &'static str) -> Self {
-        Self::from(Cow::Borrowed(message))
-    }
-}
-
-impl From<String> for Context {
-    #[inline]
-    fn from(message: String) -> Self {
-        Self::from(Cow::Owned(message))
-    }
-}
-
-/*
-impl<'a> From<std::fmt::Arguments<'a>> for Context {
-    fn from(arguments: std::fmt::Arguments<'a>) -> Self {
-        Self {
-            message: if let Some(literal) = arguments.as_str() {
-                Cow::Borrowed(literal)
-            } else {
-                Cow::Owned(arguments.to_string())
-            },
-        }
-    }
-}
-*/
-
-impl Display for Context {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.message, f)
-    }
-}
-
-impl std::fmt::Debug for Context {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self.message, f)
-    }
-}
-
-struct ErrorInner {
-    kind: ErrorKind,
-    context: Vec<Context>,
-    backtrace: std::backtrace::Backtrace,
-}
-
-/// Describes an error that occured during parsing.
-#[repr(transparent)]
-pub struct Error {
-    inner: Box<ErrorInner>,
-}
-
-impl Error {
-    fn new(kind: ErrorKind) -> Self {
-        Self {
-            inner: Box::new(ErrorInner {
-                kind,
-                context: Vec::new(),
-                backtrace: std::backtrace::Backtrace::capture(),
-            }),
-        }
-    }
-
-    pub(crate) fn bad_format() -> Self {
-        Self::new(ErrorKind::InvalidFormat)
-    }
-
-    /// Gets the kind of error.
-    pub fn kind(&self) -> &ErrorKind {
-        &self.inner.kind
-    }
-
-    #[inline]
-    pub(crate) fn context<C: Into<Context>>(&mut self, context: C) {
-        self.inner.context.push(context.into())
-    }
-
-    #[inline]
-    pub(crate) fn with_context<C: Into<Context>>(mut self, context: C) -> Self {
-        self.context(context);
-        self
-    }
-}
-
-impl std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Error")
-            .field("kind", self.kind())
-            .field("context", &self.inner.context)
-            .field("backtrace", &self.inner.backtrace)
-            .finish()
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(error: std::io::Error) -> Self {
-        Self::new(ErrorKind::IO(error))
-    }
-}
+use crate::bytes::Bytes;
 
 /// Result type used when parsing input.
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
-mod sealed {
-    pub trait Sealed {}
+#[macro_export]
+#[doc(hidden)]
+macro_rules! parser_bad_format {
+    ($($arg:tt)*) => {{
+        let err: $crate::parser::Error;
 
-    impl<T, E: Into<super::Error>> Sealed for std::result::Result<T, E> {}
-}
-
-/// Provides helper methods to add additional context to [`Error`]s.
-///
-/// This trait is sealed.
-pub trait ResultExt<T>: sealed::Sealed {
-    /// Attaches the given [`Context`] to the [`Result<T>`], if it is an error.
-    fn context<C: Into<Context>>(self, context: C) -> Result<T>
-    where
-        Self: Sized,
-    {
-        self.with_context(|| context)
-    }
-
-    /// If the given [`Result<T>`] is an error, evaluates the closure to attach [`Context`].
-    fn with_context<C: Into<Context>, F: FnOnce() -> C>(self, f: F) -> Result<T>;
-}
-
-impl<T, E: Into<Error>> ResultExt<T> for std::result::Result<T, E> {
-    fn with_context<C: Into<Context>, F: FnOnce() -> C>(self, f: F) -> Result<T> {
-        match self {
-            Ok(value) => Ok(value),
-            Err(e) => {
-                let mut err = e.into();
-                err.context(f());
-                Err(err)
-            }
-        }
-    }
-}
-
-trait IntegerEncoding: From<u8> + Copy + Default + std::ops::BitOr + std::ops::ShlAssign {
-    /// A buffer type to contain the maximum number of bytes that a value is allowed to be encoded
-    /// in.
-    ///
-    /// According to the
-    /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/values.html#integers),
-    /// this should have a length equal to `ceil(BITS / 7)`.
-    type Buffer: AsRef<[u8]> + Default;
-}
-
-impl IntegerEncoding for u32 {
-    type Buffer = [u8; 5];
-}
-
-impl IntegerEncoding for u64 {
-    type Buffer = [u8; 10];
-}
-
-/// Parses a stream of bytes.
-#[derive(Debug)]
-pub struct Parser<R: Read> {
-    reader: R,
-}
-
-impl<R: Read> Parser<R> {
-    /// Creates a new parser with the specified reader.
-    pub fn new(reader: R) -> Self {
-        Self { reader }
-    }
-
-    /// Fills the given `buffer` with bytes from the reader, returning an error if the buffer could
-    /// not be completely filled.
-    pub fn bytes_exact(&mut self, buffer: &mut [u8]) -> Result<()> {
-        // TODO: Use stream_position to get context for location Option<u64>
-        let count = self
-            .reader
-            .read(buffer)
-            .with_context(|| format!("attempt to read {} bytes", buffer.len()))?;
-
-        if count != buffer.len() {
-            return Err(Error::bad_format()
-                .with_context(format!("expected {} bytes but got {count}", buffer.len())));
+        #[cfg(not(feature = "alloc"))]
+        {
+            // Disable warnings for unused variables
+            let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
+            err = $crate::parser::Error::bad_format();
         }
 
-        Ok(())
-    }
+        #[cfg(feature = "alloc")]
+        {
+            err = $crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
+        }
 
-    fn leb128_unsigned<I: IntegerEncoding>(&mut self) -> Result<I> {
-        let mut buffer = I::Buffer::default();
-        let mut value = I::default();
-        todo!()
-    }
+        err
+    }};
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! parser_bad_format_at_offset {
+    ($location:literal @ $offset:expr $(, $($arg:tt)*)?) => {{
+        let err = $crate::parser_bad_format!(concat!("at offset {:#X} in ", $location), $offset);
+
+        $(
+            // Disable warnings for unused variables
+            #[cfg(not(feature = "alloc"))]
+            let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
+
+            #[cfg(feature = "alloc")]
+            let err = err.with_context(alloc::format!($($arg)*));
+        )?
+
+        err
+    }};
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! parser_bad_input {
+    ($error:expr, $($arg:tt)*) => {{
+        #[cfg(not(feature = "alloc"))]
+        let err;
+        #[cfg(feature = "alloc")]
+        let mut err;
+
+        err = <$crate::parser::Error as From<$crate::bytes::Error>>::from($error);
+
+        #[cfg(feature = "alloc")]
+        {
+            err = err.with_context(alloc::format!($($arg)*));
+        }
+
+        #[cfg(not(feature = "alloc"))]
+        {
+            // Disable warning for unused expression $error
+            let _ = $error;
+            let _ = |f: &mut core::fmt::Formatter| core::write!(f, $($arg)*);
+        }
+
+        err
+    }};
+}
+
+/// Trait for parsers.
+pub trait Parse {
+    /// The result of the parser.
+    type Output;
+
+    /// Parses the given input.
+    fn parse<B: crate::bytes::Bytes>(&mut self, offset: &mut u64, bytes: B)
+        -> Result<Self::Output>;
+}
+
+#[inline]
+pub(crate) fn bytes<'b, B: Bytes>(
+    offset: &mut u64,
+    bytes: B,
+    buffer: &'b mut [u8],
+) -> Result<&'b mut [u8]> {
+    let length = buffer.len();
+    bytes
+        .read(offset, buffer)
+        .map_err(|e| parser_bad_input!(e, "could not read {} bytes", length))
+}
+
+#[inline]
+pub(crate) fn bytes_exact<B: Bytes>(offset: &mut u64, bytes: B, buffer: &mut [u8]) -> Result<()> {
+    bytes
+        .read_exact(offset, buffer)
+        .map_err(|e| parser_bad_input!(e, "expected {} bytes", buffer.len()))
+}
+
+#[inline]
+pub(crate) fn byte_array<B: Bytes, const N: usize>(offset: &mut u64, bytes: B) -> Result<[u8; N]> {
+    let mut array = [0u8; N];
+    bytes_exact(offset, bytes, array.as_mut_slice())?;
+    Ok(array)
+}
+
+#[inline]
+pub(crate) fn one_byte<B: Bytes>(offset: &mut u64, bytes: B) -> Result<Option<u8>> {
+    Ok(if let [value] = self::bytes(offset, bytes, &mut [0u8])? {
+        Some(*value)
+    } else {
+        None
+    })
+}
+
+#[inline]
+pub(crate) fn one_byte_exact<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u8> {
+    let mut value = 0u8;
+    bytes_exact(offset, bytes, core::slice::from_mut(&mut value))?;
+    Ok(value)
+}
+
+// pub(crate) fn skip_exact(&mut self, amount: u64) -> Result<()> {
+//     let actual = self
+//         .input
+//         .read(amount)
+//         .map_err(|e| parser_bad_input!(e, "could not read {amount} bytes"))?;
+//
+//     if amount != actual {
+//         return Err(parser_bad_format!(
+//             "attempt to read {amount} bytes, but read {actual} before reaching end of input"
+//         ));
+//     }
+//
+//     Ok(())
+// }
+
+/// Parses an UTF-8 string
+/// [name](https://webassembly.github.io/spec/core/binary/values.html#names). Allocates extra space
+/// into the given `buffer`, and appends to contents of the string to it.
+pub fn name<'b, B: Bytes, U: crate::buffer::Buffer>(
+    offset: &mut u64,
+    bytes: &B,
+    buffer: &'b mut U,
+) -> Result<&'b mut str> {
+    let length = leb128::usize(offset, bytes).context("string length")?;
+    let start = buffer.as_mut().len();
+    buffer.grow(length);
+    let destination = &mut buffer.as_mut()[start..][..length];
+    bytes_exact(offset, bytes, destination).context("string contents")?;
+    core::str::from_utf8_mut(destination).map_err(|e| crate::parser_bad_format!("{e}"))
 }

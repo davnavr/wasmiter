@@ -6,4 +6,18 @@ rust-version = "1.64"
 readme = "README.md"
 
 [dependencies]
-thiserror = "1.0.40"
+smallvec = { version = "1.10.0", optional = true, default-features = false, features = ["const_generics", "const_new", "union"] }
+
+[features]
+default = ["backtrace", "std"]
+alloc = ["smallvec"]
+std = ["alloc"]
+backtrace = ["std"]
+
+[dev-dependencies]
+criterion = "0.4.0"
+wat = "1.0.64"
+
+[[bench]]
+name = "bytes"
+harness = false
