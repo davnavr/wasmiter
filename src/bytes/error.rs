@@ -102,7 +102,7 @@ impl Debug for Error {
                 Debug::fmt(&self.inner, f)
             } else {
                 f.debug_struct("Error")
-                    .field("kind", &self.inner.kind);
+                    .field("kind", &self.inner.kind)
                     .field("message", &self.inner.message)
                     .finish()
             }
