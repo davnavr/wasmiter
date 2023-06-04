@@ -60,6 +60,42 @@ impl<B: Bytes + Clone> Window<&B> {
     }
 }
 
+impl<B: Bytes> Window<Window<B>> {
+    /// Flattens a [`Window`], with the resulting [`Bytes`] being constrained to the portion of the
+    /// inner [`Window`] that is accessible.
+    pub fn flatten(self) -> Window<B> {
+        if self.inner.base > self.base + self.length
+            || self.base > self.inner.base + self.inner.length
+        {
+            // No overlap
+            Window {
+                base: self.inner.base,
+                length: 0,
+                inner: self.inner.inner,
+            }
+        } else if self.inner.base >= self.base {
+            Window {
+                base: self.inner.base,
+                length: core::cmp::min(
+                    self.inner.length,
+                    self.length - (self.inner.base - self.base),
+                ),
+                inner: self.inner.inner,
+            }
+        } else {
+            // self.inner.base < self.base
+            Window {
+                base: self.base,
+                length: core::cmp::min(
+                    self.length,
+                    self.inner.length - (self.base - self.inner.base),
+                ),
+                inner: self.inner.inner,
+            }
+        }
+    }
+}
+
 impl<B: Bytes> Bytes for Window<B> {
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
         match u64::try_from(buffer.len()) {
