@@ -242,24 +242,23 @@ impl<B: Bytes + Clone> IntoIterator for SectionSequence<B> {
 
 impl<B: Bytes> Debug for SectionSequence<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        #[cfg(feature = "alloc")]
-        return {
-            let mut buffer = smallvec::smallvec_inline![0u8; 64];
-            let mut list = f.debug_list();
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                let mut buffer = smallvec::smallvec_inline![0u8; 64];
+                let mut list = f.debug_list();
 
-            let mut sequence = self.borrowed();
-            while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
-                list.entry(&section);
+                let mut sequence = self.borrowed();
+                while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
+                    list.entry(&section);
+                }
+
+                list.finish()
+            } else {
+                f.debug_struct("SectionSequence")
+                    .field("offset", &self.offset)
+                    .field("bytes", &crate::bytes::DebugBytes::from(&self.bytes))
+                    .finish()
             }
-
-            list.finish()
-        };
-
-        #[cfg(not(feature = "alloc"))]
-        return f
-            .debug_struct("SectionSequence")
-            .field("offset", &self.offset)
-            .field("bytes", &crate::bytes::DebugBytes::from(&self.bytes))
-            .finish();
+        }
     }
 }

@@ -23,18 +23,14 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[doc(hidden)]
 macro_rules! parser_bad_format {
     ($($arg:tt)*) => {{
-        let err: $crate::parser::Error;
-
-        #[cfg(not(feature = "alloc"))]
-        {
-            // Disable warnings for unused variables
-            let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
-            err = $crate::parser::Error::bad_format();
-        }
-
-        #[cfg(feature = "alloc")]
-        {
-            err = $crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                let err = $crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
+            } else {
+                // Disable warnings for unused variables
+                let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
+                let err = $crate::parser::Error::bad_format();
+            }
         }
 
         err
@@ -48,12 +44,14 @@ macro_rules! parser_bad_format_at_offset {
         let err = $crate::parser_bad_format!(concat!("at offset {:#X} in ", $location), $offset);
 
         $(
-            // Disable warnings for unused variables
-            #[cfg(not(feature = "alloc"))]
-            let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
-
-            #[cfg(feature = "alloc")]
-            let err = err.with_context(alloc::format!($($arg)*));
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "alloc")] {
+                    let err = err.with_context(alloc::format!($($arg)*));
+                } else {
+                    // Disable warnings for unused variables
+                    let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
+                }
+            }
         )?
 
         err
@@ -64,23 +62,24 @@ macro_rules! parser_bad_format_at_offset {
 #[doc(hidden)]
 macro_rules! parser_bad_input {
     ($error:expr, $($arg:tt)*) => {{
-        #[cfg(not(feature = "alloc"))]
-        let err;
-        #[cfg(feature = "alloc")]
-        let mut err;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                let mut err;
+            } else {
+                let err;
+            }
+        }
 
         err = <$crate::parser::Error as From<$crate::bytes::Error>>::from($error);
 
-        #[cfg(feature = "alloc")]
-        {
-            err = err.with_context(alloc::format!($($arg)*));
-        }
-
-        #[cfg(not(feature = "alloc"))]
-        {
-            // Disable warning for unused expression $error
-            let _ = $error;
-            let _ = |f: &mut core::fmt::Formatter| core::write!(f, $($arg)*);
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                err = err.with_context(alloc::format!($($arg)*));
+            } else {
+                // Disable warning for unused expression $error
+                let _ = $error;
+                let _ = |f: &mut core::fmt::Formatter| core::write!(f, $($arg)*);
+            }
         }
 
         err

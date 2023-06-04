@@ -32,39 +32,44 @@ impl From<bytes::Error> for ErrorKind {
     }
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "alloc")] {
+        type ContextInner = Cow<'static, str>;
+
+        impl From<Cow<'static, str>> for Context {
+            #[inline]
+            fn from(message: Cow<'static, str>) -> Self {
+                Self { message }
+            }
+        }
+
+        impl From<String> for Context {
+            #[inline]
+            fn from(message: String) -> Self {
+                Self::from(Cow::Owned(message))
+            }
+        }
+    } else {
+        type ContextInner = &'static str;
+    }
+}
+
 /// Adds additional information to an [`Error`].
 pub struct Context {
     // TODO: Make an enum ContextKind?
-    #[cfg(feature = "alloc")]
-    message: Cow<'static, str>,
-    #[cfg(not(feature = "alloc"))]
-    message: &'static str,
-}
-
-#[cfg(feature = "alloc")]
-impl From<Cow<'static, str>> for Context {
-    #[inline]
-    fn from(message: Cow<'static, str>) -> Self {
-        Self { message }
-    }
+    message: ContextInner,
 }
 
 impl From<&'static str> for Context {
     #[inline]
     fn from(message: &'static str) -> Self {
-        #[cfg(feature = "alloc")]
-        return Self::from(Cow::Borrowed(message));
-
-        #[cfg(not(feature = "alloc"))]
-        return Self { message };
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl From<String> for Context {
-    #[inline]
-    fn from(message: String) -> Self {
-        Self::from(Cow::Owned(message))
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                Self::from(Cow::Borrowed(message))
+            } else {
+                Self { message }
+            }
+        }
     }
 }
 
@@ -99,18 +104,20 @@ pub struct Error {
 
 impl Error {
     fn new(kind: ErrorKind) -> Self {
-        #[cfg(feature = "alloc")]
-        return Self {
-            inner: alloc::boxed::Box::new(ErrorInner {
-                kind,
-                context: Default::default(),
-                #[cfg(feature = "backtrace")]
-                backtrace: Backtrace::capture(),
-            }),
-        };
-
-        #[cfg(not(feature = "alloc"))]
-        return Self { kind };
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                Self {
+                    inner: alloc::boxed::Box::new(ErrorInner {
+                        kind,
+                        context: Default::default(),
+                        #[cfg(feature = "backtrace")]
+                        backtrace: Backtrace::capture(),
+                    }),
+                }
+            } else {
+                Self { kind }
+            }
+        }
     }
 
     /// Gets a [`Backtrace`] describing where in the code the error occured.
@@ -123,11 +130,13 @@ impl Error {
     /// Gets the kind of error that occured.
     #[inline]
     pub fn kind(&self) -> &ErrorKind {
-        #[cfg(feature = "alloc")]
-        return &self.inner.kind;
-
-        #[cfg(not(feature = "alloc"))]
-        return &self.kind;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                &self.inner.kind
+            } else {
+                &self.kind
+            }
+        }
     }
 
     #[inline]
@@ -137,11 +146,13 @@ impl Error {
 
     #[inline]
     pub(crate) fn context<C: Into<Context>>(&mut self, context: C) {
-        #[cfg(feature = "alloc")]
-        self.inner.context.push(context.into());
-
-        #[cfg(not(feature = "alloc"))]
-        let _ = context;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                self.inner.context.push(context.into());
+            } else {
+                let _ = context;
+            }
+        }
     }
 
     #[inline]
@@ -152,11 +163,13 @@ impl Error {
 
     #[inline]
     fn context_list(&self) -> &[Context] {
-        #[cfg(feature = "alloc")]
-        return &self.inner.context;
-
-        #[cfg(not(feature = "alloc"))]
-        return &[];
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                &self.inner.context
+            } else {
+                &[]
+            }
+        }
     }
 }
 

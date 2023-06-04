@@ -1,8 +1,5 @@
 use crate::buffer::Buffer;
 
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
 /// Trait for arena allocation.
 pub trait Arena {
     /// Type for byte buffers.
@@ -31,27 +28,5 @@ impl<A: Arena> Arena for &A {
     #[inline]
     fn allocate_string(&self, s: &str) -> A::String {
         A::allocate_string(self, s)
-    }
-}
-
-/// [`Arena`] implementation that uses the default heap allocator.
-#[cfg(feature = "alloc")]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GlobalArena;
-
-#[cfg(feature = "alloc")]
-impl Arena for GlobalArena {
-    type Buf = Vec<u8>;
-
-    #[inline]
-    fn allocate_buffer(&self, capacity: usize) -> Self::Buf {
-        Vec::with_capacity(capacity)
-    }
-
-    type String = alloc::boxed::Box<str>;
-
-    #[inline]
-    fn allocate_string(&self, s: &str) -> Self::String {
-        s.into()
     }
 }
