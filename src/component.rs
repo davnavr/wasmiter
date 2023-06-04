@@ -16,6 +16,8 @@ mod mems_component;
 mod tables_component;
 mod type_parser;
 mod types_component;
+
+#[cfg(feature = "alloc")]
 mod wat;
 
 pub use type_parser::{

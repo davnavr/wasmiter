@@ -112,6 +112,6 @@ impl<B: Bytes> Display for component::TypesComponent<B> {
             break;
         }
 
-        return w.finish();
+        w.finish()
     }
 }
