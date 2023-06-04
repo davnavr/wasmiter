@@ -8,6 +8,8 @@ mod window;
 
 #[cfg(feature = "std")]
 mod reader;
+
+#[deprecated = "Consider using memmap2 as a Bytes implementation instead of using a SharedBytes<File>"]
 #[cfg(feature = "std")]
 mod shared_bytes;
 
@@ -23,6 +25,7 @@ pub use window::Window;
 #[cfg(feature = "std")]
 pub use reader::Reader;
 #[cfg(feature = "std")]
+#[allow(deprecated)]
 pub use shared_bytes::{SharedBytes, SharedInput};
 
 /// Result type used when an operation with [`Bytes`] fails.
