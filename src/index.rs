@@ -77,7 +77,11 @@ macro_rules! indices {
 
         impl core::fmt::Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                core::fmt::Debug::fmt(&self.0, f)
+                if f.alternate() {
+                    f.debug_tuple(stringify!($name)).field(&self.0).finish()
+                } else {
+                    core::fmt::Debug::fmt(&self.0, f)
+                }
             }
         }
 
