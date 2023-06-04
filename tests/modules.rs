@@ -68,7 +68,7 @@ fn basic_module() {
         .read(
             |locals| {
                 assert_eq!(locals.count(), 0);
-                Ok(())
+                wasmiter::parser::Result::Ok(())
             },
             |(), instrs| {
                 instrs
@@ -77,32 +77,32 @@ fn basic_module() {
                             matches!(i, Instruction::LocalGet(l) if l.to_u32() == 0),
                             "{i:?}"
                         );
-                        Ok(())
+                        wasmiter::parser::Result::Ok(())
                     })
                     .unwrap()
                     .unwrap();
                 instrs
                     .next(|i| {
                         assert!(matches!(i, Instruction::I32Const(5)), "{i:?}");
-                        Ok(())
+                        wasmiter::parser::Result::Ok(())
                     })
                     .unwrap()
                     .unwrap();
                 instrs
                     .next(|i| {
                         assert!(matches!(i, Instruction::I32Add), "{i:?}");
-                        Ok(())
+                        wasmiter::parser::Result::Ok(())
                     })
                     .unwrap()
                     .unwrap();
                 instrs
                     .next(|i| {
                         assert!(matches!(i, Instruction::End), "{i:?}");
-                        Ok(())
+                        wasmiter::parser::Result::Ok(())
                     })
                     .unwrap()
                     .unwrap();
-                assert!(instrs.next(|_| Ok(())).is_none());
+                assert!(instrs.next(|_| wasmiter::parser::Result::Ok(())).is_none());
                 Ok(())
             },
         )
