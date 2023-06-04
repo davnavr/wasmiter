@@ -11,6 +11,8 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod wat;
+
 pub mod buffer;
 pub mod bytes;
 pub mod component;
