@@ -16,6 +16,7 @@ mod mems_component;
 mod tables_component;
 mod type_parser;
 mod types_component;
+mod wat;
 
 pub use type_parser::{
     block_type, func_type, global_mutability, global_type, limits, mem_type, ref_type, table_type,

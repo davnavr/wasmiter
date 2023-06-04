@@ -65,6 +65,14 @@ impl<B: Bytes> TypesComponent<B> {
 
         result.map(Some)
     }
+
+    pub(crate) fn borrowed(&self) -> TypesComponent<&B> {
+        TypesComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
+    }
 }
 
 struct FuncType<'a, B: Bytes> {
@@ -84,11 +92,7 @@ impl<B: Bytes> core::fmt::Debug for FuncType<'_, B> {
 impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
-        let mut types = TypesComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        };
+        let mut types = self.borrowed();
 
         let empty_types = ResultType::empty(&self.bytes, Default::default());
         let mut last_parameters = empty_types;
