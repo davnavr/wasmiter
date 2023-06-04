@@ -1,0 +1,6 @@
+---
+source: tests/type_section.rs
+expression: "TypesComponent::new(0, bytes.as_slice()).unwrap()"
+---
+(type (; 0 ;) (func (param i32) (result i64)))
+

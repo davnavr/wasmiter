@@ -7,7 +7,7 @@ use crate::{
     parser::{self, Result as Parsed},
     types::ValType,
 };
-use core::fmt::{Display, Formatter, Write};
+use core::fmt::{Display, Formatter};
 
 type Result<T = ()> = core::result::Result<T, core::fmt::Error>;
 
@@ -28,7 +28,7 @@ impl<'a, 'b> Writer<'a, 'b> {
     }
 
     fn write_char(&mut self, c: char) {
-        self.with_fmt(|f| f.write_char(c))
+        self.with_fmt(|f| core::fmt::Write::write_char(f, c))
     }
 
     fn write_str(&mut self, s: &str) {
@@ -52,12 +52,6 @@ impl<'b> core::ops::Deref for Writer<'_, 'b> {
     }
 }
 
-macro_rules! write {
-    ($dst:expr, $($arg:tt)*) => {
-        Writer::write_fmt($dst, core::format_args!($($arg)*))
-    };
-}
-
 fn write_err(error: &parser::Error, w: &mut Writer) {
     write!(w, "\n(;\n{error};)")
 }
@@ -69,20 +63,18 @@ fn write_result<T: Display>(result: Parsed<T>, w: &mut Writer) {
     }
 }
 
-fn write_types<I: IntoIterator<Item = Parsed<ValType>>>(types: I, w: &mut Writer) -> Parsed<()> {
-    for (i, result) in types.into_iter().enumerate() {
-        if i > 0 {
-            w.write_char(' ');
-        }
-
+fn write_types<I: IntoIterator<Item = Parsed<ValType>>>(types: I, w: &mut Writer) {
+    for result in types.into_iter() {
+        w.write_char(' ');
         write_result(result, w);
     }
-    Ok(())
 }
 
-fn write_index(prefix: char, index: u32, w: &mut Writer) {
+fn write_index(prefix: char, declaration: bool, index: u32, w: &mut Writer) {
     if w.alternate() {
         write!(w, "${prefix}{index}")
+    } else if declaration {
+        write!(w, "(; {index} ;)")
     } else {
         write!(w, "{index}")
     }
@@ -97,21 +89,27 @@ impl<B: Bytes> Display for component::TypesComponent<B> {
             let result = types.parse(
                 |params| Ok(params.dereferenced()),
                 |params, results| {
-                    w.write_str("(types ");
-                    write_index('t', i, &mut w);
-                    write_types(params, &mut w)?;
-                    write_types(results, &mut w)?;
+                    w.write_str("(type ");
+                    write_index('t', true, i, &mut w);
+                    w.write_str(" (func (param");
+                    write_types(params, &mut w);
+                    w.write_str(") (result");
+                    write_types(results, &mut w);
+                    w.write_str("))");
                     Ok(())
                 },
             );
 
-            if let Ok(Some(())) | Err(_) = result {
-                w.write_char(')');
+            if let Err(e) = &result {
+                write_err(e, &mut w);
             }
 
-            if let Ok(None) | Err(_) = result {
-                break;
+            if let Ok(Some(())) = result {
+                writeln!(w, ")");
+                continue;
             }
+
+            break;
         }
 
         return w.finish();

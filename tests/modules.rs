@@ -1,5 +1,8 @@
-use wasmiter::component::{self, KnownSection, ValType};
-use wasmiter::instruction_set::Instruction;
+use wasmiter::{
+    component::{self, KnownSection},
+    instruction_set::Instruction,
+    types::ValType,
+};
 
 #[test]
 fn basic_module() {
