@@ -414,6 +414,32 @@ impl<B: Bytes> Name<B> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<B: Bytes> Name<B> {
+    /// Allocates a byte vector to contain the contents of the [`Name`].
+    ///
+    /// # Error
+    ///
+    /// Returns an error if the operation to read the characters from the [`Bytes`] fails.
+    pub fn into_bytes(self) -> parser::Result<Vec<u8>> {
+        let mut bytes = vec![0u8; self.length.try_into().unwrap_or(usize::MAX)];
+        let mut offset = self.offset;
+        parser::bytes_exact(&mut offset, &self.bytes, &mut bytes).context("string contents")?;
+        Ok(bytes)
+    }
+
+    /// Allocates a [`String`] containing the contents of the [`Name`].
+    ///
+    /// # Error
+    ///
+    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
+    /// the [`Name`] is not valid UTF-8.
+    pub fn try_into_string(self) -> parser::Result<alloc::string::String> {
+        alloc::string::String::from_utf8(self.into_bytes()?)
+            .map_err(|e| crate::parser_bad_format!("{e}"))
+    }
+}
+
 impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
     type Error = parser::Error;
 
