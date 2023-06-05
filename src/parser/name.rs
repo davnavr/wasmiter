@@ -440,6 +440,13 @@ impl<B: Bytes> Name<B> {
     }
 }
 
+/// Parses a UTF-8 string [`Name`].
+pub fn parse<B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<Name<B>> {
+    let name = Name::new(bytes, *offset)?;
+    bytes::increment_offset(offset, u64::from(name.length()));
+    Ok(name)
+}
+
 impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
     type Error = parser::Error;
 

@@ -41,7 +41,7 @@ pub(crate) fn offset_overflowed() -> Error {
 }
 
 #[inline]
-fn increment_offset(offset: &mut u64, amount: usize) -> Result<()> {
+pub(crate) fn increment_offset(offset: &mut u64, amount: usize) -> Result<()> {
     *offset = u64::try_from(amount)
         .ok()
         .and_then(|length| offset.checked_add(length))
