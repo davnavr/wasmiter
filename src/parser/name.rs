@@ -378,6 +378,19 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
     }
 }
 
+/// Interprets the `str` as a [`Name`] originating from a byte slice.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), wasmiter::parser::Error> {
+/// use wasmiter::parser::name::Name;
+/// let s = "hello";
+/// let n = Name::try_from(s)?;
+/// assert_eq!(format!("{n}"), s);
+/// # Ok(())
+/// # }
+/// ```
 impl<'a> TryFrom<&'a str> for Name<&'a [u8]> {
     type Error = parser::Error;
 
