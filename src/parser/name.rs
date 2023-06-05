@@ -292,7 +292,7 @@ impl<B: Bytes> CharsLossy<B> {
     }
 
     fn fmt_debug(self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_char('\'')?;
+        f.write_char('"')?;
 
         for c in self {
             if c.is_ascii_graphic() || matches!(c, ' ' | char::REPLACEMENT_CHARACTER) {
@@ -311,7 +311,7 @@ impl<B: Bytes> CharsLossy<B> {
             }
         }
 
-        f.write_char('\'')
+        f.write_char('"')
     }
 
     fn fmt_display(self, f: &mut Formatter<'_>) -> core::fmt::Result {
