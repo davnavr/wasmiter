@@ -431,8 +431,8 @@ impl<B: Bytes> Name<B> {
     /// # Error
     ///
     /// Returns an error if the operation to read the characters from the [`Bytes`] fails.
-    pub fn into_bytes(self) -> parser::Result<Vec<u8>> {
-        let mut bytes = vec![0u8; self.length.try_into().unwrap_or(usize::MAX)];
+    pub fn into_bytes(self) -> parser::Result<alloc::vec::Vec<u8>> {
+        let mut bytes = alloc::vec![0u8; self.length.try_into().unwrap_or(usize::MAX)];
         let mut offset = self.offset;
         parser::bytes_exact(&mut offset, &self.bytes, &mut bytes).context("string contents")?;
         Ok(bytes)
