@@ -414,6 +414,16 @@ impl<B: Bytes> Name<B> {
     }
 }
 
+impl<B: Bytes + Clone> Name<&B> {
+    pub(crate) fn really_cloned(&self) -> Name<B> {
+        Name {
+            bytes: self.bytes.clone(),
+            offset: self.offset,
+            length: self.length,
+        }
+    }
+}
+
 #[cfg(feature = "alloc")]
 impl<B: Bytes> Name<B> {
     /// Allocates a byte vector to contain the contents of the [`Name`].
@@ -443,7 +453,7 @@ impl<B: Bytes> Name<B> {
 /// Parses a UTF-8 string [`Name`].
 pub fn parse<B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<Name<B>> {
     let name = Name::new(bytes, *offset)?;
-    bytes::increment_offset(offset, u64::from(name.length()));
+    bytes::increment_offset(offset, name.length() as usize);
     Ok(name)
 }
 
@@ -520,5 +530,15 @@ impl<B: Bytes> Debug for Name<B> {
 impl<B: Bytes> Display for Name<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.borrowed().chars_lossy().fmt_display(f)
+    }
+}
+
+impl<B: Bytes> IntoIterator for Name<B> {
+    type IntoIter = Chars<B>;
+    type Item = Result<char, NameError>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.chars()
     }
 }

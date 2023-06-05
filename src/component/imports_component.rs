@@ -1,10 +1,10 @@
 use crate::{
-    buffer::Buffer,
     bytes::Bytes,
     component,
-    parser::{self, Result, ResultExt},
+    parser::{self, name::Name, Result, ResultExt},
     types,
 };
+use core::fmt::{Debug, Formatter};
 
 /// Describes what kind of entity is specified by an [`Import`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -21,24 +21,24 @@ pub enum ImportKind {
 
 /// Represents a
 /// [WebAssembly import](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct Import<'a> {
-    module: &'a str,
-    name: &'a str,
+#[derive(Clone, Copy)]
+pub struct Import<B: Bytes> {
+    module: Name<B>,
+    name: Name<B>,
     kind: ImportKind,
 }
 
-impl<'a> Import<'a> {
+impl<B: Bytes> Import<B> {
     /// Gets the name of the module that this import originates from.
     #[inline]
-    pub fn module(&self) -> &'a str {
-        self.module
+    pub fn module(&self) -> &Name<B> {
+        &self.module
     }
 
     /// Gets the name of the import.
     #[inline]
-    pub fn name(&self) -> &'a str {
-        self.name
+    pub fn name(&self) -> &Name<B> {
+        &self.name
     }
 
     /// Gets the kind of import.
@@ -46,20 +46,13 @@ impl<'a> Import<'a> {
     pub fn kind(&self) -> &ImportKind {
         &self.kind
     }
+}
 
+impl<B: Bytes> Import<&B> {
     #[inline]
-    fn parse<'b: 'a, B: Bytes, N: Buffer>(
-        offset: &mut u64,
-        bytes: &B,
-        buffer: &'b mut N,
-    ) -> Result<Self> {
-        let module_name = parser::name(offset, &bytes, buffer)
-            .context("module name")?
-            .len();
-
-        let import_name = parser::name(offset, bytes, buffer)
-            .context("import name")?
-            .len();
+    fn parse(offset: &mut u64, bytes: &B) -> Result<Self> {
+        let module = parser::name::parse(offset, bytes).context("module name")?;
+        let name = parser::name::parse(offset, bytes).context("import name")?;
 
         let kind_offset = *offset;
         let kind = match parser::one_byte_exact(offset, bytes).context("import kind")? {
@@ -83,21 +76,28 @@ impl<'a> Import<'a> {
             }
         };
 
-        // Need to convert &mut [u8] to [u8], borrow error occurs if as_ref is used
-        let names: &'a [u8] = buffer.as_mut();
-        Ok(Self {
-            module: {
-                // Safety: parser::name returns a valid string
-                unsafe { core::str::from_utf8_unchecked(&names[0..module_name]) }
-            },
-            name: {
-                // Safety: parser::name returns a valid string, and this is after the module name
-                unsafe {
-                    core::str::from_utf8_unchecked(&names[module_name..module_name + import_name])
-                }
-            },
-            kind,
-        })
+        Ok(Self { module, name, kind })
+    }
+}
+
+impl<B: Clone + Bytes> Import<&B> {
+    /// Clones the [`Import`] by cloning the underlying [`Bytes`].
+    pub fn cloned(&self) -> Import<B> {
+        Import {
+            module: self.module.really_cloned(),
+            name: self.name.really_cloned(),
+            kind: self.kind,
+        }
+    }
+}
+
+impl<B: Bytes> Debug for Import<B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Import")
+            .field("module", &self.module)
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .finish()
     }
 }
 
@@ -136,25 +136,20 @@ impl<B: Bytes> ImportsComponent<B> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse_with_buffer<'n, N: Buffer>(
-        &mut self,
-        name_buffer: &'n mut N,
-    ) -> Result<Option<Import<'n>>> {
+    pub fn parse(&mut self) -> Result<Option<Import<&B>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        name_buffer.clear();
-        match Import::parse(&mut self.offset, &self.bytes, name_buffer) {
-            Ok(import) => {
-                self.count -= 1;
-                Ok(Some(import))
-            }
-            Err(e) => {
-                self.count = 0;
-                Err(e)
-            }
+        let result = Import::parse(&mut self.offset, &self.bytes);
+
+        if result.is_ok() {
+            self.count -= 1;
+        } else {
+            self.count = 0;
         }
+
+        result.map(Some)
     }
 
     fn borrowed(&self) -> ImportsComponent<&B> {
@@ -166,27 +161,13 @@ impl<B: Bytes> ImportsComponent<B> {
     }
 }
 
-impl<B: Bytes> core::fmt::Debug for ImportsComponent<B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        // This is COMPLETELY duplicated from crate::sections::SectionSequence
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                let mut buffer = smallvec::smallvec_inline![0u8; 64];
-                let mut list = f.debug_list();
-
-                let mut sequence = self.borrowed();
-                while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
-                    list.entry(&section);
-                }
-
-                list.finish()
-            } else {
-                f.debug_struct("ImportsComponent")
-                    .field("count", &self.count)
-                    .field("offset", &self.offset)
-                    .field("bytes", &crate::bytes::DebugBytes::from(&self.bytes))
-                    .finish()
-            }
+impl<B: Bytes> Debug for ImportsComponent<B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let mut list = f.debug_list();
+        let mut imports = self.borrowed();
+        while let Some(i) = imports.parse().transpose() {
+            list.entry(&i);
         }
+        list.finish()
     }
 }
