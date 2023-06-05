@@ -1,7 +1,7 @@
 use wasmiter::parser::name::Name;
 
 #[test]
-fn basic_type() {
+fn simple_names() {
     let inputs = [
         "fd_write".as_bytes(),
         "wasi_snapshot_preview1".as_bytes(),

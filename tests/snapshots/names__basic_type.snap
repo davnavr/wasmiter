@@ -1,0 +1,36 @@
+---
+source: tests/names.rs
+expression: "inputs.iter().map(|bytes| Name::try_from(*bytes)).collect::<Box<[_]>>()"
+---
+[
+    Ok(
+        'fd_write',
+    ),
+    Ok(
+        'wasi_snapshot_preview1',
+    ),
+    Ok(
+        'Hello World!',
+    ),
+    Ok(
+        'abc',
+    ),
+    Ok(
+        '\0',
+    ),
+    Ok(
+        'espa\u{0xF1}ol',
+    ),
+    Ok(
+        '\u{0x420}\u{0x43E}\u{0x441}\u{0x441}\u{0x438}\u{0x44F}',
+    ),
+    Ok(
+        'Fuerza A\u{0xE9}rea Mexicana',
+    ),
+    Ok(
+        '\u{0x1F643}',
+    ),
+    Ok(
+        '��',
+    ),
+]
