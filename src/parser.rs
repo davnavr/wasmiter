@@ -7,6 +7,7 @@ mod simple_parse;
 mod vector;
 
 pub mod leb128;
+pub mod name;
 
 pub use error::{Context, Error, ErrorKind};
 pub use offset::Offset;
