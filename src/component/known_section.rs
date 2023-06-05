@@ -49,9 +49,7 @@ pub enum KnownSection<B: Bytes> {
 
 impl<B: Bytes> KnownSection<Window<B>> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
-    pub fn try_from_section<S: AsRef<str>>(
-        section: Section<B, S>,
-    ) -> Result<parser::Result<Self>, Section<B, S>> {
+    pub fn try_from_section(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
                 section_id::TYPE => {

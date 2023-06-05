@@ -1,12 +1,8 @@
 //! Contains types for reading the sections of a WebAssembly module.
 
-use crate::buffer::{Arena, Buffer};
 use crate::bytes::{Bytes, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
-
-#[cfg(feature = "alloc")]
-use crate::buffer::GlobalArena;
 
 mod section_kind;
 
@@ -15,17 +11,17 @@ pub use section_kind::{section_id as id, SectionId, SectionKind};
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 #[derive(Clone, Copy)]
-pub struct Section<B: Bytes, S: AsRef<str>> {
-    kind: SectionKind<S>,
+pub struct Section<B: Bytes> {
+    kind: SectionKind<B>,
     contents: Window<B>,
 }
 
-impl<B: Bytes, S: AsRef<str>> Section<B, S> {
+impl<B: Bytes> Section<B> {
     /// Gets the
     /// [*id* or custom section name](https://webassembly.github.io/spec/core/binary/modules.html#sections)
     /// for this section.
     #[inline]
-    pub fn kind(&self) -> &SectionKind<S> {
+    pub fn kind(&self) -> &SectionKind<B> {
         &self.kind
     }
 
@@ -53,7 +49,7 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     }
 
     /// Returns a borrowed version of the [`Section`].
-    pub fn borrowed(&self) -> Section<&B, &str> {
+    pub fn borrowed(&self) -> Section<&B> {
         Section {
             kind: self.kind.into_borrowed(),
             contents: self.contents.borrowed(),
@@ -61,18 +57,19 @@ impl<B: Bytes, S: AsRef<str>> Section<B, S> {
     }
 }
 
-impl<B: Bytes + Clone, S: AsRef<str> + Clone> Section<&B, S> {
+impl<B: Bytes + Clone> Section<&B> {
     /// Returns a version of the [`Section`] with the contents cloned.
-    pub fn cloned(&self) -> Section<B, S> {
+    pub fn cloned(&self) -> Section<B> {
         Section {
-            kind: self.kind.clone(),
+            kind: self.kind.cloned(),
             contents: self.contents.cloned(),
         }
     }
 }
 
-impl<B: Bytes, S: AsRef<str>> Debug for Section<B, S> {
+impl<B: Bytes> Debug for Section<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // TODO: Debug for KnownSection
         #[cfg(feature = "alloc")]
         if let Ok(Ok(known)) = crate::component::KnownSection::try_from_section(self.borrowed()) {
             return Debug::fmt(&known, f);
@@ -107,10 +104,7 @@ impl<B: Bytes> SectionSequence<B> {
     ///
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
-    pub fn parse_with_buffer<'n, N: Buffer>(
-        &mut self,
-        name_buffer: &'n mut N,
-    ) -> Result<Option<Section<&B, &'n str>>> {
+    pub fn parse(&mut self) -> Result<Option<Section<&B>>> {
         let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, &self.bytes)? {
             id
         } else {
@@ -127,8 +121,7 @@ impl<B: Bytes> SectionSequence<B> {
         } else {
             let name_start = self.offset;
 
-            name_buffer.clear();
-            let name: &str = parser::name(&mut self.offset, &self.bytes, name_buffer)
+            let name = parser::name::parse(&mut self.offset, &self.bytes)
                 .context("custom section name")?;
 
             content_length -= self.offset - name_start;
@@ -153,112 +146,22 @@ impl<B: Bytes> SectionSequence<B> {
             bytes: &self.bytes,
         }
     }
-
-    /// Returns an iterator over the sections, using the provided [`Arena`] when allocating custom
-    /// section names.
-    pub fn iter_with_arena<A: Arena>(&self, arena: A) -> SectionsIter<&B, A> {
-        SectionsIter::with_arena(self.borrowed(), arena)
-    }
-
-    /// Returns an iterator over the sections.
-    #[cfg(feature = "alloc")]
-    pub fn iter(&self) -> SectionsIter<&B, GlobalArena> {
-        self.iter_with_arena(GlobalArena)
-    }
 }
 
-/// Provides an [`Iterator`] implementation for a [`SectionSequence`].
-#[derive(Clone, Copy)]
-pub struct SectionsIter<B: Bytes, A: Arena> {
-    sections: SectionSequence<B>,
-    buffer: A::Buf,
-    arena: A,
-}
-
-impl<B: Bytes, A: Arena> SectionsIter<B, A> {
-    /// Creates an [`Iterator`] over the [`SectionSequence`], using the given [`Arena`] when
-    /// allocating custom section names.
-    pub fn with_arena(sections: SectionSequence<B>, arena: A) -> Self {
-        Self {
-            sections,
-            buffer: arena.allocate_buffer(0),
-            arena,
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<B: Bytes> SectionsIter<B, GlobalArena> {
-    /// Creates an [`Iterator`] over the [`SectionSequence`].
-    pub fn new(sections: SectionSequence<B>) -> Self {
-        Self::with_arena(sections, GlobalArena)
-    }
-}
-
-impl<B: Bytes + Clone, A: Arena> Iterator for SectionsIter<B, A> {
-    type Item = Result<Section<B, A::String>>;
+impl<B: Clone + Bytes> Iterator for SectionSequence<B> {
+    type Item = Result<Section<B>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.sections.parse_with_buffer(&mut self.buffer) {
-            Ok(Some(section)) => Some(Ok(Section {
-                kind: match section.kind {
-                    SectionKind::Id(id) => SectionKind::Id(id),
-                    SectionKind::Custom(name) => {
-                        SectionKind::Custom(self.arena.allocate_string(name))
-                    }
-                },
-                contents: section.contents.cloned(),
-            })),
+        match self.parse() {
+            Ok(Some(section)) => Some(Ok(section.cloned())),
             Ok(None) => None,
             Err(e) => Some(Err(e)),
         }
     }
 }
 
-impl<B: Bytes, A: Arena> Debug for SectionsIter<B, A> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let sections = SectionsIter {
-            sections: self.sections.borrowed(),
-            buffer: self
-                .arena
-                .allocate_buffer(self.buffer.capacity().unwrap_or_default()),
-            arena: &self.arena,
-        };
-
-        f.debug_list().entries(sections).finish()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<B: Bytes + Clone> IntoIterator for SectionSequence<B> {
-    type IntoIter = SectionsIter<B, GlobalArena>;
-
-    type Item = Result<Section<B, alloc::boxed::Box<str>>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        SectionsIter::new(self)
-    }
-}
-
 impl<B: Bytes> Debug for SectionSequence<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                let mut buffer = smallvec::smallvec_inline![0u8; 64];
-                let mut list = f.debug_list();
-
-                let mut sequence = self.borrowed();
-                while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
-                    list.entry(&section);
-                }
-
-                list.finish()
-            } else {
-                f.debug_struct("SectionSequence")
-                    .field("offset", &self.offset)
-                    .field("bytes", &crate::bytes::DebugBytes::from(&self.bytes))
-                    .finish()
-            }
-        }
+        f.debug_list().entries(self.borrowed()).finish()
     }
 }

@@ -453,7 +453,7 @@ impl<B: Bytes> Name<B> {
 /// Parses a UTF-8 string [`Name`].
 pub fn parse<B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<Name<B>> {
     let name = Name::new(bytes, *offset)?;
-    bytes::increment_offset(offset, name.length() as usize);
+    bytes::increment_offset(offset, name.length() as usize)?;
     Ok(name)
 }
 
@@ -472,6 +472,16 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
             Err(crate::parser_bad_format!(
                 "byte slice has a length of {actual_length}, which is too large"
             ))
+        }
+    }
+}
+
+impl<'a> Name<&'a [u8]> {
+    pub(crate) const fn from_byte_slice(bytes: &'a [u8]) -> Self {
+        Self {
+            bytes,
+            length: bytes.len() as u32,
+            offset: 0,
         }
     }
 }

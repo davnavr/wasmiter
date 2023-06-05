@@ -48,9 +48,9 @@ impl<B: Bytes> Import<B> {
     }
 }
 
-impl<B: Bytes> Import<&B> {
+impl<'a, B: Bytes> Import<&'a B> {
     #[inline]
-    fn parse(offset: &mut u64, bytes: &B) -> Result<Self> {
+    fn parse(offset: &mut u64, bytes: &'a B) -> Result<Self> {
         let module = parser::name::parse(offset, bytes).context("module name")?;
         let name = parser::name::parse(offset, bytes).context("import name")?;
 

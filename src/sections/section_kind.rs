@@ -1,3 +1,5 @@
+use crate::{bytes::Bytes, parser::name::Name};
+
 /// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
 /// is a byte value that indicates what kind of contents are contained within a WebAssembly
 /// [`Section`](crate::sections::Section).
@@ -5,33 +7,42 @@ pub type SectionId = core::num::NonZeroU8;
 
 /// Indicates what kind of contents are contained within a WebAssembly
 /// [`Section`](crate::sections::Section).
-#[derive(Clone, Copy, Eq, Hash)]
-pub enum SectionKind<S: AsRef<str>> {
+#[derive(Clone, Copy)]
+pub enum SectionKind<B: Bytes = &'static [u8]> {
     /// The section is a known value documented in the
     /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/modules.html#sections)
     Id(SectionId),
     /// The section is a
     /// [custom section](https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec)
     /// with the given name.
-    Custom(S),
+    Custom(Name<B>),
 }
 
-impl<S: AsRef<str>> SectionKind<S> {
+impl<B: Bytes> SectionKind<B> {
     /// Converts the [`SectionKind`], copying the section ID or borrowing the custom section name.
     #[inline]
-    pub fn into_borrowed(&self) -> SectionKind<&str> {
+    pub fn into_borrowed(&self) -> SectionKind<&B> {
         match self {
             Self::Id(id) => SectionKind::Id(*id),
-            Self::Custom(name) => SectionKind::Custom(name.as_ref()),
+            Self::Custom(name) => SectionKind::Custom(name.borrowed()),
         }
     }
 }
 
-impl<S: AsRef<str>> core::fmt::Debug for SectionKind<S> {
+impl<B: Clone + Bytes> SectionKind<&B> {
+    pub(super) fn cloned(&self) -> SectionKind<B> {
+        match self {
+            Self::Id(id) => SectionKind::Id(*id),
+            Self::Custom(name) => SectionKind::Custom(name.really_cloned()),
+        }
+    }
+}
+
+impl<B: Bytes> core::fmt::Debug for SectionKind<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Id(id) => f.debug_tuple("Id").field(id).finish(),
-            Self::Custom(name) => f.debug_tuple("Custom").field(&name.as_ref()).finish(),
+            Self::Custom(name) => f.debug_tuple("Custom").field(name).finish(),
         }
     }
 }
@@ -59,7 +70,7 @@ macro_rules! known_ids {
             )*
         }
 
-        impl<S: AsRef<str>> SectionKind<S> {
+        impl<B: Bytes> SectionKind<B> {
             $(
                 $(#[$meta])*
                 pub const $name: Self = Self::Id(section_id::$name);
@@ -118,10 +129,10 @@ macro_rules! known_custom_ids {
             }
         }
 
-        impl SectionKind<&'static str> {
+        impl SectionKind<&'static [u8]> {
             $(
                 $(#[$meta])*
-                pub const $name: Self = Self::Custom($value);
+                pub const $name: Self = Self::Custom(Name::from_byte_slice($value.as_bytes()));
             )*
         }
     };
@@ -149,14 +160,4 @@ known_custom_ids! {
     /// [The `linking` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#linking-metadata-section),
     /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for static linking.
     LINKING = "linking";
-}
-
-impl<A: AsRef<str>, B: AsRef<str>> core::cmp::PartialEq<SectionKind<B>> for SectionKind<A> {
-    fn eq(&self, other: &SectionKind<B>) -> bool {
-        match (self, other) {
-            (Self::Id(a), SectionKind::Id(b)) => a == b,
-            (Self::Custom(a), SectionKind::Custom(b)) => a.as_ref() == b.as_ref(),
-            _ => false,
-        }
-    }
 }

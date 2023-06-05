@@ -1,8 +1,8 @@
 use crate::{
-bytes::Bytes,
-component,
-index,
-parser::{self, Result, ResultExt, name::Name}};
+    bytes::Bytes,
+    component, index,
+    parser::{self, name::Name, Result, ResultExt},
+};
 use core::fmt::{Debug, Formatter};
 
 /// Describes what kind of entity is specified by an [`Export`].
@@ -37,11 +37,8 @@ impl<B: Bytes> Export<B> {
     }
 }
 
-impl<B: Bytes> Export<&B> {
-    fn parse(
-        offset: &mut u64,
-        bytes: &B,
-    ) -> Result<Self> {
+impl<'a, B: Bytes> Export<&'a B> {
+    fn parse(offset: &mut u64, bytes: &'a B) -> Result<Self> {
         let name = parser::name::parse(offset, bytes).context("export name")?;
 
         let kind_offset = *offset;
@@ -74,7 +71,10 @@ impl<B: Clone + Bytes> Export<&B> {
 
 impl<B: Bytes> Debug for Export<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Export").field("name", &self.name).field("kind", &self.kind).finish()
+        f.debug_struct("Export")
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .finish()
     }
 }
 
@@ -101,15 +101,13 @@ impl<B: Bytes> ExportsComponent<B> {
     }
 
     /// Parses the next export in the section.
-    pub fn parse(
-        &mut self
-    ) -> Result<Option<Export<&B>>> {
+    pub fn parse(&mut self) -> Result<Option<Export<&B>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
         let result = Export::parse(&mut self.offset, &self.bytes);
-        
+
         if result.is_ok() {
             self.count -= 1;
         } else {
