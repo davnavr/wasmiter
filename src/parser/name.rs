@@ -46,7 +46,7 @@ impl Display for InvalidCodePoint {
         f.write_str("encountered invalid byte sequence or invalid code point")?;
         if let Some(bytes) = self.bytes() {
             f.write_char(':')?;
-            for b in bytes.iter().copied() {
+            for b in bytes {
                 write!(f, " {b:#04X}")?;
             }
             Ok(())
@@ -124,11 +124,11 @@ impl CharsBuffer {
     fn advance(&mut self, amount: u8) {
         debug_assert!(amount <= self.saved_len());
 
-        self.lengths |= (self.saved_len() - amount) & 0xF;
+        self.lengths = (self.lengths & 0xF0) | ((self.saved_len() - amount) & 0xF);
 
         if self.valid_len() > 0 {
             debug_assert!(amount <= self.valid_len());
-            self.lengths |= (self.valid_len() - amount) << 4;
+            self.lengths = ((self.valid_len() - amount) << 4) | (self.lengths & 0xF);
         }
 
         let start = usize::from(amount);
@@ -139,6 +139,7 @@ impl CharsBuffer {
     fn take_char(&mut self) -> Result<Option<char>, NameError> {
         if self.valid_len() > 0 {
             let mut chars = self.valid().chars();
+            let original_len = chars.as_str().len();
 
             let c = if cfg!(debug_assertions) {
                 chars.next().unwrap()
@@ -147,8 +148,8 @@ impl CharsBuffer {
                 unsafe { chars.next().unwrap_unchecked() }
             };
 
-            // Skip the amount of bytes that were read?
-            self.advance(chars.as_str().len() as u8);
+            // Skip the amount of bytes that were read
+            self.advance((original_len - chars.as_str().len()) as u8);
 
             Ok(Some(c))
         } else if let Some(bad) = self.bad_sequence.take() {
@@ -156,6 +157,7 @@ impl CharsBuffer {
             let mut bytes = [0u8; 4];
             bytes[0..bad_len].copy_from_slice(&self.buffer[0..bad_len]);
 
+            // Skip the invalid sequence
             self.advance(bad.get());
 
             Err(NameError::BadBytes(InvalidCodePoint { length: bad, bytes }))
@@ -183,7 +185,7 @@ impl CharsBuffer {
 
             match result {
                 Ok(filled) => {
-                    self.lengths |= (saved_length as u8 + filled) & 0xF;
+                    self.lengths = (self.lengths & 0xF0) | ((saved_length as u8 + filled) & 0xF);
                     *length -= u32::from(filled);
                 }
                 Err(e) => {
@@ -209,7 +211,7 @@ impl CharsBuffer {
             }
         };
 
-        self.lengths |= (valid_len as u8) << 4;
+        self.lengths = ((valid_len as u8) << 4) | (self.lengths & 0xF);
         Ok(())
     }
 }
@@ -257,6 +259,7 @@ impl<B: Bytes> Chars<B> {
 impl<B: Bytes> Iterator for Chars<B> {
     type Item = Result<char, NameError>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.next_inner().transpose()
     }
