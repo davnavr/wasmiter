@@ -1,8 +1,9 @@
-use crate::buffer::Buffer;
-use crate::bytes::Bytes;
-use crate::component;
-use crate::index;
-use crate::parser::{self, Result, ResultExt};
+use crate::{
+bytes::Bytes,
+component,
+index,
+parser::{self, Result, ResultExt, name::Name}};
+use core::fmt::{Debug, Formatter};
 
 /// Describes what kind of entity is specified by an [`Export`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -16,17 +17,17 @@ pub enum ExportKind {
 
 /// Represents a
 /// [WebAssembly export](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct Export<'a> {
-    name: &'a str,
+#[derive(Clone, Copy)]
+pub struct Export<B: Bytes> {
+    name: Name<B>,
     kind: ExportKind,
 }
 
-impl<'a> Export<'a> {
+impl<B: Bytes> Export<B> {
     /// Gets the name of the export.
     #[inline]
-    pub fn name(&self) -> &'a str {
-        self.name
+    pub fn name(&self) -> &Name<B> {
+        &self.name
     }
 
     /// Gets the kind of export.
@@ -34,14 +35,14 @@ impl<'a> Export<'a> {
     pub fn kind(&self) -> &ExportKind {
         &self.kind
     }
+}
 
-    #[inline]
-    fn parse<'b: 'a, B: Bytes, U: Buffer>(
+impl<B: Bytes> Export<&B> {
+    fn parse(
         offset: &mut u64,
         bytes: &B,
-        buffer: &'b mut U,
     ) -> Result<Self> {
-        let name = parser::name(offset, bytes, buffer).context("export name")?;
+        let name = parser::name::parse(offset, bytes).context("export name")?;
 
         let kind_offset = *offset;
         let kind = match parser::one_byte_exact(offset, bytes).context("export kind")? {
@@ -58,6 +59,22 @@ impl<'a> Export<'a> {
         };
 
         Ok(Self { name, kind })
+    }
+}
+
+impl<B: Clone + Bytes> Export<&B> {
+    /// Clones the [`Export`] by cloning the underlying [`Bytes`].
+    pub fn cloned(&self) -> Export<B> {
+        Export {
+            name: self.name.really_cloned(),
+            kind: self.kind,
+        }
+    }
+}
+
+impl<B: Bytes> Debug for Export<B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Export").field("name", &self.name).field("kind", &self.kind).finish()
     }
 }
 
@@ -84,24 +101,22 @@ impl<B: Bytes> ExportsComponent<B> {
     }
 
     /// Parses the next export in the section.
-    pub fn parse_with_buffer<'n, N: Buffer>(
-        &mut self,
-        name_buffer: &'n mut N,
-    ) -> Result<Option<Export<'n>>> {
+    pub fn parse(
+        &mut self
+    ) -> Result<Option<Export<&B>>> {
         if self.count == 0 {
             return Ok(None);
         }
 
-        match Export::parse(&mut self.offset, &self.bytes, name_buffer) {
-            Ok(export) => {
-                self.count -= 1;
-                Ok(Some(export))
-            }
-            Err(e) => {
-                self.count = 0;
-                Err(e)
-            }
+        let result = Export::parse(&mut self.offset, &self.bytes);
+        
+        if result.is_ok() {
+            self.count -= 1;
+        } else {
+            self.count = 0;
         }
+
+        result.map(Some)
     }
 
     fn borrowed(&self) -> ExportsComponent<&B> {
@@ -127,25 +142,11 @@ impl<B: Bytes> ExportsComponent<B> {
 
 impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        // This is COMPLETELY duplicated from crate::sections::SectionSequence
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                let mut buffer = smallvec::smallvec_inline![0u8; 64];
-                let mut list = f.debug_list();
-
-                let mut sequence = self.borrowed();
-                while let Some(section) = sequence.parse_with_buffer(&mut buffer).transpose() {
-                    list.entry(&section);
-                }
-
-                list.finish()
-            } else {
-                f.debug_struct("ExportsComponent")
-                    .field("count", &self.count)
-                    .field("offset", &self.offset)
-                    .field("bytes", &crate::bytes::DebugBytes::from(&self.bytes))
-                    .finish()
-            }
+        let mut list = f.debug_list();
+        let mut imports = self.borrowed();
+        while let Some(i) = imports.parse().transpose() {
+            list.entry(&i);
         }
+        list.finish()
     }
 }
