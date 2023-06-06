@@ -179,8 +179,10 @@ impl CharsBuffer {
 
         let saved_length = usize::from(self.saved_len());
         if saved_length < self.buffer.len() {
+            let remaining = self.buffer.len() - saved_length;
+            let actual_remaining = core::cmp::min(remaining, *length as usize);
             let result = bytes
-                .read(offset, &mut self.buffer[saved_length..])
+                .read(offset, &mut self.buffer[saved_length..][..actual_remaining])
                 .map(|buf| buf.len() as u8);
 
             match result {
@@ -355,10 +357,10 @@ impl<B: Bytes> Name<B> {
     /// # Error
     ///
     /// Returns an error if the length could not be parsed.
-    pub fn new(bytes: B, mut offset: u64) -> parser::Result<Self> {
+    pub fn new(bytes: B, offset: &mut u64) -> parser::Result<Self> {
         Ok(Self {
-            length: parser::leb128::u32(&mut offset, &bytes).context("string length")?,
-            offset,
+            length: parser::leb128::u32(offset, &bytes).context("string length")?,
+            offset: *offset,
             bytes,
         })
     }
@@ -452,7 +454,7 @@ impl<B: Bytes> Name<B> {
 
 /// Parses a UTF-8 string [`Name`].
 pub fn parse<B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<Name<B>> {
-    let name = Name::new(bytes, *offset)?;
+    let name = Name::new(bytes, offset)?;
     bytes::increment_offset(offset, name.length() as usize)?;
     Ok(name)
 }
