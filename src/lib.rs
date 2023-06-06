@@ -13,7 +13,6 @@ extern crate alloc;
 
 mod wat;
 
-pub mod buffer;
 pub mod bytes;
 pub mod component;
 pub mod index;

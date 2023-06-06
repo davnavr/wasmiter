@@ -1,7 +1,6 @@
 //! Types and functions for parsing UTF-8 strings from [`Bytes`].
 
 use crate::{
-    buffer::Buffer,
     bytes::{self, Bytes},
     parser::{self, ResultExt as _},
 };
@@ -375,20 +374,6 @@ impl<B: Bytes> Name<B> {
     #[inline]
     pub fn length(&self) -> u64 {
         self.length.into()
-    }
-
-    /// Allocates the UTF-8 string contents into the given [`Buffer`].
-    pub fn to_str_in_buffer<'b, U: Buffer>(
-        &self,
-        buffer: &'b mut U,
-    ) -> parser::Result<&'b mut str> {
-        let length = usize::try_from(self.length).unwrap_or(usize::MAX);
-        let start = buffer.as_mut().len();
-        buffer.grow(length);
-        let destination = &mut buffer.as_mut()[start..][..length];
-        let mut offset = self.offset;
-        parser::bytes_exact(&mut offset, &self.bytes, destination).context("string contents")?;
-        core::str::from_utf8_mut(destination).map_err(|e| crate::parser_bad_format!("{e}"))
     }
 
     /// Returns an iterator over the [`char`]s of the [`Name`], returning a [`NameError`] for
