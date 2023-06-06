@@ -399,6 +399,29 @@ impl<B: Bytes> Name<B> {
             length: self.length,
         }
     }
+
+    /// Copies the contents of the [`Name`] into the specified `buffer`.
+    ///
+    /// If the length of the `buffer` is less than the length, in bytes, of the [`Name`], then only
+    /// a portion of the [`Name`] contents is copied.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the name [`Bytes`] could not be feteched.
+    pub fn copy_to_slice<'b>(&self, buffer: &'b mut [u8]) -> parser::Result<&'b mut [u8]> {
+        let length = core::cmp::min(
+            usize::try_from(self.length).ok().unwrap_or(usize::MAX),
+            buffer.len(),
+        );
+
+        let destination: &'b mut [u8] = &mut buffer[0..length];
+
+        self.bytes
+            .read_exact_at(self.offset, destination)
+            .context("string contents")?;
+
+        Ok(destination)
+    }
 }
 
 impl<B: Bytes + Clone> Name<&B> {
@@ -420,8 +443,7 @@ impl<B: Bytes> Name<B> {
     /// Returns an error if the operation to read the characters from the [`Bytes`] fails.
     pub fn into_bytes(self) -> parser::Result<alloc::vec::Vec<u8>> {
         let mut bytes = alloc::vec![0u8; self.length.try_into().unwrap_or(usize::MAX)];
-        let mut offset = self.offset;
-        parser::bytes_exact(&mut offset, &self.bytes, &mut bytes).context("string contents")?;
+        self.copy_to_slice(&mut bytes)?;
         Ok(bytes)
     }
 
