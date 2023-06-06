@@ -69,16 +69,14 @@ impl<B: Bytes + Clone> Section<&B> {
 
 impl<B: Bytes> Debug for Section<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        // TODO: Debug for KnownSection
-        #[cfg(feature = "alloc")]
-        if let Ok(Ok(known)) = crate::component::KnownSection::try_from_section(self.borrowed()) {
-            return Debug::fmt(&known, f);
+        match crate::component::KnownSection::try_from_section(self.borrowed()) {
+            Ok(known) => Debug::fmt(&known, f),
+            Err(unknown) => f
+                .debug_struct("Section")
+                .field("kind", &unknown.kind)
+                .field("contents", &unknown.contents)
+                .finish(),
         }
-
-        f.debug_struct("Section")
-            .field("kind", &self.kind)
-            .field("contents", &self.contents)
-            .finish()
     }
 }
 
