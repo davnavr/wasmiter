@@ -1,7 +1,7 @@
 use core::fmt::{Display, Formatter, Write as _};
 
 /// Describes an invalid byte sequence or code point that was encountered while decoding a
-/// [`Name`].
+/// [`Name`](crate::parser::name::Name).
 #[derive(Clone, Copy)]
 pub struct InvalidCodePoint {
     pub(super) length: core::num::NonZeroU8,
@@ -49,10 +49,12 @@ impl Display for InvalidCodePoint {
 #[cfg(feature = "std")]
 impl std::error::Error for InvalidCodePoint {}
 
-/// Errors which can occur when attempting to interpret a [`Name`] as a UTF-8 string.
+/// Errors which can occur when attempting to interpret a [`Name`](crate::parser::name::Name) as a
+/// UTF-8 string.
 #[derive(Debug)]
 pub enum NameError {
-    /// An operation to read the UTF-8 string contents from the [`Bytes`] failed.
+    /// An operation to read the UTF-8 string contents from the [`Bytes`](crate::bytes::Bytes)
+    /// failed.
     BadInput(crate::bytes::Error),
     /// The UTF-8 string itself is malformed.
     BadBytes(InvalidCodePoint),

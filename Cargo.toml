@@ -9,13 +9,16 @@ repository = "https://github.com/davnavr/wasmiter"
 [dependencies]
 cfg-if = "1.0.0"
 memmap2 = { version = "0.6.2", optional = true }
+blink-alloc = { version = "0.3.0", optional = true, default-features = false, features = ["alloc"] }
 
 [features]
 default = ["backtrace", "std", "mmap"]
-alloc = []
-std = ["alloc"]
-backtrace = ["std"]
 mmap = ["std", "dep:memmap2"]
+backtrace = ["std"]
+std = ["alloc"]
+alloc = []
+
+blink-alloc = ["dep:blink-alloc", "alloc"]
 
 [dev-dependencies]
 criterion = "0.4.0"
