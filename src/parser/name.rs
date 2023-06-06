@@ -118,45 +118,6 @@ impl<B: Bytes> Name<B> {
         Ok(bytes)
     }
 
-    /// Allocates space within the given [`BlinkAllocator`](blink_alloc::BlinkAllocator) for the
-    /// contents of the [`Name`], checking that they are valid UTF-8.
-    ///
-    /// # Error
-    ///
-    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
-    /// the [`Name`] is not valid UTF-8.
-    #[cfg(feature = "blink-alloc")]
-    pub fn into_str_in_blink<A: blink_alloc::BlinkAllocator>(
-        self,
-        blink: &blink_alloc::Blink<A>,
-    ) -> parser::Result<&mut str> {
-        let layout =
-            core::alloc::Layout::from_size_align(self.length.try_into().unwrap_or(usize::MAX), 1)
-                .unwrap();
-
-        match blink.allocator().allocate(layout) {
-            Ok(mut ptr) => {
-                // Safety: Liftime of slice will either be current stack frame, or 'b
-                let bytes = unsafe { ptr.as_mut() }; // Is it ok if this is inferred to have lifetime 'b?
-
-                let result = self.copy_to_slice(bytes).and_then(|b| {
-                    core::str::from_utf8_mut(b).map_err(|e| crate::parser_bad_format!("{e}"))
-                });
-
-                // If an error happened, slice is deallocated and is NOT returned
-                if result.is_err() {
-                    // Safety: ptr originates from call to allocate, and UAF should not occur here
-                    unsafe {
-                        blink.allocator().deallocate(ptr.cast(), layout);
-                    }
-                }
-
-                result
-            }
-            Err(_) => alloc::alloc::handle_alloc_error(layout),
-        }
-    }
-
     /// Allocates a [`String`] containing the contents of the [`Name`].
     ///
     /// # Error
@@ -166,6 +127,82 @@ impl<B: Bytes> Name<B> {
     pub fn try_into_string(self) -> parser::Result<alloc::string::String> {
         alloc::string::String::from_utf8(self.into_bytes()?)
             .map_err(|e| crate::parser_bad_format!("{e}"))
+    }
+}
+
+#[cfg(feature = "blink-alloc")]
+impl<B: Bytes> Name<B> {
+    /// Allocates space within the given [`BlinkAllocator`](blink_alloc::BlinkAllocator) for the
+    /// contents of the [`Name`], checking that they are valid UTF-8. The string is then passed to
+    /// the given closure in order to cache the given string.
+    ///
+    /// # Error
+    ///
+    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
+    /// the [`Name`] is not valid UTF-8.
+    pub fn into_str_in_blink_cached<'a, A, F>(
+        self,
+        blink: &'a blink_alloc::Blink<A>,
+        f: F,
+    ) -> parser::Result<&'a str>
+    where
+        A: blink_alloc::BlinkAllocator,
+        F: for<'b> FnOnce(&'b str) -> Option<&'a str>,
+    {
+        let layout =
+            core::alloc::Layout::from_size_align(self.length.try_into().unwrap_or(usize::MAX), 1)
+                .unwrap();
+
+        match blink.allocator().allocate(layout) {
+            Ok(mut ptr) => {
+                let result = {
+                    // Safety: Liftime of slice could either be current stack frame, or 'a
+                    let bytes = unsafe { ptr.as_mut() };
+
+                    self.copy_to_slice(bytes)
+                        .and_then(|b| {
+                            core::str::from_utf8(b).map_err(|e| crate::parser_bad_format!("{e}"))
+                        })
+                        .map(|s| match f(s) {
+                            Some(cached) => Ok(cached),
+                            None => Err(core::ptr::NonNull::<str>::from(s)),
+                        })
+                };
+
+                // If an error happened, or it WAS cached, slice is deallocated and is NOT returned
+                if matches!(&result, Err(_) | Ok(Ok(_))) {
+                    // Safety: ptr originates from call to allocate, and UAF should not occur here
+                    unsafe {
+                        blink.allocator().deallocate(ptr.cast(), layout);
+                    }
+                }
+
+                match result {
+                    Ok(Ok(cached)) => Ok(cached),
+                    Ok(Err(ptr)) => {
+                        // Safety: allocation now lives for 'a
+                        Ok(unsafe { ptr.as_ref() })
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            Err(_) => alloc::alloc::handle_alloc_error(layout),
+        }
+    }
+
+    /// Allocates space within the given [`BlinkAllocator`](blink_alloc::BlinkAllocator) for the
+    /// contents of the [`Name`], checking that they are valid UTF-8.
+    ///
+    /// # Error
+    ///
+    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
+    /// the [`Name`] is not valid UTF-8.
+    #[inline]
+    pub fn into_str_in_blink<A: blink_alloc::BlinkAllocator>(
+        self,
+        blink: &blink_alloc::Blink<A>,
+    ) -> parser::Result<&str> {
+        self.into_str_in_blink_cached(blink, |_| None)
     }
 }
 
