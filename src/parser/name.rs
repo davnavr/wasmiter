@@ -130,67 +130,9 @@ impl<B: Bytes> Name<B> {
     }
 }
 
-#[cfg(feature = "blink-alloc")]
+#[cfg(feature = "allocator-api2")]
 impl<B: Bytes> Name<B> {
-    /// Allocates space within the given [`BlinkAllocator`](blink_alloc::BlinkAllocator) for the
-    /// contents of the [`Name`], checking that they are valid UTF-8. The string is then passed to
-    /// the given closure in order to cache the given string.
-    ///
-    /// # Error
-    ///
-    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
-    /// the [`Name`] is not valid UTF-8.
-    pub fn into_str_in_blink_cached<'a, A, F>(
-        self,
-        blink: &'a blink_alloc::Blink<A>,
-        f: F,
-    ) -> parser::Result<&'a str>
-    where
-        A: blink_alloc::BlinkAllocator,
-        F: for<'b> FnOnce(&'b str) -> Option<&'a str>,
-    {
-        let layout =
-            core::alloc::Layout::from_size_align(self.length.try_into().unwrap_or(usize::MAX), 1)
-                .unwrap();
-
-        match blink.allocator().allocate(layout) {
-            Ok(mut ptr) => {
-                let result = {
-                    // Safety: Liftime of slice could either be current stack frame, or 'a
-                    let bytes = unsafe { ptr.as_mut() };
-
-                    self.copy_to_slice(bytes)
-                        .and_then(|b| {
-                            core::str::from_utf8(b).map_err(|e| crate::parser_bad_format!("{e}"))
-                        })
-                        .map(|s| match f(s) {
-                            Some(cached) => Ok(cached),
-                            None => Err(core::ptr::NonNull::<str>::from(s)),
-                        })
-                };
-
-                // If an error happened, or it WAS cached, slice is deallocated and is NOT returned
-                if matches!(&result, Err(_) | Ok(Ok(_))) {
-                    // Safety: ptr originates from call to allocate, and UAF should not occur here
-                    unsafe {
-                        blink.allocator().deallocate(ptr.cast(), layout);
-                    }
-                }
-
-                match result {
-                    Ok(Ok(cached)) => Ok(cached),
-                    Ok(Err(ptr)) => {
-                        // Safety: allocation now lives for 'a
-                        Ok(unsafe { ptr.as_ref() })
-                    }
-                    Err(e) => Err(e),
-                }
-            }
-            Err(_) => alloc::alloc::handle_alloc_error(layout),
-        }
-    }
-
-    /// Allocates space within the given [`BlinkAllocator`](blink_alloc::BlinkAllocator) for the
+    /// Allocates space within the given [`Allocator`](allocator_api2::alloc::Allocator) for the
     /// contents of the [`Name`], checking that they are valid UTF-8.
     ///
     /// # Error
@@ -198,11 +140,28 @@ impl<B: Bytes> Name<B> {
     /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
     /// the [`Name`] is not valid UTF-8.
     #[inline]
-    pub fn into_str_in_blink<A: blink_alloc::BlinkAllocator>(
+    pub fn into_str_in<A: allocator_api2::alloc::Allocator>(
         self,
-        blink: &blink_alloc::Blink<A>,
-    ) -> parser::Result<&str> {
-        self.into_str_in_blink_cached(blink, |_| None)
+        allocator: A,
+    ) -> parser::Result<allocator_api2::boxed::Box<str, A>> {
+        let mut bytes =
+            allocator_api2::vec![in allocator; 0u8; self.length.try_into().unwrap_or(usize::MAX)];
+
+        self.copy_to_slice(&mut bytes)?;
+
+        // Check for valid UTF-8
+        core::str::from_utf8(&bytes).map_err(|e| crate::parser_bad_format!("{e}"))?;
+
+        let (ptr, allocator) = allocator_api2::boxed::Box::<[u8], A>::into_raw_with_allocator(
+            bytes.into_boxed_slice(),
+        );
+
+        // Safety: Box<str> and Box<[u8]> have same layout, check for valid UTF-8 already occured
+        let s = unsafe {
+            allocator_api2::boxed::Box::<str, A>::from_raw_in(ptr as *mut str, allocator)
+        };
+
+        Ok(s)
     }
 }
 
