@@ -14,13 +14,16 @@ cfg_alloc := "--no-default-features --features alloc"
 
 # Test
 
+test_nostd $RUST_BACKTRACE="1":
+    cargo nextest run {{cfg_nostd}}
+
 test_alloc $RUST_BACKTRACE="1":
     cargo nextest run {{cfg_alloc}}
 
 test_full $RUST_BACKTRACE="1":
     cargo nextest run
 
-test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTRACE)
+test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTRACE) (test_nostd RUST_BACKTRACE)
 
 # Clippy
 
