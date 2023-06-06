@@ -60,16 +60,34 @@ pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::Sec
     ))
 }
 
-/*
-/// Opens a file containing a
+/// Opens a memory-mapped file containing a
 /// [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html) at the
 /// given [`Path`](std::path::Path).
 ///
-/// See [`parse_module_sections`] for more information.
+/// See [`parse_module_sections`] and [`Mmap::map`](memmap2::Mmap::map) for more information.
 #[inline]
-pub fn parse_module_sections_from_path<P: AsRef<std::path::Path>>(
+#[cfg(feature = "mmap")]
+pub fn parse_module_sections_from_mmap_file<P: AsRef<std::path::Path>>(
     path: P,
-) -> Result<SectionSequence<parser::FileInput>> {
-    parse_module_binary(parser::FileInput::new(std::fs::File::open(path)?))
+) -> Result<sections::SectionSequence<memmap2::Mmap>> {
+    let actual_path = path.as_ref();
+
+    let file = std::fs::File::open(actual_path).map_err(|e| {
+        crate::parser_bad_input!(
+            e.into(),
+            "could not open file at path {}",
+            actual_path.display()
+        )
+    })?;
+
+    // Safety: See documentation for Bytes impl on Mmap on how unsafe behavior is "ignored" (sorry)
+    let binary = unsafe { memmap2::Mmap::map(&file) };
+
+    parse_module_sections(binary.map_err(|e| {
+        crate::parser_bad_input!(
+            e.into(),
+            "could not create memory map for file at path {}",
+            actual_path.display()
+        )
+    })?)
 }
-*/
