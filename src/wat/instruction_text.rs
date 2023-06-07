@@ -1,6 +1,7 @@
 use crate::{
     bytes::Bytes,
-    instruction_set::{self, Instruction as Instr},
+    instruction_set::{self, Instruction as Instr, InstructionSequence},
+    parser::Offset,
     types::{self, BlockType},
     wat::{self, Writer},
 };
@@ -283,19 +284,46 @@ fn instruction<B: Bytes>(
 }
 
 impl<B: Bytes> wat::Wat for Instr<'_, B> {
-    fn write(mut self, w: &mut Writer) -> wat::Parsed<()> {
-        instruction(&mut self, None, w)
+    fn write(mut self, writer: &mut Writer) -> wat::Parsed<()> {
+        instruction(&mut self, None, writer)
     }
 }
 
-pub(super) fn expression_linear<O: crate::parser::Offset>(
-    expr: &mut instruction_set::InstructionSequence<O, &impl Bytes>,
+impl<O: Offset, B: Bytes> wat::Wat for InstructionSequence<O, B> {
+    fn write(mut self, writer: &mut Writer) -> crate::parser::Result<()> {
+        expression_indented(&mut self, false, writer)
+    }
+}
+
+pub(super) fn expression_linear(
+    expr: &mut instruction_set::InstructionSequence<impl Offset, &impl Bytes>,
     w: &mut Writer,
 ) -> wat::Parsed<()> {
     loop {
         let printer = |instr: &mut Instr<_>| {
             w.write_char(' ');
             instruction(instr, None, w)?;
+            Ok(())
+        };
+
+        match expr.next(printer) {
+            Some(Ok(())) => continue,
+            None => return Ok(()),
+            Some(Err(e)) => return Err(e),
+        }
+    }
+}
+
+pub(super) fn expression_indented(
+    expr: &mut instruction_set::InstructionSequence<impl Offset, impl Bytes>,
+    is_function: bool,
+    w: &mut Writer,
+) -> wat::Parsed<()> {
+    loop {
+        let indent = expr.nesting_level().saturating_sub(u32::from(!is_function));
+        let printer = |instr: &mut Instr<_>| {
+            w.write_char(' ');
+            instruction(instr, Some(indent), w)?;
             Ok(())
         };
 
