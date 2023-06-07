@@ -2,8 +2,8 @@
 source: tests/sections.rs
 expression: "component::ImportsComponent::new(0, bytes.as_slice()).unwrap()"
 ---
-(import "env" "doSomeStuff" (func (; 0 ;) (type 0))
-(import "env" "memory" (memory (; 0 ;) 16)
-(import "rt" "references" (table (; 0 ;) 0 externref)
-(import "rt" "stackptr" (global (; 0 ;) (mut i32))
+(import "env" "doSomeStuff" (func (; 0 ;) (type 0)))
+(import "env" "memory" (memory (; 0 ;) 16))
+(import "rt" "references" (table (; 0 ;) 0 externref))
+(import "rt" "stackptr" (global (; 0 ;) (mut i32)))
 

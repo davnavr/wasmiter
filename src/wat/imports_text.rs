@@ -58,6 +58,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ImportsCom
                             global_count += 1;
                         }
                     }
+                    w.write_char(')');
                 }
                 Err(e) => wat::write_err(&e, &mut w),
             }
