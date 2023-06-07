@@ -6,22 +6,32 @@ use crate::{
 
 impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
+        let mut function_types = None;
+
         for result in self.borrowed() {
             match KnownSection::try_from_section(result?) {
                 Ok(known) => match known? {
                     KnownSection::Type(types) => Wat::write(types, w)?,
                     KnownSection::Import(imports) => Wat::write(imports, w)?,
-                    //Function
+                    KnownSection::Function(functions) => {
+                        write!(w, ";; function section count = {}", functions.len());
+                        function_types = Some(functions);
+                    }
                     KnownSection::Table(tables) => Wat::write(tables, w)?,
                     KnownSection::Memory(mems) => Wat::write(mems, w)?,
                     KnownSection::Global(globals) => Wat::write(globals, w)?,
                     KnownSection::Export(exports) => Wat::write(exports, w)?,
                     KnownSection::Start(start) => wat::write_index(false, start, w),
                     KnownSection::Element(elems) => Wat::write(elems, w)?,
-                    //Code
+                    KnownSection::Code(code) => {
+                        if let Some(types) = function_types.take() {
+                            Wat::write(crate::component::FuncsComponent::new(types, code)?, w)?;
+                        } else {
+                            write!(w, ";; code section count = {}", code.len());
+                        }
+                    }
                     KnownSection::Data(data) => Wat::write(data, w)?,
                     KnownSection::DataCount(count) => write!(w, ";; data count = {count}"),
-                    bad => todo!("display {bad:?}"),
                 },
                 Err(section) => {
                     write!(w, "(; ");
