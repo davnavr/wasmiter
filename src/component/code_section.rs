@@ -291,16 +291,24 @@ impl<B: Bytes> CodeSection<B> {
     }
 }
 
+impl<B: Clone + Bytes> Iterator for CodeSection<B> {
+    type Item = parser::Result<Code<B>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse()
+            .map(|result| result.map(|i| i.cloned()))
+            .transpose()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        ((self.count > 0).into(), self.count.try_into().ok())
+    }
+}
+
+impl<B: Clone + Bytes> core::iter::FusedIterator for CodeSection<B> {}
+
 impl<B: Bytes> Debug for CodeSection<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut code = self.borrowed();
-        let mut list = f.debug_list();
-        while let Some(func) = code.parse().transpose() {
-            list.entry(&func);
-            if func.is_err() {
-                break;
-            }
-        }
-        list.finish()
+        f.debug_list().entries(self.borrowed()).finish()
     }
 }

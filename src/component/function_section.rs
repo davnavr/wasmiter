@@ -63,6 +63,8 @@ impl<B: Bytes> Iterator for FunctionSection<B> {
     }
 }
 
+impl<B: Clone + Bytes> core::iter::FusedIterator for FunctionSection<B> {}
+
 impl<B: Bytes> core::fmt::Debug for FunctionSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.indices, f)

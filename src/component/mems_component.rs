@@ -57,6 +57,8 @@ impl<B: Bytes> core::iter::Iterator for MemsComponent<B> {
     }
 }
 
+impl<B: Clone + Bytes> core::iter::FusedIterator for MemsComponent<B> {}
+
 impl<B: Bytes> core::fmt::Debug for MemsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.limits, f)

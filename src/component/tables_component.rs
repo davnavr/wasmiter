@@ -57,6 +57,8 @@ impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {
     }
 }
 
+impl<B: Clone + Bytes> core::iter::FusedIterator for TablesComponent<B> {}
+
 impl<B: Bytes> core::fmt::Debug for TablesComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.types, f)

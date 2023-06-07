@@ -93,16 +93,34 @@ impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
     }
 }
 
+impl<T: Clone + Bytes, C: Clone + Bytes> Iterator for FuncsComponent<T, C> {
+    type Item = Result<Func<C>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse()
+            .map(|result| result.map(|i| i.cloned()))
+            .transpose()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let types = self.types.size_hint();
+        let code = self.code.size_hint();
+        (
+            core::cmp::min(types.0, code.0),
+            types.1.and_then(|t| code.1.map(|c| core::cmp::min(t, c))),
+        )
+    }
+}
+
+impl<T: Clone + Bytes, C: Clone + Bytes> core::iter::FusedIterator for FuncsComponent<T, C> {}
+
 impl<T: Bytes, C: Bytes> core::fmt::Debug for FuncsComponent<T, C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut funcs = FuncsComponent {
-            types: self.types.borrowed(),
-            code: self.code.borrowed(),
-        };
-        let mut list = f.debug_list();
-        while let Some(func) = funcs.parse().transpose() {
-            list.entry(&func);
-        }
-        list.finish()
+        f.debug_list()
+            .entries(FuncsComponent {
+                types: self.types.borrowed(),
+                code: self.code.borrowed(),
+            })
+            .finish()
     }
 }

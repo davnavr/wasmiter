@@ -148,6 +148,8 @@ impl<O: Offset, B: Bytes, P: Parse> Iterator for Vector<O, B, P> {
     }
 }
 
+impl<O: Offset, B: Bytes, P: Parse> core::iter::FusedIterator for Vector<O, B, P> {}
+
 impl<O, B, P> core::fmt::Debug for Vector<O, B, P>
 where
     O: Offset,
