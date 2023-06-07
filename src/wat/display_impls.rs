@@ -42,3 +42,10 @@ impl<B: Bytes> Display for component::DatasComponent<B> {
 }
 
 //impl Display for Instruction // needs borrowed() method
+
+impl<B: Bytes> Display for crate::sections::SectionSequence<B> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_wat(self.borrowed(), f)
+    }
+}
