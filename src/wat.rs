@@ -15,6 +15,7 @@ mod imports_text;
 mod instruction_text;
 mod mems_text;
 mod module_text;
+mod tables_text;
 mod types_text;
 
 #[must_use]

@@ -41,6 +41,12 @@ impl<B: Bytes> TablesComponent<B> {
     pub fn is_empty(&self) -> bool {
         self.types.is_empty()
     }
+
+    pub(crate) fn borrowed(&self) -> TablesComponent<&B> {
+        TablesComponent {
+            types: self.types.by_reference(),
+        }
+    }
 }
 
 impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {

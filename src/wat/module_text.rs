@@ -12,7 +12,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                     KnownSection::Type(types) => Wat::write(types, w)?,
                     KnownSection::Import(imports) => Wat::write(imports, w)?,
                     //Function
-                    //Table
+                    KnownSection::Table(tables) => Wat::write(tables, w)?,
                     KnownSection::Memory(mems) => Wat::write(mems, w)?,
                     //Global
                     KnownSection::Export(exports) => Wat::write(exports, w)?,
