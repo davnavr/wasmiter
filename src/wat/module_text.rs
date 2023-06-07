@@ -1,4 +1,4 @@
-use crate::{wat, component::KnownSection, sections::SectionKind};
+use crate::{component::KnownSection, sections::SectionKind, wat};
 use core::fmt::Display;
 
 impl<B: crate::bytes::Bytes> Display for crate::sections::SectionSequence<B> {
@@ -19,7 +19,11 @@ impl<B: crate::bytes::Bytes> Display for crate::sections::SectionSequence<B> {
                             SectionKind::Id(id) => write!(w, "{id}"),
                         }
                         writeln!(w, " section @ {:#X}", section.contents().base());
-                        writeln!(w, "{:?}", crate::bytes::DebugBytes::from(section.into_contents()));
+                        writeln!(
+                            w,
+                            "{:?}",
+                            crate::bytes::DebugBytes::from(section.into_contents())
+                        );
                         w.write_str(";)");
                     }
                 },

@@ -9,26 +9,46 @@ use crate::{
 use core::fmt::{Display, Formatter};
 
 mod datas_text;
+mod display_impls;
 mod exports_text;
 mod imports_text;
 mod instruction_text;
-mod types_text;
 mod module_text;
+mod types_text;
 
 #[must_use]
 struct Writer<'a, 'b> {
     fmt: &'a mut Formatter<'b>,
+    paren_count: u32,
     err: core::fmt::Result,
 }
 
 impl<'a, 'b> Writer<'a, 'b> {
     fn new(fmt: &'a mut Formatter<'b>) -> Self {
-        Self { fmt, err: Ok(()) }
+        Self {
+            fmt,
+            err: Ok(()),
+            paren_count: 0,
+        }
     }
 
     #[inline]
     fn with_fmt<F: FnOnce(&mut Formatter<'b>) -> core::fmt::Result>(&mut self, f: F) {
         self.err = self.err.and_then(|()| f(self.fmt));
+    }
+
+    #[inline]
+    fn open_paren(&mut self) {
+        self.paren_count += 1;
+        self.write_char('(');
+    }
+
+    #[inline]
+    fn close_paren(&mut self) {
+        if let Some(updated) = self.paren_count.checked_sub(1) {
+            self.paren_count = updated;
+            self.write_char(')');
+        }
     }
 
     fn write_char(&mut self, c: char) {
@@ -43,7 +63,10 @@ impl<'a, 'b> Writer<'a, 'b> {
         self.with_fmt(|f| f.write_fmt(args))
     }
 
-    fn finish(self) -> core::fmt::Result {
+    fn finish(mut self) -> core::fmt::Result {
+        for _ in 0..self.paren_count {
+            self.write_char(')');
+        }
         self.err
     }
 }
@@ -58,22 +81,22 @@ impl<'b> core::ops::Deref for Writer<'_, 'b> {
 
 const INDENTATION: &str = "  ";
 
+trait Wat {
+    fn write(self, writer: &mut Writer) -> Parsed<()>;
+}
+
 fn write_err(error: &parser::Error, w: &mut Writer) {
     write!(w, "\n(;\n{error};)")
 }
 
-fn write_result<T: Display>(result: Parsed<T>, w: &mut Writer) {
-    match result {
-        Ok(item) => write!(w, "{item}"),
-        Err(e) => write_err(&e, w),
-    }
-}
-
-fn write_types<I: IntoIterator<Item = Parsed<types::ValType>>>(types: I, w: &mut Writer) {
+fn write_types<I: IntoIterator<Item = Parsed<types::ValType>>>(
+    types: I,
+    w: &mut Writer,
+) -> Parsed<()> {
     for result in types.into_iter() {
-        w.write_char(' ');
-        write_result(result, w);
+        write!(w, " {}", result?);
     }
+    Ok(())
 }
 
 macro_rules! index_format {

@@ -1,38 +1,36 @@
 use crate::{component::ExportKind, wat};
 
-impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ExportsComponent<B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut w = wat::Writer::new(f);
+impl<B: crate::bytes::Bytes> wat::Wat for crate::component::ExportsComponent<B> {
+    fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
         for result in self.borrowed() {
-            w.write_str("(export ");
-            match result {
-                Ok(export) => {
-                    write!(w, "{:?} (", export.name());
-                    match export.kind() {
-                        ExportKind::Function(idx) => {
-                            w.write_str("func ");
-                            wat::write_index(false, *idx, &mut w)
-                        }
-                        ExportKind::Table(idx) => {
-                            w.write_str("table ");
-                            wat::write_index(false, *idx, &mut w)
-                        }
-                        ExportKind::Memory(idx) => {
-                            w.write_str("memory ");
-                            wat::write_index(false, *idx, &mut w)
-                        }
-                        ExportKind::Global(idx) => {
-                            w.write_str("global ");
-                            wat::write_index(false, *idx, &mut w)
-                        }
-                    }
-                    w.write_char(')')
+            w.open_paren();
+            w.write_str("export ");
+            let export = result?;
+            write!(w, "{:?} ", export.name());
+            w.open_paren();
+            match export.kind() {
+                ExportKind::Function(idx) => {
+                    w.write_str("func ");
+                    wat::write_index(false, *idx, w)
                 }
-                Err(e) => wat::write_err(&e, &mut w),
+                ExportKind::Table(idx) => {
+                    w.write_str("table ");
+                    wat::write_index(false, *idx, w)
+                }
+                ExportKind::Memory(idx) => {
+                    w.write_str("memory ");
+                    wat::write_index(false, *idx, w)
+                }
+                ExportKind::Global(idx) => {
+                    w.write_str("global ");
+                    wat::write_index(false, *idx, w)
+                }
             }
-            writeln!(w, ")");
+            w.close_paren();
+            w.close_paren();
+            writeln!(w);
         }
 
-        w.finish()
+        Ok(())
     }
 }
