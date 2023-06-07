@@ -7,5 +7,5 @@ fn basic_module() {
         i32.add))
 "#;
     let wasm = wat::parse_str(wat).unwrap();
-    insta::assert_debug_snapshot!(wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
+    insta::assert_display_snapshot!(&wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
 }

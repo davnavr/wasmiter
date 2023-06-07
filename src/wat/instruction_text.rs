@@ -80,8 +80,8 @@ fn instruction<B: Bytes>(
             w.close_paren();
         }
         Instr::LocalGet(idx) | Instr::LocalSet(idx) | Instr::LocalTee(idx) => {
-            wat::write_index(false, *idx, w);
             w.write_char(' ');
+            wat::write_index(false, *idx, w);
         }
         Instr::GlobalGet(idx) | Instr::GlobalSet(idx) => {
             w.write_char(' ');

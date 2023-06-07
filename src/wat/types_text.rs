@@ -23,14 +23,17 @@ impl<B: crate::bytes::Bytes> wat::Wat for crate::component::TypesComponent<B> {
                     w.write_str("result");
                     wat::write_types(results, w)?;
                     w.close_paren();
-                    w.close_paren();
+                    w.close_paren(); // func
+                    w.close_paren(); // type
                     writeln!(w);
                     Ok(w)
                 },
             )?;
 
             match result {
-                Some(wr) => w = wr,
+                Some(wr) => {
+                    w = wr;
+                },
                 None => break,
             }
         }
