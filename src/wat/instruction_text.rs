@@ -285,7 +285,10 @@ impl<B: Bytes> core::fmt::Display for Instr<'_, B> {
     }
 }
 
-pub(super) fn expression_linear(mut expr: instruction_set::InstructionSequence<u64, &impl Bytes>, w: &mut Writer) {
+pub(super) fn expression_linear(
+    mut expr: instruction_set::InstructionSequence<u64, &impl Bytes>,
+    w: &mut Writer,
+) {
     loop {
         let printer = |instr: &mut Instr<_>| {
             w.write_char(' ');

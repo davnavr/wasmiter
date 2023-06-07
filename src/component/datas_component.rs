@@ -139,15 +139,20 @@ impl<B: Bytes> DatasComponent<B> {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    #[inline]
+    pub(crate) fn borrowed(&self) -> DatasComponent<&B> {
+        DatasComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
+    }
 }
 
 impl<B: Bytes> Debug for DatasComponent<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut datas = DatasComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        };
+        let mut datas = self.borrowed();
 
         struct DataSegment<'a, B: Bytes> {
             mode: DataMode<u64, B>,

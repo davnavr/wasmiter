@@ -8,6 +8,7 @@ use crate::{
 };
 use core::fmt::{Display, Formatter};
 
+mod datas_text;
 mod exports_text;
 mod imports_text;
 mod instruction_text;
