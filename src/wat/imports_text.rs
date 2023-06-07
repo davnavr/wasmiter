@@ -11,7 +11,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ImportsCom
             w.write_str("(import ");
             match result {
                 Ok(import) => {
-                    write!(w, "\"{:?}\" \"{:?}\" (", import.module(), import.name());
+                    write!(w, "{:?} {:?} (", import.module(), import.name());
                     match import.kind() {
                         ImportKind::Function(ty) => {
                             w.write_str("func ");
@@ -20,6 +20,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ImportsCom
                                 index::FuncIdx::try_from(function_count).unwrap(),
                                 &mut w,
                             );
+                            w.write_char(' ');
                             wat::write_type_use(*ty, &mut w);
                             function_count += 1;
                         }
@@ -30,6 +31,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ImportsCom
                                 index::TableIdx::try_from(table_count).unwrap(),
                                 &mut w,
                             );
+                            w.write_char(' ');
                             wat::write_table_type(ty, &mut w);
                             table_count += 1;
                         }
@@ -40,6 +42,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ImportsCom
                                 index::MemIdx::try_from(memory_count).unwrap(),
                                 &mut w,
                             );
+                            w.write_char(' ');
                             wat::write_mem_type(ty, &mut w);
                             memory_count += 1;
                         }
@@ -50,6 +53,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ImportsCom
                                 index::GlobalIdx::try_from(global_count).unwrap(),
                                 &mut w,
                             );
+                            w.write_char(' ');
                             wat::write_global_type(*ty, &mut w);
                             global_count += 1;
                         }
