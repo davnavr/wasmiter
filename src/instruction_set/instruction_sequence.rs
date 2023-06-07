@@ -879,10 +879,23 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
         }
     }
 
-    /// Returns a value indicating if there are more instructions remaining to be parsed
+    /// Returns a value indicating if there are more instructions remaining to be parsed.
     #[inline]
     pub fn is_finished(&self) -> bool {
         self.blocks == 0
+    }
+
+    /// Gets the number of [**block**]s that have been entered, or in other words, the remaining
+    /// number of [**end**] instructions to be parsed before the instruction sequence is considered
+    /// finished.
+    ///
+    /// Returns `0` if there are no more instructions to parse.
+    ///
+    /// [**block**]: https://webassembly.github.io/spec/core/syntax/instructions.html#control-instructions
+    /// [**end**]: Instruction::End
+    #[inline]
+    pub fn nesting_level(&self) -> u32 {
+        self.blocks
     }
 
     #[inline]

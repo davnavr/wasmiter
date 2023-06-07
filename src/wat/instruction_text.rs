@@ -34,11 +34,11 @@ fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) {
 
 const INDENTATION: &str = "  ";
 
-fn write_instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut Writer) {
+fn instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut Writer) {
     match indentation {
         Some(level) if w.alternate() => {
-            // Instruction sequence instructions start w/ nesting == 1
-            for _ in 1..level {
+            // InstructionSequence has nesting >= 1, so function bodies will always have indentation
+            for _ in 0..level {
                 w.write_str(INDENTATION);
             }
         }
@@ -280,7 +280,22 @@ fn write_instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w
 impl<B: Bytes> core::fmt::Display for Instr<'_, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut w = Writer::new(f);
-        write_instruction(self, None, &mut w);
+        instruction(self, None, &mut w);
         w.finish()
+    }
+}
+
+pub(super) fn expression_linear(mut expr: instruction_set::InstructionSequence<u64, &impl Bytes>, w: &mut Writer) {
+    loop {
+        let printer = |instr: &mut Instr<_>| {
+            w.write_char(' ');
+            instruction(instr, None, w);
+            crate::parser::Result::Ok(())
+        };
+
+        match expr.next(printer) {
+            Some(Ok(())) => (),
+            Some(Err(_)) | None => break,
+        }
     }
 }
