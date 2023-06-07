@@ -2,16 +2,13 @@
 //! [WebAssembly text format](https://webassembly.github.io/spec/core/text/index.html).
 
 use crate::{
-    bytes::Bytes,
-    component, index,
+    index,
     parser::{self, Result as Parsed},
-    types::ValType,
 };
 use core::fmt::{Display, Formatter};
 
 mod instruction_text;
-
-type Result<T = ()> = core::result::Result<T, core::fmt::Error>;
+mod types_text;
 
 #[must_use]
 struct Writer<'a, 'b> {
@@ -65,7 +62,7 @@ fn write_result<T: Display>(result: Parsed<T>, w: &mut Writer) {
     }
 }
 
-fn write_types<I: IntoIterator<Item = Parsed<ValType>>>(types: I, w: &mut Writer) {
+fn write_types<I: IntoIterator<Item = Parsed<crate::types::ValType>>>(types: I, w: &mut Writer) {
     for result in types.into_iter() {
         w.write_char(' ');
         write_result(result, w);
@@ -105,41 +102,5 @@ fn write_index<I: IndexFormat>(declaration: bool, index: I, w: &mut Writer) {
         write!(w, "(; {idx} ;)")
     } else {
         write!(w, "{idx}")
-    }
-}
-
-impl<B: Bytes> Display for component::TypesComponent<B> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        let mut types = self.borrowed();
-        let mut w = Writer::new(f);
-
-        for i in (0u32..).flat_map(index::TypeIdx::try_from) {
-            let result = types.parse(
-                |params| Ok(params.dereferenced()),
-                |params, results| {
-                    w.write_str("(type ");
-                    write_index(true, i, &mut w);
-                    w.write_str(" (func (param");
-                    write_types(params, &mut w);
-                    w.write_str(") (result");
-                    write_types(results, &mut w);
-                    w.write_str("))");
-                    Ok(())
-                },
-            );
-
-            if let Err(e) = &result {
-                write_err(e, &mut w);
-            }
-
-            if let Ok(Some(())) = result {
-                writeln!(w, ")");
-                continue;
-            }
-
-            break;
-        }
-
-        w.finish()
     }
 }
