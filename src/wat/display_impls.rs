@@ -34,4 +34,11 @@ impl<B: Bytes> Display for component::ExportsComponent<B> {
     }
 }
 
+impl<B: Bytes> Display for component::DatasComponent<B> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_wat(self.borrowed(), f)
+    }
+}
+
 //impl Display for Instruction // needs borrowed() method
