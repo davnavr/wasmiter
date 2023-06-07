@@ -148,20 +148,14 @@ impl<B: Clone + Bytes> Iterator for ExportsComponent<B> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            (self.count > 0).into(),
-            self.count.try_into().ok()
-        )
+        ((self.count > 0).into(), self.count.try_into().ok())
     }
 }
 
+impl<B: Clone + Bytes> core::iter::FusedIterator for ExportsComponent<B> {}
+
 impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        let mut imports = self.borrowed();
-        while let Some(i) = imports.parse().transpose() {
-            list.entry(&i);
-        }
-        list.finish()
+        f.debug_list().entries(self.borrowed()).finish()
     }
 }

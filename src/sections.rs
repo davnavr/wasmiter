@@ -158,6 +158,8 @@ impl<B: Clone + Bytes> Iterator for SectionSequence<B> {
     }
 }
 
+impl<B: Clone + Bytes> core::iter::FusedIterator for SectionSequence<B> {}
+
 impl<B: Bytes> Debug for SectionSequence<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
