@@ -353,16 +353,19 @@ impl<B: Bytes> ElemsComponent<B> {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    pub(crate) fn borrowed(&self) -> ElemsComponent<&B> {
+        ElemsComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
+    }
 }
 
 impl<B: Bytes> Debug for ElemsComponent<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let bytes = &self.bytes;
-        let mut elems = ElemsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes,
-        };
+        let mut elems = self.borrowed();
 
         let mut list = f.debug_list();
 
