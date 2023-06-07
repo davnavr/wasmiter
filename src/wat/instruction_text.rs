@@ -1,22 +1,15 @@
 use crate::{
     bytes::Bytes,
-    index,
     instruction_set::{self, Instruction as Instr},
     types::{self, BlockType},
     wat::{self, Writer},
 };
 
-fn write_type_use(index: index::TypeIdx, w: &mut Writer) {
-    w.write_str("(type ");
-    wat::write_index(false, index, w);
-    w.write_char(')');
-}
-
 fn write_block_type(block_type: BlockType, w: &mut Writer) {
     match block_type {
         BlockType::Empty => (),
         BlockType::Inline(ty) => write!(w, "(result {ty})"),
-        BlockType::Index(idx) => write_type_use(idx, w),
+        BlockType::Index(idx) => wat::write_type_use(idx, w),
     }
 }
 
@@ -75,7 +68,7 @@ fn write_instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w
         Instr::CallIndirect(signature, table) | Instr::ReturnCallIndirect(signature, table) => {
             w.write_char(' ');
             wat::write_index(false, *table, w);
-            write_type_use(*signature, w);
+            wat::write_type_use(*signature, w);
         }
         Instr::Select(types) => {
             w.write_str(" (result");

@@ -1,5 +1,4 @@
-use crate::component::ExportKind;
-use crate::wat;
+use crate::{component::ExportKind, wat};
 
 impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ExportsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -8,7 +7,7 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::ExportsCom
             w.write_str("(export ");
             match result {
                 Ok(export) => {
-                    write!(w, "\"{}\" (", export.name());
+                    write!(w, "\"{:?}\" (", export.name());
                     match export.kind() {
                         ExportKind::Function(idx) => {
                             w.write_str("func ");

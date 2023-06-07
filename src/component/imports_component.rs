@@ -152,7 +152,7 @@ impl<B: Bytes> ImportsComponent<B> {
         result.map(Some)
     }
 
-    fn borrowed(&self) -> ImportsComponent<&B> {
+    pub(crate) fn borrowed(&self) -> ImportsComponent<&B> {
         ImportsComponent {
             count: self.count,
             offset: self.offset,
