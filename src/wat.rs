@@ -12,6 +12,7 @@ mod datas_text;
 mod display_impls;
 mod elems_text;
 mod exports_text;
+mod funcs_text;
 mod globals_text;
 mod imports_text;
 mod instruction_text;

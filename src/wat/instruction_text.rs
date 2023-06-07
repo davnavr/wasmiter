@@ -319,10 +319,17 @@ pub(super) fn expression_indented(
     is_function: bool,
     w: &mut Writer,
 ) -> wat::Parsed<()> {
+    let mut first = true;
+
     loop {
         let indent = expr.nesting_level().saturating_sub(u32::from(!is_function));
         let printer = |instr: &mut Instr<_>| {
-            w.write_char(' ');
+            if !first {
+                writeln!(w);
+            }
+
+            first = false;
+
             instruction(instr, Some(indent), w)?;
             Ok(())
         };

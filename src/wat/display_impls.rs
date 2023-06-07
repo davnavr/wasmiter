@@ -13,6 +13,13 @@ fn write_wat(thing: impl Wat, f: &mut Formatter) -> Result {
     writer.finish()
 }
 
+impl<T: Bytes, C: Bytes> Display for component::FuncsComponent<T, C> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_wat(self.borrowed(), f)
+    }
+}
+
 impl<B: Bytes> Display for component::TypesComponent<B> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

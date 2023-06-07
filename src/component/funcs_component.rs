@@ -91,6 +91,13 @@ impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
             }
         }
     }
+
+    pub(crate) fn borrowed(&self) -> FuncsComponent<&T, &C> {
+        FuncsComponent {
+            types: self.types.borrowed(),
+            code: self.code.borrowed(),
+        }
+    }
 }
 
 impl<T: Clone + Bytes, C: Clone + Bytes> Iterator for FuncsComponent<T, C> {
@@ -116,11 +123,6 @@ impl<T: Clone + Bytes, C: Clone + Bytes> core::iter::FusedIterator for FuncsComp
 
 impl<T: Bytes, C: Bytes> core::fmt::Debug for FuncsComponent<T, C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list()
-            .entries(FuncsComponent {
-                types: self.types.borrowed(),
-                code: self.code.borrowed(),
-            })
-            .finish()
+        f.debug_list().entries(self.borrowed()).finish()
     }
 }
