@@ -13,7 +13,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                     KnownSection::Import(imports) => Wat::write(imports, w)?,
                     //Function
                     //Table
-                    //Memory
+                    KnownSection::Memory(mems) => Wat::write(mems, w)?,
                     //Global
                     KnownSection::Export(exports) => Wat::write(exports, w)?,
                     KnownSection::Start(start) => wat::write_index(false, start, w),

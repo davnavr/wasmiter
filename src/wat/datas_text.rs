@@ -61,6 +61,7 @@ impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
                     }
 
                     w.close_paren();
+                    writeln!(w);
                     Ok(w)
                 },
             )?;

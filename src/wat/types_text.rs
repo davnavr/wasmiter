@@ -24,6 +24,7 @@ impl<B: crate::bytes::Bytes> wat::Wat for crate::component::TypesComponent<B> {
                     wat::write_types(results, w)?;
                     w.close_paren();
                     w.close_paren();
+                    writeln!(w);
                     Ok(w)
                 },
             )?;

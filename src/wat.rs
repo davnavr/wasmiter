@@ -13,6 +13,7 @@ mod display_impls;
 mod exports_text;
 mod imports_text;
 mod instruction_text;
+mod mems_text;
 mod module_text;
 mod types_text;
 

@@ -41,6 +41,12 @@ impl<B: Bytes> MemsComponent<B> {
     pub fn is_empty(&self) -> bool {
         self.limits.is_empty()
     }
+
+    pub(crate) fn borrowed(&self) -> MemsComponent<&B> {
+        MemsComponent {
+            limits: self.limits.by_reference(),
+        }
+    }
 }
 
 impl<B: Bytes> core::iter::Iterator for MemsComponent<B> {
