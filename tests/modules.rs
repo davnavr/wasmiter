@@ -9,3 +9,9 @@ fn basic_module() {
     let wasm = wat::parse_str(wat).unwrap();
     insta::assert_display_snapshot!(&wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
 }
+
+#[test]
+fn all_the_things() {
+    let wasm = wat::parse_str(include_str!("modules/all_the_things.wat")).unwrap();
+    insta::assert_display_snapshot!(&wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
+}

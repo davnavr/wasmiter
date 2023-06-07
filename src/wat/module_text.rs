@@ -21,7 +21,11 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                     KnownSection::Memory(mems) => Wat::write(mems, w)?,
                     KnownSection::Global(globals) => Wat::write(globals, w)?,
                     KnownSection::Export(exports) => Wat::write(exports, w)?,
-                    KnownSection::Start(start) => wat::write_index(false, start, w),
+                    KnownSection::Start(start) => {
+                        w.write_str("(start ");
+                        wat::write_index(false, start, w);
+                        w.write_char(')');
+                    }
                     KnownSection::Element(elems) => Wat::write(elems, w)?,
                     KnownSection::Code(code) => {
                         if let Some(types) = function_types.take() {

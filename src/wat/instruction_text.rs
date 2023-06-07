@@ -36,8 +36,13 @@ fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) {
 fn instruction<B: Bytes>(
     instr: &mut Instr<'_, B>,
     indentation: Option<u32>,
+    last: bool,
     w: &mut Writer,
 ) -> wat::Parsed<()> {
+    if matches!(instr, Instr::End if last) {
+        return Ok(());
+    }
+
     if let Some(level) = indentation {
         // InstructionSequence has nesting >= 1, so function bodies will always have indentation
         for _ in 0..level {
@@ -282,7 +287,7 @@ fn instruction<B: Bytes>(
 
 impl<B: Bytes> wat::Wat for Instr<'_, B> {
     fn write(mut self, writer: &mut Writer) -> wat::Parsed<()> {
-        instruction(&mut self, None, writer)
+        instruction(&mut self, None, false, writer)
     }
 }
 
@@ -297,9 +302,10 @@ pub(super) fn expression_linear(
     w: &mut Writer,
 ) -> wat::Parsed<()> {
     loop {
+        let last = expr.nesting_level() <= 1;
         let printer = |instr: &mut Instr<_>| {
             w.write_char(' ');
-            instruction(instr, None, w)?;
+            instruction(instr, None, last, w)?;
             Ok(())
         };
 
@@ -320,6 +326,7 @@ pub(super) fn expression_indented(
 
     loop {
         let indent = expr.nesting_level().saturating_sub(u32::from(!is_function));
+        let last = expr.nesting_level() <= 1;
         let printer = |instr: &mut Instr<_>| {
             if !first {
                 writeln!(w);
@@ -327,7 +334,7 @@ pub(super) fn expression_indented(
 
             first = false;
 
-            instruction(instr, Some(indent), w)?;
+            instruction(instr, Some(indent), last, w)?;
             Ok(())
         };
 
