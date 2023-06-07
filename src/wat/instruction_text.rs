@@ -14,8 +14,8 @@ fn write_block_type(block_type: BlockType, w: &mut Writer) {
     }
 }
 
-fn write_non_zero_index<I: wat::IndexFormat>(idx: I, w: &mut Writer) {
-    if Into::<u32>::into(idx) != 0 {
+fn write_non_zero_index<I: Copy + Into<u32>>(idx: I, w: &mut Writer) {
+    if idx.into() != 0 {
         w.write_char(' ');
         wat::write_index(false, idx, w);
     }
@@ -38,14 +38,11 @@ fn instruction<B: Bytes>(
     indentation: Option<u32>,
     w: &mut Writer,
 ) -> wat::Parsed<()> {
-    match indentation {
-        Some(level) if w.alternate() => {
-            // InstructionSequence has nesting >= 1, so function bodies will always have indentation
-            for _ in 0..level {
-                w.write_str(wat::INDENTATION);
-            }
+    if let Some(level) = indentation {
+        // InstructionSequence has nesting >= 1, so function bodies will always have indentation
+        for _ in 0..level {
+            w.write_str(wat::INDENTATION);
         }
-        _ => (),
     }
 
     w.write_str(instr.name());

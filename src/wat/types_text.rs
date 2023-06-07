@@ -33,7 +33,7 @@ impl<B: crate::bytes::Bytes> wat::Wat for crate::component::TypesComponent<B> {
             match result {
                 Some(wr) => {
                     w = wr;
-                },
+                }
                 None => break,
             }
         }

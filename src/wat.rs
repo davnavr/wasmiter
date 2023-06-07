@@ -2,7 +2,6 @@
 //! [WebAssembly text format](https://webassembly.github.io/spec/core/text/index.html).
 
 use crate::{
-    index,
     parser::{self, Result as Parsed},
     types,
 };
@@ -104,36 +103,9 @@ fn write_types<I: IntoIterator<Item = Parsed<types::ValType>>>(
     Ok(())
 }
 
-macro_rules! index_format {
-    ($($implementor:ty = $prefix:literal,)*) => {
-        trait IndexFormat: index::Index {
-            const PREFIX: char;
-        }
-
-        $(
-            impl IndexFormat for $implementor {
-                const PREFIX: char = $prefix;
-            }
-        )*
-    };
-}
-
-index_format! {
-    index::TypeIdx = 't',
-    index::FuncIdx = 'f',
-    index::TableIdx = 'T',
-    index::MemIdx = 'M',
-    index::GlobalIdx = 'G',
-    index::ElemIdx = 'E',
-    index::DataIdx = 'D',
-    index::LocalIdx = 'l',
-}
-
-fn write_index<I: IndexFormat>(declaration: bool, index: I, w: &mut Writer) {
+fn write_index<I: Into<u32>>(declaration: bool, index: I, w: &mut Writer) {
     let idx: u32 = index.into();
-    if w.alternate() {
-        write!(w, "${}{idx}", I::PREFIX)
-    } else if declaration {
+    if declaration {
         write!(w, "(; {idx} ;)")
     } else {
         write!(w, "{idx}")

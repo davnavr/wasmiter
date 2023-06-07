@@ -1,5 +1,4 @@
-use crate::bytes::Bytes;
-use crate::{component::ElementInit, component::ElementMode, wat};
+use crate::{bytes::Bytes, component::ElementInit, component::ElementMode, wat};
 
 impl<B: Bytes> wat::Wat for crate::component::ElemsComponent<B> {
     fn write(mut self, mut w: &mut wat::Writer) -> wat::Parsed<()> {

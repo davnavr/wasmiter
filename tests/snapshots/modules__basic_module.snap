@@ -1,0 +1,16 @@
+---
+source: tests/modules.rs
+expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
+---
+(type (; 0 ;) (func (param i32) (result i32)))
+
+;; function section count = 1
+(export "add_five" (func 0))
+
+(func (type 0) ;; code size = 7
+  local.get 0
+  i32.const 0x00000005
+  i32.add
+  end)
+
+
