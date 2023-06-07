@@ -1,0 +1,6 @@
+---
+source: tests/sections.rs
+expression: "component::ExportsComponent::new(0, bytes.as_slice()).unwrap()"
+---
+(export "myExportName" (func 0))
+
