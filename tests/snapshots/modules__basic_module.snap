@@ -9,7 +9,7 @@ expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
 
 (func (type 0) ;; code size = 7
   local.get 0
-  i32.const 0x00000005
+  i32.const 0x00000005 (; 5 signed, 5 unsigned ;)
   i32.add
   end)
 

@@ -75,14 +75,6 @@ impl<'a, 'b> Writer<'a, 'b> {
     }
 }
 
-impl<'b> core::ops::Deref for Writer<'_, 'b> {
-    type Target = Formatter<'b>;
-
-    fn deref(&self) -> &Self::Target {
-        self.fmt
-    }
-}
-
 const INDENTATION: &str = "  ";
 
 trait Wat {

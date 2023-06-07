@@ -192,10 +192,10 @@ fn instruction<B: Bytes>(
         Instr::MemorySize(idx) | Instr::MemoryGrow(idx) | Instr::MemoryFill(idx) => {
             write_non_zero_index(*idx, w)
         }
-        Instr::I32Const(i) => write!(w, " {i:#010X}"),
-        Instr::I64Const(i) => write!(w, " {i:#018X}"),
-        Instr::F32Const(f) => write!(w, " {:#010X}", f.to_bits()),
-        Instr::F64Const(f) => write!(w, " {:#018X}", f.to_bits()),
+        Instr::I32Const(i) => write!(w, " {i:#010X} (; {i} signed, {} unsigned ;)", *i as u32),
+        Instr::I64Const(i) => write!(w, " {i:#018X} (; {i} signed, {} unsigned ;)", *i as u64),
+        Instr::F32Const(f) => write!(w, " {:#010X} (; {f} ;)", f.to_bits()),
+        Instr::F64Const(f) => write!(w, " {:#018X} (; {f} ;)", f.to_bits()),
         Instr::RefNull(rt) => w.write_str(match rt {
             types::RefType::Extern => " extern",
             types::RefType::Func => " func",
