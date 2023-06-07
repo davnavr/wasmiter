@@ -275,8 +275,6 @@ fn write_instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w
         }
         _ => (),
     }
-
-    writeln!(w);
 }
 
 impl<B: Bytes> core::fmt::Display for Instr<'_, B> {
