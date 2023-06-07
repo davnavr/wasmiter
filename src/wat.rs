@@ -6,7 +6,7 @@ use crate::{
     parser::{self, Result as Parsed},
     types,
 };
-use core::fmt::{Display, Formatter};
+use core::fmt::Formatter;
 
 mod datas_text;
 mod display_impls;

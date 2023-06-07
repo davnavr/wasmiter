@@ -32,7 +32,11 @@ fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) {
     }
 }
 
-fn instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut Writer) {
+fn instruction<B: Bytes>(
+    instr: &mut Instr<'_, B>,
+    indentation: Option<u32>,
+    w: &mut Writer,
+) -> wat::Parsed<()> {
     match indentation {
         Some(level) if w.alternate() => {
             // InstructionSequence has nesting >= 1, so function bodies will always have indentation
@@ -54,9 +58,8 @@ fn instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut
             write!(w, " {}", target.to_u32())
         }
         Instr::BrTable(entries) => {
-            for target in entries.by_reference() {
-                w.write_char(' ');
-                wat::write_result(target.map(u32::from), w);
+            for target in entries {
+                write!(w, " {}", u32::from(target?));
             }
         }
         Instr::Call(idx) | Instr::RefFunc(idx) | Instr::ReturnCall(idx) => {
@@ -69,9 +72,11 @@ fn instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut
             wat::write_type_use(*signature, w);
         }
         Instr::Select(types) => {
-            w.write_str(" (result");
-            wat::write_types(types.by_reference(), w);
-            w.write_char(')');
+            w.write_char(' ');
+            w.open_paren();
+            w.write_str("result");
+            wat::write_types(types.by_reference(), w)?;
+            w.close_paren();
         }
         Instr::LocalGet(idx) | Instr::LocalSet(idx) | Instr::LocalTee(idx) => {
             wat::write_index(false, *idx, w);
@@ -273,30 +278,31 @@ fn instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut
         }
         _ => (),
     }
+
+    Ok(())
 }
 
-impl<B: Bytes> core::fmt::Display for Instr<'_, B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut w = Writer::new(f);
-        instruction(self, None, &mut w);
-        w.finish()
+impl<B: Bytes> wat::Wat for Instr<'_, B> {
+    fn write(mut self, w: &mut Writer) -> wat::Parsed<()> {
+        instruction(&mut self, None, w)
     }
 }
 
 pub(super) fn expression_linear(
     mut expr: instruction_set::InstructionSequence<u64, &impl Bytes>,
     w: &mut Writer,
-) {
+) -> wat::Parsed<()> {
     loop {
         let printer = |instr: &mut Instr<_>| {
             w.write_char(' ');
-            instruction(instr, None, w);
-            crate::parser::Result::Ok(())
+            instruction(instr, None, w)?;
+            Ok(())
         };
 
         match expr.next(printer) {
-            Some(Ok(())) => (),
-            Some(Err(_)) | None => break,
+            Some(Ok(())) => continue,
+            None => return Ok(()),
+            Some(Err(e)) => return Err(e),
         }
     }
 }

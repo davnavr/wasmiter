@@ -13,6 +13,13 @@ fn write_wat(thing: impl Wat, f: &mut Formatter) -> Result {
     writer.finish()
 }
 
+impl<B: Bytes> Display for component::TypesComponent<B> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_wat(self.borrowed(), f)
+    }
+}
+
 impl<B: Bytes> Display for component::ImportsComponent<B> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -26,3 +33,5 @@ impl<B: Bytes> Display for component::ExportsComponent<B> {
         write_wat(self.borrowed(), f)
     }
 }
+
+//impl Display for Instruction // needs borrowed() method
