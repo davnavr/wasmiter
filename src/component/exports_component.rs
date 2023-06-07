@@ -117,7 +117,7 @@ impl<B: Bytes> ExportsComponent<B> {
         result.map(Some)
     }
 
-    fn borrowed(&self) -> ExportsComponent<&B> {
+    pub(crate) fn borrowed(&self) -> ExportsComponent<&B> {
         ExportsComponent {
             count: self.count,
             offset: self.offset,
