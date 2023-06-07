@@ -161,6 +161,23 @@ impl<B: Bytes> ImportsComponent<B> {
     }
 }
 
+impl<B: Clone + Bytes> Iterator for ImportsComponent<B> {
+    type Item = Result<Import<B>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse()
+            .map(|result| result.map(|i| i.cloned()))
+            .transpose()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            (self.count > 0).into(),
+            self.count.try_into().ok()
+        )
+    }
+}
+
 impl<B: Bytes> Debug for ImportsComponent<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();

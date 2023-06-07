@@ -138,6 +138,23 @@ impl<B: Bytes> ExportsComponent<B> {
     }
 }
 
+impl<B: Clone + Bytes> Iterator for ExportsComponent<B> {
+    type Item = Result<Export<B>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse()
+            .map(|result| result.map(|i| i.cloned()))
+            .transpose()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            (self.count > 0).into(),
+            self.count.try_into().ok()
+        )
+    }
+}
+
 impl<B: Bytes> core::fmt::Debug for ExportsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
