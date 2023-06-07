@@ -55,6 +55,8 @@ impl<'b> core::ops::Deref for Writer<'_, 'b> {
     }
 }
 
+const INDENTATION: &str = "  ";
+
 fn write_err(error: &parser::Error, w: &mut Writer) {
     write!(w, "\n(;\n{error};)")
 }

@@ -1,6 +1,7 @@
+use crate::bytes::Bytes;
 use crate::{component::DataMode, wat};
 
-impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::DatasComponent<B> {
+impl<B: Bytes> core::fmt::Display for crate::component::DatasComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut w = wat::Writer::new(f);
         let mut datas_component = self.borrowed();
@@ -27,7 +28,46 @@ impl<B: crate::bytes::Bytes> core::fmt::Display for crate::component::DatasCompo
                 },
                 |writer, data| {
                     let mut w = writer.borrow_mut();
-                    write!(w, "\"TODO: TODO: Print bytes {data:?}\"");
+                    let mut length = usize::try_from(data.length()).unwrap_or(usize::MAX);
+
+                    if length > 0 {
+                        if length > 16 {
+                            writeln!(w);
+                            w.write_str(wat::INDENTATION);
+                        } else {
+                            w.write_char(' ');
+                        }
+
+                        let mut buffer = [0u8; 16];
+                        let mut offset = data.base();
+
+                        while length > 0 {
+                            let buffer_size = core::cmp::min(buffer.len(), length);
+
+                            if let Err(e) = data.read_exact(&mut offset, &mut buffer[..buffer_size])
+                            {
+                                wat::write_err(&e.into(), &mut w);
+                                break;
+                            } else {
+                                length -= buffer_size;
+                            }
+
+                            w.write_char('"');
+                            for b in &buffer[..buffer_size] {
+                                write!(w, "{}", core::ascii::escape_default(*b));
+
+                                // Write indentation for next line if there are more bytes to write
+                                if length > 0 {
+                                    writeln!(w);
+                                    w.write_str(wat::INDENTATION);
+                                }
+                            }
+                            w.write_char('"');
+                        }
+                    } else {
+                        w.write_str("\"\"");
+                    }
+
                     crate::parser::Result::Ok(())
                 },
             );

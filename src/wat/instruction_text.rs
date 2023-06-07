@@ -32,14 +32,12 @@ fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) {
     }
 }
 
-const INDENTATION: &str = "  ";
-
 fn instruction<B: Bytes>(instr: &Instr<'_, B>, indentation: Option<u32>, w: &mut Writer) {
     match indentation {
         Some(level) if w.alternate() => {
             // InstructionSequence has nesting >= 1, so function bodies will always have indentation
             for _ in 0..level {
-                w.write_str(INDENTATION);
+                w.write_str(wat::INDENTATION);
             }
         }
         _ => (),
