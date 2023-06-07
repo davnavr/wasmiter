@@ -70,15 +70,19 @@ impl<B: Bytes> GlobalsComponent<B> {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    pub(crate) fn borrowed(&self) -> GlobalsComponent<&B> {
+        GlobalsComponent {
+            count: self.count,
+            offset: self.offset,
+            bytes: &self.bytes,
+        }
+    }
 }
 
 impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut globals = GlobalsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        };
+        let mut globals = self.borrowed();
 
         struct Global<'a, B: Bytes> {
             r#type: GlobalType,

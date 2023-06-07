@@ -41,6 +41,13 @@ impl<B: Bytes> Display for component::MemsComponent<B> {
     }
 }
 
+impl<B: Bytes> Display for component::GlobalsComponent<B> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_wat(self.borrowed(), f)
+    }
+}
+
 impl<B: Bytes> Display for component::ExportsComponent<B> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

@@ -20,7 +20,7 @@ impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
                         w.write_char(' ');
                         w.open_paren();
                         w.write_str("offset ");
-                        wat::instruction_text::expression_linear(offset.borrowed(), w)?;
+                        wat::instruction_text::expression_linear(offset, w)?;
                         w.close_paren();
                         Ok(w)
                     }

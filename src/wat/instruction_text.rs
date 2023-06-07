@@ -288,8 +288,8 @@ impl<B: Bytes> wat::Wat for Instr<'_, B> {
     }
 }
 
-pub(super) fn expression_linear(
-    mut expr: instruction_set::InstructionSequence<u64, &impl Bytes>,
+pub(super) fn expression_linear<O: crate::parser::Offset>(
+    expr: &mut instruction_set::InstructionSequence<O, &impl Bytes>,
     w: &mut Writer,
 ) -> wat::Parsed<()> {
     loop {

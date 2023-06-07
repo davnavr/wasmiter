@@ -11,6 +11,7 @@ use core::fmt::Formatter;
 mod datas_text;
 mod display_impls;
 mod exports_text;
+mod globals_text;
 mod imports_text;
 mod instruction_text;
 mod mems_text;
