@@ -138,7 +138,7 @@ impl<B: Bytes> SectionSequence<B> {
         Ok(Some(Section { kind: id, contents }))
     }
 
-    fn borrowed(&self) -> SectionSequence<&B> {
+    pub(crate) fn borrowed(&self) -> SectionSequence<&B> {
         SectionSequence {
             offset: self.offset,
             bytes: &self.bytes,

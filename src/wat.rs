@@ -13,6 +13,7 @@ mod exports_text;
 mod imports_text;
 mod instruction_text;
 mod types_text;
+mod module_text;
 
 #[must_use]
 struct Writer<'a, 'b> {
