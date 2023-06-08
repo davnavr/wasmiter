@@ -7,7 +7,7 @@ use crate::{
 /// [**tag**](https://webassembly.github.io/exception-handling/core/syntax/modules.html#tags) in
 /// the
 /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum Tag {
     /// Describes an exception that can be thrown or caught, introduced as part of the
@@ -15,15 +15,21 @@ pub enum Tag {
     Exception(crate::index::TypeIdx),
 }
 
+/// Parses a [`Tag`].
+pub fn parse<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<Tag> {
+    let attribute = parser::one_byte_exact(offset, bytes)?;
+    if attribute != 0 {
+        crate::parser_bad_format!("{attribute:#04X} is not a valid tag attribute");
+    }
+    crate::component::index(offset, bytes).map(Tag::Exception)
+}
+
 impl parser::Parse for parser::SimpleParse<Tag> {
     type Output = Tag;
 
+    #[inline]
     fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> Result<Self::Output> {
-        let attribute = parser::one_byte_exact(offset, &bytes)?;
-        if attribute != 0 {
-            crate::parser_bad_format!("{attribute:#04X} is not a valid tag attribute");
-        }
-        crate::component::index(offset, bytes).map(Tag::Exception)
+        parse(offset, &bytes)
     }
 }
 

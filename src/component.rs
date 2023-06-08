@@ -34,7 +34,7 @@ pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use known_section::KnownSection;
 pub use mems_component::MemsComponent;
 pub use tables_component::TablesComponent;
-pub use tags_component::{Tag, TagsComponent};
+pub use tags_component::{parse as tag, Tag, TagsComponent};
 pub use types_component::{ResultType, TypesComponent};
 
 /// Parses a

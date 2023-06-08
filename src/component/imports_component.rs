@@ -8,6 +8,7 @@ use core::fmt::{Debug, Formatter};
 
 /// Describes what kind of entity is specified by an [`Import`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
 pub enum ImportKind {
     /// An imported function with the specified signature.
     Function(crate::index::TypeIdx),
@@ -17,6 +18,19 @@ pub enum ImportKind {
     Memory(types::MemType),
     /// An imported global with the specified type.
     Global(types::GlobalType),
+    /// An imported tag, introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
+    Tag(component::Tag),
+}
+
+impl ImportKind {
+    /// Returns `true` if and only if the import is a function, table, memory, or global.
+    pub fn is_mvp_supported(&self) -> bool {
+        matches!(
+            self,
+            Self::Function(_) | Self::Table(_) | Self::Memory(_) | Self::Global(_)
+        )
+    }
 }
 
 /// Represents a
@@ -68,6 +82,7 @@ impl<'a, B: Bytes> Import<&'a B> {
             3 => ImportKind::Global(
                 component::global_type(offset, bytes).context("global import type")?,
             ),
+            4 => ImportKind::Tag(component::tag(offset, bytes).context("tag import")?),
             bad => {
                 return Err(crate::parser_bad_format_at_offset!(
                     "input" @ kind_offset,
