@@ -16,6 +16,7 @@ mod mems_component;
 mod tables_component;
 mod type_parser;
 mod types_component;
+mod tags_component;
 
 pub use type_parser::{
     block_type, func_type, global_mutability, global_type, limits, mem_type, ref_type, table_type,
@@ -34,6 +35,7 @@ pub use known_section::KnownSection;
 pub use mems_component::MemsComponent;
 pub use tables_component::TablesComponent;
 pub use types_component::{ResultType, TypesComponent};
+pub use tags_component::TagsComponent;
 
 /// Parses a
 /// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).

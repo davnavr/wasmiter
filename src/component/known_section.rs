@@ -13,7 +13,7 @@ pub enum KnownSection<B: Bytes> {
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
     Import(component::ImportsComponent<B>),
     /// The
-    /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section)
+    /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section).
     Function(component::FunctionSection<B>),
     /// The
     /// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
@@ -22,10 +22,10 @@ pub enum KnownSection<B: Bytes> {
     /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
     Memory(component::MemsComponent<B>),
     /// The
-    /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section)
+    /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
     Global(component::GlobalsComponent<B>),
     /// The
-    /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section)
+    /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
     Export(component::ExportsComponent<B>),
     /// Represents the
     /// [**start** component](https://webassembly.github.io/spec/core/syntax/modules.html#start-function)
@@ -33,18 +33,48 @@ pub enum KnownSection<B: Bytes> {
     /// [*start section*](https://webassembly.github.io/spec/core/binary/modules.html#start-section).
     Start(crate::index::FuncIdx),
     /// The
-    /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section)
+    /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
     Element(component::ElemsComponent<B>),
     /// The
-    /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section)
+    /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
     Code(component::CodeSection<B>),
     /// The
-    /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section)
+    /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section).
     Data(component::DatasComponent<B>),
     /// The
-    /// [*data count section**](https://webassembly.github.io/spec/core/binary/modules.html#data-count-section)
+    /// [*data count section*](https://webassembly.github.io/spec/core/binary/modules.html#data-count-section)
     /// specifies the number of of entries in the [*data section*](KnownSection::Data).
     DataCount(u32),
+    /// The
+    /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
+    Tag(component::TagsComponent<B>),
+}
+
+impl<B: Bytes> KnownSection<B> {
+    /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
+    /// the section.
+    pub const fn id(&self) -> crate::sections::SectionId {
+        match self {
+            Self::Type(_) => section_id::TYPE,
+            Self::Import(_) => section_id::IMPORT,
+            Self::Function(_) => section_id::FUNC,
+            Self::Table(_) => section_id::TABLE,
+            Self::Memory(_) => section_id::MEMORY,
+            Self::Global(_) => section_id::GLOBAL,
+            Self::Export(_) => section_id::EXPORT,
+            Self::Start(_) => section_id::START,
+            Self::Element(_) => section_id::ELEMENT,
+            Self::Code(_) => section_id::CODE,
+            Self::Data(_) => section_id::DATA,
+            Self::DataCount(_) => section_id::DATA_COUNT,
+            Self::Tag(_) => section_id::TAG,
+        }
+    }
+
+    /// Returns `true` if the section was introduced in WebAssembly 1.0 (the 2017 MVP).
+    pub fn is_mvp_section(&self) -> bool {
+        matches!(self, Self::Tag(_))
+    }
 }
 
 impl<B: Bytes> KnownSection<Window<B>> {
@@ -109,25 +139,6 @@ impl<B: Bytes> KnownSection<Window<B>> {
             })
         } else {
             Err(section)
-        }
-    }
-
-    /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
-    /// the section.
-    pub const fn id(&self) -> crate::sections::SectionId {
-        match self {
-            Self::Type(_) => section_id::TYPE,
-            Self::Import(_) => section_id::IMPORT,
-            Self::Function(_) => section_id::FUNC,
-            Self::Table(_) => section_id::TABLE,
-            Self::Memory(_) => section_id::MEMORY,
-            Self::Global(_) => section_id::GLOBAL,
-            Self::Export(_) => section_id::EXPORT,
-            Self::Start(_) => section_id::START,
-            Self::Element(_) => section_id::ELEMENT,
-            Self::Code(_) => section_id::CODE,
-            Self::Data(_) => section_id::DATA,
-            Self::DataCount(_) => section_id::DATA_COUNT,
         }
     }
 }
@@ -217,6 +228,7 @@ impl<B: Bytes> core::fmt::Debug for KnownSection<B> {
             Self::Code(code) => f.debug_tuple("Code").field(code).finish(),
             Self::Data(data) => f.debug_tuple("Data").field(data).finish(),
             Self::DataCount(count) => f.debug_tuple("DataCount").field(count).finish(),
+            Self::Tag(tags) => f.debug_tuple("Tag").field(tags).finish(),
         }
     }
 }
@@ -236,6 +248,7 @@ impl<B: Bytes + Clone> Clone for KnownSection<B> {
             Self::Code(code) => Self::Code(code.clone()),
             Self::Data(data) => Self::Data(data.clone()),
             Self::DataCount(count) => Self::DataCount(*count),
+            Self::Tag(tags) => Self::Tag(tags.clone()),
         }
     }
 }
