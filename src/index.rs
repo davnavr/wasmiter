@@ -228,4 +228,13 @@ indices! {
     /// [structured control instructions](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
     /// within the code of a function.
     struct LabelIdx = "label index";
+
+    /// A [`tagidx`](https://webassembly.github.io/exception-handling/core/syntax/modules.html#syntax-tagidx)
+    /// refers to a
+    /// [*tag*s](https://webassembly.github.io/exception-handling/core/syntax/modules.html#tags)
+    /// in the
+    /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section),
+    /// introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
+    struct TagIdx = "tag index";
 }
