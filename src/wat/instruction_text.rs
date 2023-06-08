@@ -43,7 +43,14 @@ fn instruction<B: Bytes>(
         return Ok(());
     }
 
-    if let Some(level) = indentation {
+    if let Some(mut level) = indentation {
+        if matches!(
+            instr,
+            Instr::Else | Instr::Catch(_) | Instr::CatchAll | Instr::Delegate(_)
+        ) {
+            level = level.saturating_sub(1);
+        };
+
         // InstructionSequence has nesting >= 1, so function bodies will always have indentation
         for _ in 0..level {
             w.write_str(wat::INDENTATION);
