@@ -135,6 +135,10 @@ impl<B: Bytes> KnownSection<Window<B>> {
                         .context("data count section")
                         .map(Self::DataCount)
                 }
+                section_id::TAG => {
+                    let contents = section.into_contents();
+                    component::TagsComponent::new(contents.base(), contents).map(Self::from)
+                }
                 _ => return Err(section),
             })
         } else {
@@ -210,6 +214,13 @@ impl<B: Bytes> From<component::DatasComponent<B>> for KnownSection<B> {
     #[inline]
     fn from(data: component::DatasComponent<B>) -> Self {
         Self::Data(data)
+    }
+}
+
+impl<B: Bytes> From<component::TagsComponent<B>> for KnownSection<B> {
+    #[inline]
+    fn from(tags: component::TagsComponent<B>) -> Self {
+        Self::Tag(tags)
     }
 }
 
