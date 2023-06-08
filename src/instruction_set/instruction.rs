@@ -1398,6 +1398,46 @@ instructions! {
         /// [**i64.atomic.rmw32.cmpxchg_u**](https://webassembly.github.io/threads/core/binary/instructions.html#atomic-memory-instructions)
         I64AtomicRmw32CmpxchgU[(MemArg)] = "i64.atomic.rmw32.cmpxchg_u",
     }
+
+    /// Returns `true` if the [`Instruction`] was introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
+    is_exception_handling {
+        /// The [**try**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction marks the start of a block that can catch exceptions.
+        Try[(BlockType)] = "try",
+        /// The
+        /// [**catch**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction marks the start of an exception handler for the given
+        /// [`Tag`](crate::component::Tag) for a corresponding
+        /// [**try**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction.
+        Catch[(index::TagIdx)] = "catch",
+        /// The
+        /// [**throw**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction create an exception with the given [`Tag`](crate::component::Tag), then
+        /// [throws it](https://webassembly.github.io/exception-handling/core/exec/instructions.html#exception-handling).
+        Throw[(index::TagIdx)] = "throw",
+        /// The
+        /// [**rethrow**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// throws a caught exception so that it can be handled by a different enclosing block
+        /// referred to by the given label.
+        Rethrow[(LabelIdx)] = "rethrow",
+        /// The
+        /// [**catch_all**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction marks the start of the handler for uncaught exceptions in the block of a corresponding
+        /// [**try**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction.
+        CatchAll = "catch_all",
+        /// The
+        /// [**delegate**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction delegates exception handling within the block of an associated
+        /// [**try**](https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions)
+        /// instruction to the [**catch**]/[**catch_all**] handler associated with the given label.
+        ///
+        /// [**catch**]: https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions
+        /// [**catch_all**]: https://webassembly.github.io/exception-handling/core/syntax/instructions.html#control-instructions
+        Delegate[(LabelIdx)] = "delegate",
+    }
 }
 
 impl<B: Bytes> Instruction<'_, B> {

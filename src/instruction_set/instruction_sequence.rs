@@ -48,8 +48,18 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::If => {
             Instruction::If(component::block_type(offset, bytes).context("if block type")?)
         }
-        Opcode::Br => Instruction::Br(component::index(offset, bytes)?),
-        Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes)?),
+        Opcode::Else => Instruction::Else,
+        Opcode::Try => {
+            Instruction::Try(component::block_type(offset, bytes).context("try block type")?)
+        }
+        Opcode::Catch => Instruction::Catch(component::index(offset, bytes).context("catch tag")?),
+        Opcode::Throw => Instruction::Throw(component::index(offset, bytes).context("throw tag")?),
+        Opcode::Rethrow => {
+            Instruction::Rethrow(component::index(offset, bytes).context("rethrow label")?)
+        }
+        Opcode::End => Instruction::End,
+        Opcode::Br => Instruction::Br(component::index(offset, bytes).context("br label")?),
+        Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes).context("br_if label")?),
         Opcode::BrTable => Instruction::BrTable(
             Vector::new(offset, bytes, Default::default()).context("branch table")?,
         ),
@@ -66,8 +76,10 @@ fn instruction<'a, 'b, B: Bytes>(
             component::index(offset, bytes).context("indirect tail call signature")?,
             component::index(offset, bytes).context("indirect tail call target")?,
         ),
-        Opcode::Else => Instruction::Else,
-        Opcode::End => Instruction::End,
+        Opcode::Delegate => {
+            Instruction::Delegate(component::index(offset, bytes).context("delegate label")?)
+        }
+        Opcode::CatchAll => Instruction::CatchAll,
 
         Opcode::Drop => Instruction::Drop,
         Opcode::Select => {
@@ -858,6 +870,49 @@ fn instruction<'a, 'b, B: Bytes>(
     }) //.context() // the opcode name
 }
 
+#[inline]
+fn next_instruction<'a, T, E, B, F>(
+    offset: &'a mut u64,
+    bytes: &'a B,
+    blocks: &mut u32,
+    f: F,
+) -> Result<T, E>
+where
+    E: From<parser::Error>,
+    B: Bytes,
+    F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
+{
+    let mut instruction = self::instruction(offset, bytes)?;
+    let result = f(&mut instruction)?;
+
+    match instruction {
+        Instruction::Block(_) | Instruction::Loop(_) | Instruction::If(_) | Instruction::Try(_) => {
+            *blocks = blocks
+                .checked_add(1)
+                .ok_or_else(|| crate::parser_bad_format!("block nesting counter overflowed"))?;
+        }
+        Instruction::End => {
+            // Won't underflow, check for self.blocks == 0 ensures None is returned early
+            *blocks -= 1;
+        }
+        Instruction::Delegate(_) => {
+            if *blocks > 1 {
+                // Check above ensures a "delegate" won't erroneously mark the end of an expression
+                *blocks -= 1;
+            } else {
+                return Err(crate::parser_bad_format!(
+                    "expected end instruction to mark end of expression, but got delegate"
+                )
+                .into());
+            }
+        }
+        _ => {}
+    }
+
+    instruction.finish()?;
+    Ok(result)
+}
+
 /// Represents an expression or
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
@@ -898,33 +953,6 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
         self.blocks
     }
 
-    #[inline]
-    fn process_next<'a, T, E, F>(&'a mut self, f: F) -> Result<T, E>
-    where
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
-        E: From<parser::Error>,
-    {
-        let mut instruction = self::instruction(self.offset.offset_mut(), &self.bytes)?;
-        let result = f(&mut instruction)?;
-
-        match instruction {
-            Instruction::Block(_) | Instruction::Loop(_) | Instruction::If(_) => {
-                self.blocks = self
-                    .blocks
-                    .checked_add(1)
-                    .ok_or_else(|| crate::parser_bad_format!("block nesting counter overflowed"))?;
-            }
-            Instruction::End => {
-                // Won't underflow, check for self.blocks == 0 ensures None is returned early
-                self.blocks -= 1;
-            }
-            _ => {}
-        }
-
-        instruction.finish()?;
-        Ok(result)
-    }
-
     /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
     pub fn next<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
@@ -935,7 +963,14 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
             return None;
         }
 
-        Some(self.process_next(f))
+        let result = next_instruction(self.offset.offset_mut(), &self.bytes, &mut self.blocks, f);
+
+        if result.is_err() {
+            // If error is encountered, no more instructions should be returned
+            self.blocks = 0u32;
+        }
+
+        Some(result)
     }
 
     /// Processes the remaining instructions in the sequence. Returns `true` if all instructions
@@ -960,7 +995,7 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
                 "missing end instruction for expression, or blocks were not structured correctly"
             )),
             missing => Err(crate::parser_bad_format!(
-                "missing {missing} end instructions, blocks are not structured correctly"
+                "blocks are not structured correctly, {missing} end instructions were missing"
             )),
         }
     }
