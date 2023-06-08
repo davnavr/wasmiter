@@ -73,7 +73,21 @@ impl<B: Bytes> KnownSection<B> {
 
     /// Returns `true` if the section was introduced in WebAssembly 1.0 (the 2017 MVP).
     pub fn is_mvp_section(&self) -> bool {
-        matches!(self, Self::Tag(_))
+        matches!(
+            self,
+            Self::Type(_)
+                | Self::Import(_)
+                | Self::Function(_)
+                | Self::Table(_)
+                | Self::Memory(_)
+                | Self::Global(_)
+                | Self::Export(_)
+                | Self::Start(_)
+                | Self::Element(_)
+                | Self::Code(_)
+                | Self::Data(_)
+                | Self::DataCount(_)
+        )
     }
 }
 
