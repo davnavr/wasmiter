@@ -36,6 +36,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                     }
                     KnownSection::Data(data) => Wat::write(data, w)?,
                     KnownSection::DataCount(count) => write!(w, ";; data count = {count}"),
+                    KnownSection::Tag(tags) => Wat::write(tags, w)?,
                 },
                 Err(section) => {
                     write!(w, "(; ");
