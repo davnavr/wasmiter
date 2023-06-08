@@ -6,6 +6,7 @@ impl<B: Clone + crate::bytes::Bytes> wat::Wat for crate::component::ImportsCompo
         let mut table_count = 0u32;
         let mut memory_count = 0u32;
         let mut global_count = 0u32;
+        let mut tag_count = 0u32;
         for result in self {
             w.open_paren();
             w.write_str("import ");
@@ -40,6 +41,13 @@ impl<B: Clone + crate::bytes::Bytes> wat::Wat for crate::component::ImportsCompo
                     w.write_char(' ');
                     wat::write_global_type(*ty, w);
                     global_count += 1;
+                }
+                ImportKind::Tag(tag) => {
+                    w.write_str("tag ");
+                    wat::write_index(true, index::TagIdx::try_from(tag_count).unwrap(), w);
+                    w.write_char(' ');
+                    wat::tags_text::write_tag(Ok(*tag), w)?;
+                    tag_count += 1;
                 }
             }
             w.close_paren();

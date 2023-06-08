@@ -76,6 +76,13 @@ impl<B: Bytes> Display for component::DatasComponent<B> {
     }
 }
 
+impl<B: Bytes> Display for component::TagsComponent<B> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_wat(self.borrowed(), f)
+    }
+}
+
 //impl Display for Instruction // needs borrowed() method
 
 impl<O: crate::parser::Offset, B: Bytes> Display

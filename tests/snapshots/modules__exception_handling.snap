@@ -1,0 +1,28 @@
+---
+source: tests/modules.rs
+expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
+---
+(type (; 0 ;) (func (param i32) (result i32)))
+(type (; 1 ;) (func (param i32) (result)))
+
+(import "env" "DoTheThings" (func (; 0 ;) (type 0)))
+
+;; function section count = 1
+(tag (type 1))
+
+(func (type 0) ;; code size = 21
+  try (result i32)
+    local.get 0
+    i32.const 0x0000FFFF (; 65535 signed, 65535 unsigned ;)
+    i32.add
+    call 0
+  catch 0
+    drop
+    i32.const 0xFFFF0000 (; -65536 signed, 4294901760 unsigned ;)
+    end
+)
+
+(; "name" (custom) section @ 0x52
+[]
+;)
+

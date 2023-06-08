@@ -43,7 +43,14 @@ fn instruction<B: Bytes>(
         return Ok(());
     }
 
-    if let Some(level) = indentation {
+    if let Some(mut level) = indentation {
+        if matches!(
+            instr,
+            Instr::Else | Instr::Catch(_) | Instr::CatchAll | Instr::Delegate(_)
+        ) {
+            level = level.saturating_sub(1);
+        };
+
         // InstructionSequence has nesting >= 1, so function bodies will always have indentation
         for _ in 0..level {
             w.write_str(wat::INDENTATION);
@@ -53,11 +60,18 @@ fn instruction<B: Bytes>(
     w.write_str(instr.name());
 
     match instr {
-        Instr::Block(ty) | Instr::Loop(ty) | Instr::If(ty) => {
+        Instr::Block(ty) | Instr::Loop(ty) | Instr::If(ty) | Instr::Try(ty) => {
             w.write_char(' ');
             write_block_type(*ty, w);
         }
-        Instr::Br(target) | Instr::BrIf(target) => {
+        Instr::Catch(idx) | Instr::Throw(idx) => {
+            w.write_char(' ');
+            wat::write_index(false, *idx, w)
+        }
+        Instr::Br(target)
+        | Instr::BrIf(target)
+        | Instr::Delegate(target)
+        | Instr::Rethrow(target) => {
             write!(w, " {}", target.to_u32())
         }
         Instr::BrTable(entries) => {

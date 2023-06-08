@@ -14,6 +14,7 @@ mod imports_component;
 mod known_section;
 mod mems_component;
 mod tables_component;
+mod tags_component;
 mod type_parser;
 mod types_component;
 
@@ -33,6 +34,7 @@ pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use known_section::KnownSection;
 pub use mems_component::MemsComponent;
 pub use tables_component::TablesComponent;
+pub use tags_component::{parse as tag, Tag, TagsComponent};
 pub use types_component::{ResultType, TypesComponent};
 
 /// Parses a
