@@ -53,11 +53,18 @@ fn instruction<B: Bytes>(
     w.write_str(instr.name());
 
     match instr {
-        Instr::Block(ty) | Instr::Loop(ty) | Instr::If(ty) => {
+        Instr::Block(ty) | Instr::Loop(ty) | Instr::If(ty) | Instr::Try(ty) => {
             w.write_char(' ');
             write_block_type(*ty, w);
         }
-        Instr::Br(target) | Instr::BrIf(target) => {
+        Instr::Catch(idx) | Instr::Throw(idx) => {
+            w.write_char(' ');
+            wat::write_index(false, *idx, w)
+        }
+        Instr::Br(target)
+        | Instr::BrIf(target)
+        | Instr::Delegate(target)
+        | Instr::Rethrow(target) => {
             write!(w, " {}", target.to_u32())
         }
         Instr::BrTable(entries) => {
