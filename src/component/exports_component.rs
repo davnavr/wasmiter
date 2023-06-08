@@ -8,11 +8,27 @@ use core::fmt::{Debug, Formatter};
 /// Describes what kind of entity is specified by an [`Export`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[allow(missing_docs)]
+#[non_exhaustive]
 pub enum ExportKind {
     Function(index::FuncIdx),
     Table(index::TableIdx),
     Memory(index::MemIdx),
     Global(index::GlobalIdx),
+    /// Exports the given [`Tag`](component::Tag).
+    ///
+    /// Introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
+    Tag(index::TagIdx),
+}
+
+impl ExportKind {
+    /// Returns `true` if and only if the import is a function, table, memory, or global.
+    pub fn is_mvp_supported(&self) -> bool {
+        matches!(
+            self,
+            Self::Function(_) | Self::Table(_) | Self::Memory(_) | Self::Global(_)
+        )
+    }
 }
 
 /// Represents a
@@ -47,6 +63,7 @@ impl<'a, B: Bytes> Export<&'a B> {
             1 => ExportKind::Table(component::index(offset, bytes).context("table export")?),
             2 => ExportKind::Memory(component::index(offset, bytes).context("memory export")?),
             3 => ExportKind::Global(component::index(offset, bytes).context("global export")?),
+            4 => ExportKind::Tag(component::index(offset, bytes).context("tag export")?),
             bad => {
                 return Err(crate::parser_bad_format_at_offset!(
                     "input" @ kind_offset,

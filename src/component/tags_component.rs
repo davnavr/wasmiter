@@ -6,7 +6,7 @@ use crate::{
 /// Represents a
 /// [**tag**](https://webassembly.github.io/exception-handling/core/syntax/modules.html#tags) in
 /// the
-/// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section)
+/// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum Tag {

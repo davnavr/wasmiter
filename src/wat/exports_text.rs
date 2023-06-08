@@ -25,6 +25,10 @@ impl<B: crate::bytes::Bytes> wat::Wat for crate::component::ExportsComponent<B> 
                     w.write_str("global ");
                     wat::write_index(false, *idx, w)
                 }
+                ExportKind::Tag(idx) => {
+                    w.write_str("tag ");
+                    wat::write_index(false, *idx, w)
+                }
             }
             w.close_paren();
             w.close_paren();
