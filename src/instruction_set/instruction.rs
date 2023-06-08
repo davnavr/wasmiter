@@ -92,11 +92,12 @@ instructions! {
     /// - The [multi-value proposal](https://github.com/WebAssembly/multi-value), which allows
     /// additional inputs to and outputs from blocks.
     /// - The [reference types proposal](https://github.com/WebAssembly/reference-types), which
-    /// allows additional forms of the [`select`](Instruction::Select) and [`call_indirect`](Instruction::CallIndirect) instructions along with the
-    /// introduction of the `funcref` and `externref` types.
+    /// allows additional forms of the [`select`](Instruction::Select) and
+    /// [`call_indirect`](Instruction::CallIndirect) instructions along with the introduction of
+    /// the `funcref` and `externref` types.
     ///
-    /// Users that support only certain features must check themselves that instructions introduced
-    /// in 1.0 do not make use of unsupported features.
+    /// Users that support only certain proposals must check themselves that instructions
+    /// introduced in 1.0 do not make use of unsupported proposals.
     is_from_mvp {
         // Control Instructions
 
@@ -595,7 +596,7 @@ instructions! {
     }
 
     /// Returns `true` if the [`Instruction`] was introduced as part of the
-    /// [non-trapping float-to-int conversions proposal](https://github.com/webassembly/simd).
+    /// [non-trapping float-to-int conversions proposal](https://github.com/WebAssembly/nontrapping-float-to-int-conversions).
     is_from_non_trapping_float_to_int_conversions {
         /// [**i32.trunc_sat_f32_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions)
         I32TruncSatF32S = "i32.trunc_sat_f32_s",

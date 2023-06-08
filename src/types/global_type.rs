@@ -10,6 +10,9 @@ pub enum GlobalMutability {
     Constant,
     /// A [`var`](https://webassembly.github.io/spec/core/syntax/types.html#syntax-mut) global is
     /// mutable, and can have a value assigned any time.
+    ///
+    /// This requires support for the
+    /// [mutable globals proposal](https://github.com/WebAssembly/mutable-global).
     Variable,
 }
 

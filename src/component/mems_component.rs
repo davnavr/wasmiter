@@ -8,6 +8,9 @@ use crate::{
 /// [**mems** component](https://webassembly.github.io/spec/core/syntax/modules.html#memories) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
+///
+/// Note that defining more than one memory requires the
+/// [multi-memory proposal](https://github.com/WebAssembly/multi-memory).
 #[derive(Clone, Copy)]
 pub struct MemsComponent<B: Bytes> {
     limits: Vector<u64, B, SimpleParse<MemType>>,

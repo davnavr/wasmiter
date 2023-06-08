@@ -35,6 +35,9 @@ impl ImportKind {
 
 /// Represents a
 /// [WebAssembly import](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
+///
+/// Note that importing more than one memory requires the
+/// [multi-memory proposal](https://github.com/WebAssembly/multi-memory).
 #[derive(Clone, Copy)]
 pub struct Import<B: Bytes> {
     module: Name<B>,
