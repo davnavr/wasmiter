@@ -1,13 +1,13 @@
 use crate::{
     bytes::Bytes,
-    parser::{self, ResultExt as _},
+    parser::{self, Result, ResultExt as _},
 };
 
 /// Represents a
 /// [**tag**](https://webassembly.github.io/exception-handling/core/syntax/modules.html#tags) in
 /// the
 /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 #[non_exhaustive]
 pub enum Tag {
     /// Describes an exception that can be thrown or caught, introduced as part of the
@@ -15,13 +15,10 @@ pub enum Tag {
     Exception(crate::index::TypeIdx),
 }
 
-#[derive(Clone, Copy)]
-struct ParseTag;
-
-impl parser::Parse for ParseTag {
+impl parser::Parse for parser::SimpleParse<Tag> {
     type Output = Tag;
 
-    fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> parser::Result<Self::Output> {
+    fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> Result<Self::Output> {
         let attribute = parser::one_byte_exact(offset, &bytes)?;
         if attribute != 0 {
             crate::parser_bad_format!("{attribute:#04X} is not a valid tag attribute");
@@ -36,7 +33,7 @@ impl parser::Parse for ParseTag {
 /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
 #[derive(Clone, Copy)]
 pub struct TagsComponent<B: Bytes> {
-    tags: parser::Vector<u64, B, ParseTag>,
+    tags: parser::Vector<u64, B, parser::SimpleParse<Tag>>,
 }
 
 impl<B: Bytes> TagsComponent<B> {
@@ -44,7 +41,7 @@ impl<B: Bytes> TagsComponent<B> {
     /// at the specified `offset`.
     pub fn new(offset: u64, bytes: B) -> parser::Result<Self> {
         Ok(Self {
-            tags: parser::Vector::new(offset, bytes, ParseTag).context("tag section")?,
+            tags: parser::Vector::new(offset, bytes, Default::default()).context("tag section")?,
         })
     }
 
@@ -60,25 +57,28 @@ impl<B: Bytes> TagsComponent<B> {
         self.tags.is_empty()
     }
 
-    /// Parses the next [`Tag`] in the section.
-    pub fn parse<T, E, F>(&mut self, f: F) -> Result<Option<T>, E>
-    where
-        E: From<parser::Error>,
-        F: FnOnce(&mut Tag) -> Result<T, E>,
-    {
-        match self.tags.next() {
-            None => Ok(None),
-            Some(Ok(mut tag)) => f(&mut tag).map(Some),
-            Some(Err(e)) => Err(e.into()),
-        }
-    }
-
     pub(crate) fn borrowed(&self) -> TagsComponent<&B> {
         TagsComponent {
             tags: self.tags.by_reference(),
         }
     }
 }
+
+impl<B: Bytes> Iterator for TagsComponent<B> {
+    type Item = Result<Tag>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.tags.next()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.tags.size_hint()
+    }
+}
+
+impl<B: Bytes> core::iter::FusedIterator for TagsComponent<B> {}
 
 impl<B: Bytes> core::fmt::Debug for TagsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
