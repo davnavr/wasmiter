@@ -38,16 +38,18 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
                     KnownSection::Tag(tags) => Wat::write(tags, w)?,
                 },
                 Err(section) => {
+                    let id = section.id();
+                    let contents = section.into_contents();
                     writeln!(
                         w,
-                        "(; {} section @ {:#X}",
-                        section.id(),
-                        section.contents().base()
+                        "(; UNRECOGNIZED ({id}) @ {:#X} to {:#X}",
+                        contents.base(),
+                        contents.base() + contents.length() - 1,
                     );
                     writeln!(
                         w,
                         "{:?}",
-                        crate::bytes::DebugBytes::from(section.into_contents())
+                        crate::bytes::DebugBytes::from(contents)
                     );
                     w.write_str(";)");
                 }
