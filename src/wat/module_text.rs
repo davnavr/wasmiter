@@ -1,14 +1,13 @@
 use crate::{
     component::KnownSection,
-    sections::SectionKind,
     wat::{self, Wat},
 };
 
-impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
+impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
         let mut function_types = None;
 
-        for result in self.borrowed() {
+        for result in self.as_sections().borrowed() {
             match KnownSection::interpret(result?) {
                 Ok(known) => match known? {
                     KnownSection::Type(types) => Wat::write(types, w)?,
@@ -39,12 +38,12 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                     KnownSection::Tag(tags) => Wat::write(tags, w)?,
                 },
                 Err(section) => {
-                    write!(w, "(; ");
-                    match section.kind() {
-                        SectionKind::Custom(custom) => write!(w, "{custom:?} (custom)"),
-                        SectionKind::Id(id) => write!(w, "{id}"),
-                    }
-                    writeln!(w, " section @ {:#X}", section.contents().base());
+                    writeln!(
+                        w,
+                        "(; {} section @ {:#X}",
+                        section.id(),
+                        section.contents().base()
+                    );
                     writeln!(
                         w,
                         "{:?}",

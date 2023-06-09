@@ -1,5 +1,5 @@
-/// Contains well-known constants representing
-/// [WebAssembly section *id*s](https://webassembly.github.io/spec/core/binary/modules.html#sections).
+//! Contains well-known constants representing
+//! [WebAssembly section *id*s](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 
 macro_rules! known_ids {
     ($(

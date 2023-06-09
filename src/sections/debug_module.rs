@@ -1,5 +1,8 @@
+use crate::{
+    bytes::Bytes,
+    sections::{Section, SectionSequence},
+};
 use core::fmt::Debug;
-use crate::{bytes::Bytes, sections::{Section, SectionSequence}};
 
 /// Helper struct to display a WebAssembly module section.
 ///
@@ -18,10 +21,12 @@ impl<B: Bytes> Debug for DebugModuleSection<'_, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match crate::component::KnownSection::interpret(self.section.borrowed()) {
             Ok(known) => Debug::fmt(&known, f),
-            Err(possibly_custom) => match crate::custom::CustomSection::interpret(possibly_custom) {
-                Ok(known) => Debug::fmt(&known, f),
-                Err(_) => Debug::fmt(self.section, f),
-            },
+            Err(possibly_custom) => {
+                match crate::custom::CustomSection::interpret(possibly_custom) {
+                    Ok(known) => Debug::fmt(&known, f),
+                    Err(_) => Debug::fmt(self.section, f),
+                }
+            }
         }
     }
 }
@@ -49,9 +54,7 @@ impl<B: Bytes> Debug for DebugModule<'_, B> {
                     section = sec;
                     Ok(DebugModuleSection::new(&section))
                 }
-                Err(e) => {
-                    Err(e)
-                }
+                Err(e) => Err(e),
             };
 
             list.entry(&entry);

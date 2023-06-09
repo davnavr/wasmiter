@@ -191,16 +191,6 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
     }
 }
 
-impl<'a> Name<&'a [u8]> {
-    pub(crate) const fn from_byte_slice(bytes: &'a [u8]) -> Self {
-        Self {
-            bytes,
-            length: bytes.len() as u32,
-            offset: 0,
-        }
-    }
-}
-
 /// Interprets the `str` as a [`Name`] originating from a byte slice.
 ///
 /// # Examples

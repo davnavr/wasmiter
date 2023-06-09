@@ -12,10 +12,12 @@ use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
 
 mod debug_module;
+mod display_module;
 
 pub mod id;
 
 pub use debug_module::{DebugModule, DebugModuleSection};
+pub use display_module::DisplayModule;
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections),
@@ -132,7 +134,7 @@ impl<B: Bytes> SectionSequence<B> {
             return Ok(None);
         };
 
-        let mut content_length = u64::from(
+        let content_length = u64::from(
             parser::leb128::u32(&mut self.offset, &self.bytes).context("section content size")?,
         );
 
@@ -159,6 +161,14 @@ impl<B: Bytes> SectionSequence<B> {
     #[inline]
     pub fn debug_module(&self) -> DebugModule<'_, B> {
         DebugModule::new(self)
+    }
+
+    /// Returns a [`Display`](core::fmt::Display) implementation that attempts to interpret the
+    /// sequence of sections as a WebAssembly module's sections, and writing the corresponding
+    /// [WebAssembly text](https://webassembly.github.io/spec/core/text/index.html).
+    #[inline]
+    pub fn display_module(&self) -> DisplayModule<'_, B> {
+        DisplayModule::new(self)
     }
 }
 
