@@ -93,7 +93,14 @@ impl<B: Bytes> KnownSection<B> {
 
 impl<B: Bytes> KnownSection<Window<B>> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
-    pub fn try_from_section(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
+    ///
+    /// Returns `Ok(Err(_))` if the section is a custom section, or if the section's
+    /// [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) is not
+    /// recognized.
+    ///
+    /// Returns `Ok(Err)` if the section **was** recognized, but an attempt to parse a length field
+    /// failed.
+    pub fn interpret(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
         if let SectionKind::Id(id) = section.kind() {
             Ok(match *id {
                 section_id::TYPE => {

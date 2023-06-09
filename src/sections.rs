@@ -10,6 +10,10 @@ pub use section_kind::{section_id as id, SectionId, SectionKind};
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
+///
+/// To interpret the contents of the section, consider using
+/// [`component::KnownSection::interpret`](crate::component::KnownSection::interpret), or in the
+/// case of a custom section, [`custom::CustomSection::interpret`](crate::custom::CustomSection::interpret).
 #[derive(Clone, Copy)]
 pub struct Section<B: Bytes> {
     kind: SectionKind<B>,
