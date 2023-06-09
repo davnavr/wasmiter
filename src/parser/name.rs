@@ -21,14 +21,6 @@ pub struct Name<B: Bytes> {
 }
 
 impl<B: Bytes> Name<B> {
-    pub(crate) fn at_offset_with_length(bytes: B, offset: u64, length: u32) -> Self {
-        Self {
-            bytes,
-            offset,
-            length,
-        }
-    }
-
     /// Reads a length-prefixed UTF-8 string from the given [`Bytes`], starting at the given
     /// `offset`.
     ///
@@ -86,7 +78,7 @@ impl<B: Bytes> Name<B> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the name [`Bytes`] could not be feteched.
+    /// Returns an error if the name [`Bytes`] could not be fetched.
     pub fn copy_to_slice<'b>(&self, buffer: &'b mut [u8]) -> parser::Result<&'b mut [u8]> {
         let length = core::cmp::min(
             usize::try_from(self.length).ok().unwrap_or(usize::MAX),
@@ -100,6 +92,26 @@ impl<B: Bytes> Name<B> {
             .context("string contents")?;
 
         Ok(destination)
+    }
+
+    /// Returns the contents of the [`Name`] as a [`Window`].
+    pub fn into_bytes_window(self) -> bytes::Window<B> {
+        let offset = self.offset;
+        let length = self.length();
+        bytes::Window::new(self.bytes, offset, length)
+    }
+
+    /// Attempts to compare this [`Name`] to a [`str`]ing, returning `true` if they are equal.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the name [`Bytes`] could not be fetched.
+    #[inline]
+    pub fn try_eq_str(&self, s: &str) -> parser::Result<bool> {
+        self.borrowed()
+            .into_bytes_window()
+            .try_eq_slice(s.as_bytes())
+            .map_err(Into::into)
     }
 }
 

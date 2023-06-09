@@ -53,6 +53,26 @@ impl<B: Bytes> Window<B> {
             inner: &self.inner,
         }
     }
+
+    /// Attempts to determine if the contents of this [`Window`] are the same as the given byte
+    /// slice.
+    pub fn try_eq_slice(&self, expected: &[u8]) -> Result<bool> {
+        match u64::try_from(expected.len()) {
+            Ok(expected_length) if expected_length == self.length => {
+                let mut offset = self.base;
+                let mut buffer = [0u8; 64];
+                for expected_slice in expected.chunks(buffer.len()) {
+                    let actual_slice = &mut buffer[..expected_slice.len()];
+                    self.inner.read_exact(&mut offset, actual_slice)?;
+                    if actual_slice != expected_slice {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+            Ok(_) | Err(_) => Ok(false),
+        }
+    }
 }
 
 impl<B: Bytes + Clone> Window<&B> {
