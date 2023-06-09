@@ -48,21 +48,21 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
         )
     }
 
-    /// Parses an element with the given closure.
+    /// Parses an element with the given closure, passing the number of items that have been parsed
+    /// so far as the first parameter.
     ///
     /// # Errors
     ///
-    /// Returns any errors returned by the closure. If an error was returned, then future calls to
-    /// [`advance`](Vector::advance) will return `None`.
-    pub fn advance<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
+    /// See [`Vector::advance`] for more information.
+    pub fn advance_with_index<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
-        F: FnOnce(&'a mut u64, &'a B) -> Result<T, E>,
+        F: FnOnce(u32, &'a mut u64, &'a B) -> Result<T, E>,
     {
         if self.counter == 0 {
             return None;
         }
 
-        let result = f(self.offset.offset_mut(), &self.bytes);
+        let result = f(self.counter, self.offset.offset_mut(), &self.bytes);
 
         if result.is_ok() {
             self.counter -= 1;
@@ -71,6 +71,20 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
         }
 
         Some(result)
+    }
+
+    /// Parses an element with the given closure.
+    ///
+    /// # Errors
+    ///
+    /// Returns any errors returned by the closure. If an error was returned, then future calls to
+    /// [`advance`](Vector::advance) will return `None`.
+    #[inline]
+    pub fn advance<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
+    where
+        F: FnOnce(&'a mut u64, &'a B) -> Result<T, E>,
+    {
+        self.advance_with_index(|_, offset, bytes| f(offset, bytes))
     }
 
     /// Returns a clone of the [`Vector`] by borrowing the underlying [`Bytes`].
