@@ -22,7 +22,7 @@ impl<B: Bytes> Debug for DebugModuleSection<'_, B> {
         match crate::component::KnownSection::interpret(self.section.borrowed()) {
             Ok(known) => Debug::fmt(&known, f),
             Err(possibly_custom) => {
-                match crate::custom::CustomSection::interpret(possibly_custom) {
+                match crate::custom::KnownCustomSection::interpret(possibly_custom) {
                     Ok(known) => Debug::fmt(&known, f),
                     Err(_) => Debug::fmt(self.section, f),
                 }

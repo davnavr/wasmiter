@@ -54,7 +54,7 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
 /// returning the sequence of sections.
 ///
 /// To interpret the contents of each section, use [`component::KnownSection::interpret`], or in
-/// the case of custom sections, [`custom::CustomSection::interpret`].
+/// the case of custom sections, [`custom::KnownCustomSection::interpret`].
 #[inline]
 pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::SectionSequence<B>> {
     parse_module_preamble(&binary)?;

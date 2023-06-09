@@ -21,6 +21,14 @@ pub struct Name<B: Bytes> {
 }
 
 impl<B: Bytes> Name<B> {
+    pub(crate) fn at_offset_with_length(bytes: B, offset: u64, length: u32) -> Self {
+        Self {
+            bytes,
+            offset,
+            length,
+        }
+    }
+
     /// Reads a length-prefixed UTF-8 string from the given [`Bytes`], starting at the given
     /// `offset`.
     ///
@@ -101,6 +109,19 @@ impl<B: Bytes + Clone> Name<&B> {
             bytes: self.bytes.clone(),
             offset: self.offset,
             length: self.length,
+        }
+    }
+}
+
+impl<B: Bytes> Name<bytes::Window<B>> {
+    pub(crate) fn flatten_windowed(self) -> Name<B> {
+        Name {
+            offset: self.offset + self.bytes.base(),
+            length: core::cmp::min(
+                self.length,
+                u32::try_from(self.bytes.length()).unwrap_or(u32::MAX),
+            ),
+            bytes: self.bytes.into_inner(),
         }
     }
 }

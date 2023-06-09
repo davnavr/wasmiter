@@ -26,7 +26,8 @@ pub use display_module::DisplayModule;
 ///
 /// To interpret the contents of a WebAssembly module section, consider using
 /// [`component::KnownSection::interpret`](crate::component::KnownSection::interpret), or in the
-/// case of a custom section, [`custom::CustomSection::interpret`](crate::custom::CustomSection::interpret).
+/// case of a custom section,
+/// [`custom::KnownCustomSection::interpret`](crate::custom::KnownCustomSection::interpret).
 #[derive(Clone, Copy)]
 pub struct Section<B: Bytes> {
     id: u8,

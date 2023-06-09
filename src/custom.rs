@@ -8,9 +8,11 @@ use crate::{
 };
 use core::fmt::Debug;
 
-mod name;
+mod custom_section;
 
-pub use name::NameSection;
+pub mod name;
+
+pub use custom_section::CustomSection;
 
 /// Represents a well-known
 /// [custom section](https://webassembly.github.io/spec/core/appendix/custom.html) in a WebAssembly
@@ -18,19 +20,17 @@ pub use name::NameSection;
 #[derive(Clone, Copy)]
 #[non_exhaustive]
 #[allow(missing_docs)]
-pub enum CustomSection<B: Bytes> {
-    Name(NameSection<B>),
+pub enum KnownCustomSection<B: Bytes> {
+    Name(name::NameSection<B>),
 }
 
-impl<B: Bytes> CustomSection<Window<B>> {
-    /// Attempts to interpret the contents of the given [`Section`], only if it is a recognized
-    /// custom section.
-    ///
-    /// Returns `Err(_)` if the section was not a custom section, or was not a recognized custom
-    /// section.
+impl<B: Bytes> KnownCustomSection<Window<B>> {
+    /// Attempts to interpret the contents of the given [`CustomSection`].
     ///
     /// Returns `Ok(Err(_))` if the custom section **was** recognized, but parsing some field
     /// within resulted in an error.
+    ///
+    /// Returns `Err(_)` if the section was not recognized.
     pub fn interpret(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
         // match section.kind() {
         //     sections::SectionKind::Custom(name)
@@ -39,7 +39,7 @@ impl<B: Bytes> CustomSection<Window<B>> {
     }
 }
 
-impl<B: Bytes> Debug for CustomSection<B> {
+impl<B: Bytes> Debug for KnownCustomSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         /*
         let kind = SectionId::new(id_byte);

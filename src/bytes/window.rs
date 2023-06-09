@@ -42,7 +42,7 @@ impl<B: Bytes> Window<B> {
     }
 
     #[inline]
-    pub(super) fn into_inner(self) -> B {
+    pub(crate) fn into_inner(self) -> B {
         self.inner
     }
 

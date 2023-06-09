@@ -17,7 +17,7 @@ known_ids! {
     /// [A *custom section*](https://webassembly.github.io/spec/core/binary/modules.html#custom-section).
     ///
     /// To interpret the section's contents, consider using
-    /// [`custom::CustomSection::interpret`](crate::custom::CustomSection::interpret).
+    /// [`custom::KnownCustomSection::interpret`](crate::custom::KnownCustomSection::interpret).
     CUSTOM = 0;
     /// [The *type* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-typesec).
     TYPE = 1;
