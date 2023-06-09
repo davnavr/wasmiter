@@ -15,6 +15,7 @@ mod wat;
 
 pub mod bytes;
 pub mod component;
+pub mod custom;
 pub mod index;
 pub mod instruction_set;
 pub mod parser;
