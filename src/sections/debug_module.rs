@@ -21,12 +21,14 @@ impl<B: Bytes> Debug for DebugModuleSection<'_, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match crate::component::KnownSection::interpret(self.section.borrowed()) {
             Ok(known) => Debug::fmt(&known, f),
-            Err(possibly_custom) => {
-                match crate::custom::KnownCustomSection::interpret(possibly_custom) {
+            Err(unknown) => match crate::custom::CustomSection::try_from_section(unknown) {
+                Ok(Err(e)) => Debug::fmt(&crate::parser::Result::<()>::Err(e), f),
+                Ok(Ok(custom)) => match crate::custom::KnownCustomSection::interpret(custom) {
                     Ok(known) => Debug::fmt(&known, f),
-                    Err(_) => Debug::fmt(self.section, f),
-                }
-            }
+                    Err(unknown_custom) => Debug::fmt(&unknown_custom, f),
+                },
+                Err(really_unknown) => Debug::fmt(&really_unknown, f),
+            },
         }
     }
 }
