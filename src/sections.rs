@@ -73,13 +73,16 @@ impl<B: Bytes + Clone> Section<&B> {
 
 impl<B: Bytes> Debug for Section<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match crate::component::KnownSection::try_from_section(self.borrowed()) {
+        match crate::component::KnownSection::interpret(self.borrowed()) {
             Ok(known) => Debug::fmt(&known, f),
-            Err(unknown) => f
-                .debug_struct("Section")
-                .field("kind", &unknown.kind)
-                .field("contents", &unknown.contents)
-                .finish(),
+            Err(custom) => match crate::custom::CustomSection::interpret(custom) {
+                Ok(known) => Debug::fmt(&known, f),
+                Err(unknown) => f
+                    .debug_struct("Section")
+                    .field("kind", &unknown.kind)
+                    .field("contents", &unknown.contents)
+                    .finish(),
+            },
         }
     }
 }
