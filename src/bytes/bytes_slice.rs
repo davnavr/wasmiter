@@ -1,9 +1,9 @@
-use crate::bytes::{Bytes, Result};
+use crate::bytes::{Bytes, Result, Window};
 
 /// Slices a [`Bytes`] implementation.
 ///
 /// To instead limit reads from the original [`Bytes`] rather than hiding the regions outside of
-/// the slice, see the [`Window`](crate::bytes::Window) struct.
+/// the slice, see the [`Window`](Window) struct.
 #[derive(Clone, Copy)]
 pub struct BytesSlice<B: Bytes> {
     start: u64,
@@ -26,6 +26,16 @@ impl<B: Bytes> BytesSlice<B> {
     #[inline]
     pub fn length(&self) -> u64 {
         self.length
+    }
+
+    pub(crate) fn from_window(window: Window<B>) -> Self {
+        let start = window.base();
+        let length = window.length();
+        Self {
+            start,
+            length,
+            inner: window.into_inner(),
+        }
     }
 }
 

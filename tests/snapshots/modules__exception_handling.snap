@@ -23,6 +23,9 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
 )
 
 (; UNRECOGNIZED (0) @ 0x4D to 0x63
-[]
+[
+    046E616D_65011001__000D646F_5F746865,
+    5F746869_6E6773,
+]
 ;)
 

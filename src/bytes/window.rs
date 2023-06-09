@@ -41,6 +41,11 @@ impl<B: Bytes> Window<B> {
         &self.inner
     }
 
+    #[inline]
+    pub(super) fn into_inner(self) -> B {
+        self.inner
+    }
+
     pub(crate) fn borrowed(&self) -> Window<&B> {
         Window {
             base: self.base,
@@ -128,11 +133,7 @@ impl<B: Bytes> core::fmt::Debug for Window<B> {
             .field("length", &self.length)
             .field(
                 "content",
-                &bytes::DebugBytes::from(bytes::BytesSlice::new(
-                    &self.inner,
-                    self.base,
-                    self.length,
-                )),
+                &bytes::DebugBytes::from(bytes::BytesSlice::from_window(self.borrowed())),
             )
             .finish()
     }

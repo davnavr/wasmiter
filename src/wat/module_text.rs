@@ -48,8 +48,10 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
                     );
                     writeln!(
                         w,
-                        "{:?}",
-                        crate::bytes::DebugBytes::from(contents)
+                        "{:#?}",
+                        crate::bytes::DebugBytes::from(crate::bytes::BytesSlice::from_window(
+                            contents
+                        ))
                     );
                     w.write_str(";)");
                 }
