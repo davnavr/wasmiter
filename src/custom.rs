@@ -3,8 +3,7 @@
 
 use crate::{
     bytes::{Bytes, Window},
-    parser::{self, name::Name},
-    sections::{self, Section},
+    sections::{id as section_id, SectionSequence},
 };
 use core::fmt::Debug;
 
@@ -27,13 +26,20 @@ pub enum KnownCustomSection<B: Bytes> {
 impl<B: Bytes> KnownCustomSection<Window<B>> {
     /// Attempts to interpret the contents of the given [`CustomSection`].
     ///
-    /// Returns `Ok(Err(_))` if the custom section **was** recognized, but parsing some field
-    /// within resulted in an error.
+    /// # Errors
     ///
-    /// Returns `Err(_)` if the section was not recognized.
-    pub fn interpret(section: CustomSection<B>) -> Result<parser::Result<Self>, CustomSection<B>> {
-        if let Some(static_name) = sections::id::is_custom_name_recognized(section.name().borrowed()) {
+    /// Returns `section` if it was not recognized.
+    pub fn interpret(section: CustomSection<B>) -> Result<Self, CustomSection<B>> {
+        if let Some(static_name) = section_id::is_custom_name_recognized(section.name().borrowed())
+        {
             match static_name {
+                section_id::NAME => {
+                    let contents = section.into_contents();
+                    Ok(Self::Name(name::NameSection::new(SectionSequence::new(
+                        contents.base(),
+                        contents,
+                    ))))
+                }
                 _ => Err(section),
             }
         } else {
@@ -44,27 +50,6 @@ impl<B: Bytes> KnownCustomSection<Window<B>> {
 
 impl<B: Bytes> Debug for KnownCustomSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        /*
-        let kind = SectionId::new(id_byte);
-        let mut content_length = u64::from(
-            parser::leb128::u32(&mut self.offset, &self.bytes).context("section content size")?,
-        );
-
-        let id = if let Some(id_number) = kind {
-            SectionKind::Id(id_number)
-        } else {
-            let name_start = self.offset;
-
-            let name = parser::name::parse(&mut self.offset, &self.bytes)
-                .context("custom section name")?;
-
-            content_length -= self.offset - name_start;
-
-            SectionKind::Custom(name)
-        };
-
-        let contents = Window::new(&self.bytes, self.offset, content_length);
-        */
         match self {
             Self::Name(names) => Debug::fmt(names, f),
         }

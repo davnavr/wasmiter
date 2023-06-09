@@ -98,7 +98,9 @@ known_custom_ids! {
     LINKING = "linking";
 }
 
-pub(crate) fn is_custom_name_recognized<B: crate::bytes::Bytes>(name: crate::parser::name::Name<B>) -> Option<&'static str> {
+pub(crate) fn is_custom_name_recognized<B: crate::bytes::Bytes>(
+    name: crate::parser::name::Name<B>,
+) -> Option<&'static str> {
     let mut buffer = [0u8; 16]; // Should be enough to fit the largest known static custom name
     if let Ok(slice) = name.copy_to_slice(&mut buffer) {
         if let Ok(actual) = core::str::from_utf8(slice) {

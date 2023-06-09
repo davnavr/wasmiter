@@ -50,8 +50,6 @@ impl<B: Bytes> Section<B> {
     }
 
     /// Gets the length, in bytes, of the content of the section.
-    ///
-    /// Note that for custom sections, this does **not** include the section name.
     #[inline]
     pub fn length(&self) -> u64 {
         self.contents.length()

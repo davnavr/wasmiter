@@ -16,7 +16,12 @@ pub struct NameSection<B: Bytes> {
     sections: sections::SectionSequence<B>,
 }
 
-impl<B: Bytes> NameSection<B> {}
+impl<B: Bytes> NameSection<B> {
+    /// Creates a [`NameSection`] from the given sequence of `sections`.
+    pub fn new(sections: sections::SectionSequence<B>) -> Self {
+        Self { sections }
+    }
+}
 
 impl<B: Bytes> Debug for NameSection<B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {

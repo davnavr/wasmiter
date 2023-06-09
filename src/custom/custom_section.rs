@@ -65,6 +65,11 @@ impl<B: Bytes> CustomSection<B> {
             contents: self.contents.borrowed(),
         }
     }
+
+    /// Consumes the [`CustomSection`], returning its contents.
+    pub fn into_contents(self) -> Window<B> {
+        self.contents
+    }
 }
 
 impl<B: Clone + Bytes> CustomSection<&B> {
