@@ -9,7 +9,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
         let mut function_types = None;
 
         for result in self.borrowed() {
-            match KnownSection::try_from_section(result?) {
+            match KnownSection::interpret(result?) {
                 Ok(known) => match known? {
                     KnownSection::Type(types) => Wat::write(types, w)?,
                     KnownSection::Import(imports) => Wat::write(imports, w)?,
