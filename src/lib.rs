@@ -52,6 +52,9 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
 
 /// Reads a [WebAssembly module binary](https://webassembly.github.io/spec/core/binary/index.html),
 /// returning the sequence of sections.
+/// 
+/// To interpret the contents of each section, use [`component::KnownSection::interpret`], or in
+/// the case of custom sections, [`custom::CustomSection::interpret`].
 #[inline]
 pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::SectionSequence<B>> {
     parse_module_preamble(&binary)?;
