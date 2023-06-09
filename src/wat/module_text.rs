@@ -13,7 +13,11 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
                     KnownSection::Type(types) => Wat::write(types, w)?,
                     KnownSection::Import(imports) => Wat::write(imports, w)?,
                     KnownSection::Function(functions) => {
-                        write!(w, ";; function section count = {}", functions.len());
+                        write!(
+                            w,
+                            ";; function section count = {}",
+                            functions.remaining_count()
+                        );
                         function_types = Some(functions);
                     }
                     KnownSection::Table(tables) => Wat::write(tables, w)?,

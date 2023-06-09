@@ -1,6 +1,9 @@
-use crate::bytes::Bytes;
-use crate::index::TypeIdx;
-use crate::parser::{Result, ResultExt, SimpleParse, Vector};
+use crate::{
+    bytes::Bytes,
+    component::IndexVector,
+    index::TypeIdx,
+    parser::{Result, ResultExt},
+};
 
 /// Represents the
 /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section),
@@ -11,12 +14,12 @@ use crate::parser::{Result, ResultExt, SimpleParse, Vector};
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
 pub struct FunctionSection<B: Bytes> {
-    indices: Vector<u64, B, SimpleParse<TypeIdx>>,
+    indices: IndexVector<TypeIdx, u64, B>,
 }
 
-impl<B: Bytes> From<Vector<u64, B, SimpleParse<TypeIdx>>> for FunctionSection<B> {
+impl<B: Bytes> From<IndexVector<TypeIdx, u64, B>> for FunctionSection<B> {
     #[inline]
-    fn from(indices: Vector<u64, B, SimpleParse<TypeIdx>>) -> Self {
+    fn from(indices: IndexVector<TypeIdx, u64, B>) -> Self {
         Self { indices }
     }
 }
@@ -26,25 +29,21 @@ impl<B: Bytes> FunctionSection<B> {
     /// begins at the given `offset`.
     #[inline]
     pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::new(offset, bytes, Default::default()).map(Self::from)
+        IndexVector::parse(offset, bytes)
+            .context("at start of function section")
+            .map(Self::from)
     }
 
     /// Gets the expected remaining number of entries in the *function section* that have yet to be
     /// parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.indices.len()
-    }
-
-    /// Returns a value indicating if the *function section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.indices.is_empty()
+    pub fn remaining_count(&self) -> u32 {
+        self.indices.remaining_count()
     }
 
     pub(super) fn borrowed(&self) -> FunctionSection<&B> {
         FunctionSection {
-            indices: self.indices.by_reference(),
+            indices: self.indices.borrowed(),
         }
     }
 }
@@ -54,7 +53,9 @@ impl<B: Bytes> Iterator for FunctionSection<B> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.indices.next().map(|r| r.context("function section"))
+        self.indices
+            .next()
+            .map(|r| r.context("within function section"))
     }
 
     #[inline]

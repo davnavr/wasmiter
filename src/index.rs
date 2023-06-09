@@ -1,8 +1,6 @@
 //! Contains types representing
 //! [indices in WebAssembly](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-index).
 
-use crate::bytes::Bytes;
-
 /// Error type used when an attempt to convert an integer into an [`Index`] fails.
 #[derive(Debug)]
 pub struct IndexConversionError(&'static &'static str);
@@ -135,15 +133,6 @@ macro_rules! indices {
                     }
                     _ => Err(IndexConversionError(&Self::NAME)),
                 }
-            }
-        }
-
-        impl crate::parser::Parse for crate::parser::SimpleParse<$name> {
-            type Output = $name;
-
-            #[inline]
-            fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> crate::parser::Result<$name> {
-                crate::component::index::<$name, B>(offset, bytes)
             }
         }
 

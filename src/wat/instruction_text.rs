@@ -92,7 +92,7 @@ fn instruction<B: Bytes>(
             w.write_char(' ');
             w.open_paren();
             w.write_str("result");
-            wat::write_types(types.by_reference(), w)?;
+            wat::write_types(types.borrowed(), w)?;
             w.close_paren();
         }
         Instr::LocalGet(idx) | Instr::LocalSet(idx) | Instr::LocalTee(idx) => {

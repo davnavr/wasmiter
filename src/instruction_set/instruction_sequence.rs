@@ -1,10 +1,11 @@
-use crate::bytes::Bytes;
-use crate::component;
-use crate::index;
-use crate::instruction_set::{
-    self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
+use crate::{
+    bytes::Bytes,
+    component, index,
+    instruction_set::{
+        self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
+    },
+    parser::{self, leb128, Offset, ResultExt},
 };
-use crate::parser::{self, leb128, Offset, ResultExt, Vector};
 
 fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> parser::Result<instruction_set::MemArg> {
     let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
@@ -61,7 +62,7 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::Br => Instruction::Br(component::index(offset, bytes).context("br label")?),
         Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes).context("br_if label")?),
         Opcode::BrTable => Instruction::BrTable(
-            Vector::new(offset, bytes, Default::default()).context("branch table")?,
+            component::IndexVector::parse(offset, bytes).context("branch table")?,
         ),
         Opcode::Return => Instruction::Return,
         Opcode::Call => Instruction::Call(component::index(offset, bytes).context("call target")?),
@@ -83,10 +84,10 @@ fn instruction<'a, 'b, B: Bytes>(
 
         Opcode::Drop => Instruction::Drop,
         Opcode::Select => {
-            Instruction::Select(Vector::empty_with_offset(offset, bytes, Default::default()))
+            Instruction::Select(component::ResultType::empty_with_offset(offset, bytes))
         }
         Opcode::SelectMany => Instruction::Select(
-            Vector::new(offset, bytes, Default::default()).context("select types")?,
+            component::ResultType::parse(offset, bytes).context("select types")?,
         ),
 
         Opcode::LocalGet => Instruction::LocalGet(component::index(offset, bytes)?),

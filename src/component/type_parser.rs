@@ -150,30 +150,11 @@ where
     }
 
     let offset_reborrow: &mut u64 = offset;
-    let mut parameters = component::ResultType::new(offset_reborrow, bytes, Default::default())?;
+    let mut parameters = component::ResultType::parse(offset_reborrow, bytes)?;
     let result_types_closure_argument = parameter_types(&mut parameters)?;
     parameters.finish()?;
-    let mut results = component::ResultType::new(offset, bytes, Default::default())?;
+    let mut results = component::ResultType::parse(offset, bytes)?;
     let ret = result_types(result_types_closure_argument, &mut results)?;
     results.finish()?;
     Ok(ret)
-}
-
-macro_rules! type_parse_impls {
-    ($($ty:ty => $name:ident,)*) => {$(
-        impl parser::Parse for parser::SimpleParse<$ty> {
-            type Output = $ty;
-
-            #[inline]
-            fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> Result<$ty> {
-                $name(offset, &bytes)
-            }
-        }
-    )*};
-}
-
-type_parse_impls! {
-    ValType => val_type,
-    TableType => table_type,
-    Limits => limits,
 }

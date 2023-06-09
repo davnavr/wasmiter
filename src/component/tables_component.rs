@@ -1,6 +1,6 @@
 use crate::{
     bytes::Bytes,
-    parser::{Result, ResultExt, SimpleParse, Vector},
+    parser::{Result, ResultExt, Vector},
     types::TableType,
 };
 
@@ -10,12 +10,12 @@ use crate::{
 /// [*tables section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
 #[derive(Clone, Copy)]
 pub struct TablesComponent<B: Bytes> {
-    types: Vector<u64, B, SimpleParse<TableType>>,
+    types: Vector<u64, B>,
 }
 
-impl<B: Bytes> From<Vector<u64, B, SimpleParse<TableType>>> for TablesComponent<B> {
+impl<B: Bytes> From<Vector<u64, B>> for TablesComponent<B> {
     #[inline]
-    fn from(types: Vector<u64, B, SimpleParse<TableType>>) -> Self {
+    fn from(types: Vector<u64, B>) -> Self {
         Self { types }
     }
 }
@@ -24,27 +24,21 @@ impl<B: Bytes> TablesComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *table section* of a module, starting,
     /// at the specified `offset`.
     pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::new(offset, bytes, Default::default())
+        Vector::parse(offset, bytes)
+            .context("at start of table section")
             .map(Self::from)
-            .context("table section")
     }
 
     /// Gets the expected remaining number of entries in the *table section* that have yet to be
     /// parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.types.len()
-    }
-
-    /// Returns a value indicating if the *table section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.types.is_empty()
+    pub fn remaining_count(&self) -> u32 {
+        self.types.remaining_count()
     }
 
     pub(crate) fn borrowed(&self) -> TablesComponent<&B> {
         TablesComponent {
-            types: self.types.by_reference(),
+            types: self.types.borrowed(),
         }
     }
 }
@@ -54,7 +48,9 @@ impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.types.next().map(|r| r.context("table section"))
+        self.types.advance(|offset, bytes| {
+            crate::component::table_type(offset, bytes).context("within table section")
+        })
     }
 
     #[inline]

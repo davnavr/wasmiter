@@ -11,8 +11,10 @@ mod funcs_component;
 mod function_section;
 mod globals_component;
 mod imports_component;
+mod index_vector;
 mod known_section;
 mod mems_component;
+mod result_type;
 mod tables_component;
 mod tags_component;
 mod type_parser;
@@ -31,11 +33,13 @@ pub use funcs_component::{Func, FuncsComponent};
 pub use function_section::FunctionSection;
 pub use globals_component::GlobalsComponent;
 pub use imports_component::{Import, ImportKind, ImportsComponent};
+pub use index_vector::IndexVector;
 pub use known_section::KnownSection;
 pub use mems_component::MemsComponent;
+pub use result_type::ResultType;
 pub use tables_component::TablesComponent;
 pub use tags_component::{parse as tag, Tag, TagsComponent};
-pub use types_component::{ResultType, TypesComponent};
+pub use types_component::TypesComponent;
 
 /// Parses a
 /// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).

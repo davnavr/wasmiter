@@ -1,6 +1,6 @@
 use crate::{
     bytes::Bytes,
-    parser::{self, Result, ResultExt as _},
+    parser::{self, Result, ResultExt as _, Vector},
 };
 
 /// Represents a
@@ -24,48 +24,40 @@ pub fn parse<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<Tag> {
     crate::component::index(offset, bytes).map(Tag::Exception)
 }
 
-impl parser::Parse for parser::SimpleParse<Tag> {
-    type Output = Tag;
-
-    #[inline]
-    fn parse<B: Bytes>(&mut self, offset: &mut u64, bytes: B) -> Result<Self::Output> {
-        parse(offset, &bytes)
-    }
-}
-
 /// Represents the
 /// [**tags** component](https://webassembly.github.io/exception-handling/core/syntax/modules.html#tags) of a
 /// WebAssembly module, stored in and parsed from the
 /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
 #[derive(Clone, Copy)]
 pub struct TagsComponent<B: Bytes> {
-    tags: parser::Vector<u64, B, parser::SimpleParse<Tag>>,
+    tags: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for TagsComponent<B> {
+    #[inline]
+    fn from(tags: Vector<u64, B>) -> Self {
+        Self { tags }
+    }
 }
 
 impl<B: Bytes> TagsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *type section* of a module, starting
     /// at the specified `offset`.
     pub fn new(offset: u64, bytes: B) -> parser::Result<Self> {
-        Ok(Self {
-            tags: parser::Vector::new(offset, bytes, Default::default()).context("tag section")?,
-        })
+        Vector::parse(offset, bytes)
+            .context("at start of tag section")
+            .map(Self::from)
     }
 
     /// Gets the expected remaining number of tags that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.tags.len()
-    }
-
-    /// Returns a value indicating if the *tag section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.tags.is_empty()
+    pub fn remaining_count(&self) -> u32 {
+        self.tags.remaining_count()
     }
 
     pub(crate) fn borrowed(&self) -> TagsComponent<&B> {
         TagsComponent {
-            tags: self.tags.by_reference(),
+            tags: self.tags.borrowed(),
         }
     }
 }
@@ -75,7 +67,8 @@ impl<B: Bytes> Iterator for TagsComponent<B> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.tags.next()
+        self.tags
+            .advance(|offset, bytes| parse(offset, bytes).context("within tag section"))
     }
 
     #[inline]

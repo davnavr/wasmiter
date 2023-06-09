@@ -1,9 +1,9 @@
 use crate::{
     bytes::Bytes,
-    component,
+    component::{self, IndexVector},
     index::{self, TableIdx},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Result, ResultExt, Vector},
+    parser::{self, Offset, Result, ResultExt},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -95,7 +95,7 @@ impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
 pub enum ElementInit<O: Offset, B: Bytes> {
     /// A vector of functions to create `funcref` elements from.
-    Functions(Vector<O, B, parser::SimpleParse<index::FuncIdx>>),
+    Functions(IndexVector<index::FuncIdx, O, B>),
     /// A vector of expressions that evaluate to references.
     Expressions(Option<crate::types::RefType>, ElementExpressions<O, B>),
 }
@@ -219,7 +219,7 @@ impl<B: Bytes> ElemsComponent<B> {
                 init_arg = mode_f(&mut mode)?;
                 mode.finish()?;
                 init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                    IndexVector::parse(&mut self.offset, &self.bytes)
                         .context("function references in active element segment")?,
                 );
             }
@@ -229,7 +229,7 @@ impl<B: Bytes> ElemsComponent<B> {
                 init_arg = mode_f(&mut mode)?;
                 mode.finish()?; // Does nothing
                 init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                    IndexVector::parse(&mut self.offset, &self.bytes)
                         .context("function references in passive element segment")?,
                 );
             }
@@ -243,7 +243,7 @@ impl<B: Bytes> ElemsComponent<B> {
                 mode.finish()?;
                 elem_kind(&mut self.offset, &self.bytes)?;
                 init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                    IndexVector::parse(&mut self.offset, &self.bytes)
                         .context("function references in active element segment")?,
                 );
             }
@@ -253,7 +253,7 @@ impl<B: Bytes> ElemsComponent<B> {
                 init_arg = mode_f(&mut mode)?;
                 mode.finish()?; // Does nothing
                 init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
+                    IndexVector::parse(&mut self.offset, &self.bytes)
                         .context("function references in declarative element segment")?,
                 );
             }

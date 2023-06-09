@@ -68,10 +68,10 @@ impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
     ///
     /// Returns an error if the length of both sections are not the same.
     pub fn new(types: FunctionSection<T>, code: CodeSection<C>) -> Result<Self> {
-        if types.len() != code.len() {
+        if types.remaining_count() != code.len() {
             Err(crate::parser_bad_format!(
                 "function section has {} entries, but code section has {} entries",
-                types.len(),
+                types.remaining_count(),
                 code.len()
             ))
         } else {
