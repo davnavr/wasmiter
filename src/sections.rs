@@ -11,7 +11,11 @@ use crate::bytes::{Bytes, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
 
+mod debug_module;
+
 pub mod id;
+
+pub use debug_module::{DebugModule, DebugModuleSection};
 
 /// Represents a
 /// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections),
@@ -71,6 +75,13 @@ impl<B: Bytes> Section<B> {
             id: self.id,
             contents: self.contents.borrowed(),
         }
+    }
+
+    /// Returns a [`Debug`] implementation that attempts to interpret the contents as a WebAssembly
+    /// module section.
+    #[inline]
+    pub fn debug_module(&self) -> DebugModuleSection<'_, B> {
+        DebugModuleSection::new(self)
     }
 }
 
@@ -141,6 +152,13 @@ impl<B: Bytes> SectionSequence<B> {
             offset: self.offset,
             bytes: &self.bytes,
         }
+    }
+
+    /// Returns a [`Debug`] implementation that attempts to interpret the sequence of sections as a
+    /// WebAssembly module's sections.
+    #[inline]
+    pub fn debug_module(&self) -> DebugModule<'_, B> {
+        DebugModule::new(self)
     }
 }
 
