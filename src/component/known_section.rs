@@ -1,7 +1,7 @@
 use crate::bytes::{Bytes, Window};
 use crate::component;
 use crate::parser::{self, ResultExt as _};
-use crate::sections::{id as section_id, Section, SectionKind};
+use crate::sections::{id as section_id, Section};
 
 /// Represents a well-known WebAssembly [`Section`].
 #[non_exhaustive]
@@ -53,7 +53,7 @@ pub enum KnownSection<B: Bytes> {
 impl<B: Bytes> KnownSection<B> {
     /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
     /// the section.
-    pub const fn id(&self) -> crate::sections::SectionId {
+    pub const fn id(&self) -> u8 {
         match self {
             Self::Type(_) => section_id::TYPE,
             Self::Import(_) => section_id::IMPORT,
@@ -101,70 +101,66 @@ impl<B: Bytes> KnownSection<Window<B>> {
     /// Returns `Ok(Err)` if the section **was** recognized, but an attempt to parse a length field
     /// failed.
     pub fn interpret(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
-        if let SectionKind::Id(id) = section.kind() {
-            Ok(match *id {
-                section_id::TYPE => {
-                    let contents = section.into_contents();
-                    component::TypesComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::IMPORT => {
-                    let contents = section.into_contents();
-                    component::ImportsComponent::new(contents.base(), contents)
-                }
-                .map(Self::from),
-                section_id::FUNC => {
-                    let contents = section.into_contents();
-                    component::FunctionSection::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::TABLE => {
-                    let contents = section.into_contents();
-                    component::TablesComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::MEMORY => {
-                    let contents = section.into_contents();
-                    component::MemsComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::GLOBAL => {
-                    let contents = section.into_contents();
-                    component::GlobalsComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::EXPORT => {
-                    let contents = section.into_contents();
-                    component::ExportsComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::START => {
-                    let contents = section.into_contents();
-                    component::index(&mut contents.base(), contents)
-                        .context("start section")
-                        .map(Self::Start)
-                }
-                section_id::ELEMENT => {
-                    let contents = section.into_contents();
-                    component::ElemsComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::CODE => {
-                    let contents = section.into_contents();
-                    component::CodeSection::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::DATA => {
-                    let contents = section.into_contents();
-                    component::DatasComponent::new(contents.base(), contents).map(Self::from)
-                }
-                section_id::DATA_COUNT => {
-                    let contents = section.into_contents();
-                    parser::leb128::u32(&mut contents.base(), contents)
-                        .context("data count section")
-                        .map(Self::DataCount)
-                }
-                section_id::TAG => {
-                    let contents = section.into_contents();
-                    component::TagsComponent::new(contents.base(), contents).map(Self::from)
-                }
-                _ => return Err(section),
-            })
-        } else {
-            Err(section)
-        }
+        Ok(match section.id() {
+            section_id::TYPE => {
+                let contents = section.into_contents();
+                component::TypesComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::IMPORT => {
+                let contents = section.into_contents();
+                component::ImportsComponent::new(contents.base(), contents)
+            }
+            .map(Self::from),
+            section_id::FUNC => {
+                let contents = section.into_contents();
+                component::FunctionSection::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::TABLE => {
+                let contents = section.into_contents();
+                component::TablesComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::MEMORY => {
+                let contents = section.into_contents();
+                component::MemsComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::GLOBAL => {
+                let contents = section.into_contents();
+                component::GlobalsComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::EXPORT => {
+                let contents = section.into_contents();
+                component::ExportsComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::START => {
+                let contents = section.into_contents();
+                component::index(&mut contents.base(), contents)
+                    .context("start section")
+                    .map(Self::Start)
+            }
+            section_id::ELEMENT => {
+                let contents = section.into_contents();
+                component::ElemsComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::CODE => {
+                let contents = section.into_contents();
+                component::CodeSection::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::DATA => {
+                let contents = section.into_contents();
+                component::DatasComponent::new(contents.base(), contents).map(Self::from)
+            }
+            section_id::DATA_COUNT => {
+                let contents = section.into_contents();
+                parser::leb128::u32(&mut contents.base(), contents)
+                    .context("data count section")
+                    .map(Self::DataCount)
+            }
+            section_id::TAG => {
+                let contents = section.into_contents();
+                component::TagsComponent::new(contents.base(), contents).map(Self::from)
+            }
+            _ => return Err(section),
+        })
     }
 }
 

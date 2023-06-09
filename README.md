@@ -1,6 +1,8 @@
 # `wasmiter`
 
-Low-level WebAssembly parser, with a focus on support for processing sections in parallel.
+Low-level WebAssembly parser, with a focus on zero allocations.
+
+Designed to allow easier processing of a WebAssembly module's sections in parallel.
 
 ## Supported WebAssembly Proposals
 

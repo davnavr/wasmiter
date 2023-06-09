@@ -41,6 +41,27 @@ impl<B: Bytes> CustomSection<Window<B>> {
 
 impl<B: Bytes> Debug for CustomSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        /*
+        let kind = SectionId::new(id_byte);
+        let mut content_length = u64::from(
+            parser::leb128::u32(&mut self.offset, &self.bytes).context("section content size")?,
+        );
+
+        let id = if let Some(id_number) = kind {
+            SectionKind::Id(id_number)
+        } else {
+            let name_start = self.offset;
+
+            let name = parser::name::parse(&mut self.offset, &self.bytes)
+                .context("custom section name")?;
+
+            content_length -= self.offset - name_start;
+
+            SectionKind::Custom(name)
+        };
+
+        let contents = Window::new(&self.bytes, self.offset, content_length);
+        */
         match self {
             Self::Name(names) => Debug::fmt(names, f),
         }
