@@ -69,7 +69,7 @@ macro_rules! known_custom_ids {
 
         $(
             $(#[$meta])*
-            pub const $name: &'static str = $value;
+            pub const $name: &str = $value;
         )*
     };
 }
@@ -96,4 +96,17 @@ known_custom_ids! {
     /// [The `linking` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#linking-metadata-section),
     /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for static linking.
     LINKING = "linking";
+}
+
+pub(crate) fn is_custom_name_recognized<B: crate::bytes::Bytes>(name: crate::parser::name::Name<B>) -> Option<&'static str> {
+    let mut buffer = [0u8; 16]; // Should be enough to fit the largest known static custom name
+    if let Ok(slice) = name.copy_to_slice(&mut buffer) {
+        if let Ok(actual) = core::str::from_utf8(slice) {
+            cached_custom_name(actual)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }

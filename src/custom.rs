@@ -31,11 +31,14 @@ impl<B: Bytes> KnownCustomSection<Window<B>> {
     /// within resulted in an error.
     ///
     /// Returns `Err(_)` if the section was not recognized.
-    pub fn interpret(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
-        // match section.kind() {
-        //     sections::SectionKind::Custom(name)
-        // }
-        todo!()
+    pub fn interpret(section: CustomSection<B>) -> Result<parser::Result<Self>, CustomSection<B>> {
+        if let Some(static_name) = sections::id::is_custom_name_recognized(section.name().borrowed()) {
+            match static_name {
+                _ => Err(section),
+            }
+        } else {
+            Err(section)
+        }
     }
 }
 
