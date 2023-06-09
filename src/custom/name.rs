@@ -4,10 +4,17 @@
 
 use crate::{
     bytes::{self, Bytes},
+    index::{self, Index},
     parser::name::Name,
     sections::{self, Section},
 };
-use core::fmt::{Debug, Formatter};
+use core::fmt::Debug;
+
+mod name_assoc;
+mod name_map;
+
+pub use name_assoc::NameAssoc;
+pub use name_map::NameMap;
 
 /// Represents the sequence of subsections in the
 /// [`name` section](https://webassembly.github.io/spec/core/appendix/custom.html).
@@ -24,7 +31,7 @@ impl<B: Bytes> NameSection<B> {
 }
 
 impl<B: Bytes> Debug for NameSection<B> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         todo!()
     }
 }
