@@ -1,6 +1,6 @@
 ---
 source: tests/modules.rs
-expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
+expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
 ---
 (type (; 0 ;) (func (param) (result)))
 (type (; 1 ;) (func (param) (result i32)))
@@ -34,7 +34,15 @@ expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
   drop
 )
 
-(; "name" (custom) section @ 0xD7
-[]
+(; UNRECOGNIZED (0) @ 0xD2 to 0x136
+[
+    046E616D_65012304__010B6675_6E5F7374,
+    61727475_7002046D__61696E03_065F7374,
+    61727404_055F696E__69740512_0200085F,
+    48414E44_4C455301__0546554E_4353060A,
+    01010753_43524154__43480719_02010946,
+    554E4353_5F505452__020B5343_52415443,
+    485F5054_52,
+]
 ;)
 

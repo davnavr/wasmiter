@@ -2,121 +2,9 @@ use crate::{
     bytes::{Bytes, Window},
     component,
     instruction_set::InstructionSequence,
-    parser::{self, Offset, ResultExt},
-    types::ValType,
+    parser::{self, ResultExt as _, Vector},
 };
-use core::{
-    fmt::{Debug, Formatter},
-    num::NonZeroU32,
-};
-
-/// Represents the local declarations in the [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
-/// which corresponds to the
-/// [**locals** field](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func) of
-/// each function in the
-/// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
-/// of a WebAssembly module.
-pub struct Locals<O: Offset, B: Bytes> {
-    offset: O,
-    bytes: B,
-    count: u32,
-    current: Option<(NonZeroU32, ValType)>,
-}
-
-impl<O: Offset, B: Bytes> Locals<O, B> {
-    fn new(mut offset: O, bytes: B) -> parser::Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(offset.offset_mut(), &bytes)
-                .context("locals declaration count")?,
-            bytes,
-            offset,
-            current: None,
-        })
-    }
-
-    fn load_next_group(&mut self) -> parser::Result<Option<(NonZeroU32, ValType)>> {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
-        if let Some(existing) = self.current {
-            Ok(Some(existing))
-        } else {
-            loop {
-                self.count -= 1;
-
-                let count = parser::leb128::u32(self.offset.offset_mut(), &self.bytes)
-                    .context("local group count")?;
-
-                if let Some(variable_count) = NonZeroU32::new(count) {
-                    let variable_type = component::val_type(self.offset.offset_mut(), &self.bytes)
-                        .context("local group type")?;
-
-                    return Ok(Some(*self.current.insert((variable_count, variable_type))));
-                } else {
-                    continue;
-                }
-            }
-        }
-    }
-
-    /// Gets the next group of local variable declarations. Returns a type, and the number of
-    /// locals of that type.
-    ///
-    /// To save on size, locals of the same type can be grouped together.
-    pub fn next_group(&mut self) -> parser::Result<Option<(NonZeroU32, ValType)>> {
-        self.load_next_group()?;
-        Ok(self.current.take())
-    }
-
-    fn next_inner(&mut self) -> parser::Result<Option<ValType>> {
-        match self.load_next_group() {
-            Ok(None) => Ok(None),
-            Err(e) => Err(e),
-            Ok(Some((count, ty))) => {
-                self.current = NonZeroU32::new(count.get() - 1).map(|count| (count, ty));
-                Ok(Some(ty))
-            }
-        }
-    }
-
-    fn finish(mut self) -> parser::Result<O> {
-        while self.next_group().transpose().is_some() {}
-        Ok(self.offset)
-    }
-}
-
-impl<O: Offset, B: Bytes> Iterator for Locals<O, B> {
-    type Item = parser::Result<ValType>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next_inner().transpose()
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            self.current
-                .and_then(|(count, _)| usize::try_from(count.get()).ok())
-                .unwrap_or(0),
-            None,
-        )
-    }
-}
-
-impl<O: Offset, B: Bytes> Debug for Locals<O, B> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let borrowed = Locals {
-            offset: self.offset.offset(),
-            bytes: &self.bytes,
-            count: self.count,
-            current: self.current,
-        };
-
-        f.debug_list().entries(borrowed).finish()
-    }
-}
+use core::fmt::{Debug, Formatter};
 
 /// Represents an entry
 /// in the
@@ -150,18 +38,19 @@ impl<B: Bytes> Code<B> {
 
     /// Reads the contents of this code entry.
     ///
-    /// The first closure is given a [`Locals`] used to read the compressed local variable declarations.
+    /// The first closure is given a [`Locals`](component::Locals) used to read the compressed
+    /// local variable declarations.
     ///
     /// The second closure is given the output of the first closure, along with an
     /// [`InstructionSequence`] used to read the function *body*.
     pub fn read<Y, Z, E, L, C>(&self, locals_f: L, code_f: C) -> Result<Z, E>
     where
         E: From<parser::Error>,
-        L: FnOnce(&mut Locals<&mut u64, &Window<B>>) -> Result<Y, E>,
+        L: FnOnce(&mut component::Locals<&mut u64, &Window<B>>) -> Result<Y, E>,
         C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<B>>) -> Result<Z, E>,
     {
         let mut offset = self.content.base();
-        let mut locals = Locals::new(&mut offset, &self.content)?;
+        let mut locals = component::Locals::new(&mut offset, &self.content)?;
         let code_arg = locals_f(&mut locals)?;
         locals.finish()?;
 
@@ -221,73 +110,56 @@ impl<B: Bytes> Debug for Code<B> {
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
 pub struct CodeSection<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    entries: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for CodeSection<B> {
+    #[inline]
+    fn from(entries: Vector<u64, B>) -> Self {
+        Self { entries }
+    }
 }
 
 impl<B: Bytes> CodeSection<B> {
     /// Uses the given [`Bytes`] to read the contents of the *code section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(mut offset: u64, bytes: B) -> parser::Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("code section count")?,
-            bytes,
-            offset,
-        })
+    pub fn new(offset: u64, bytes: B) -> parser::Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of code section")
+            .map(Self::from)
     }
 
     /// Gets the expected remaining number of entries in the *code section* that have yet to be
     /// parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *code section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.entries.remaining_count()
     }
 
     /// Parses the next entry in the *code section*.
     pub fn parse(&mut self) -> parser::Result<Option<Code<&B>>> {
-        if self.count == 0 {
-            return Ok(None);
-        }
+        self.entries
+            .advance_with_index(|index, offset, bytes| {
+                let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
+                let content = Window::new(bytes, *offset, size);
 
-        let result = parser::leb128::u32(&mut self.offset, &self.bytes).context("code entry size");
-        match result {
-            Ok(size) => {
-                self.count -= 1;
-                let content = Window::new(&self.bytes, self.offset, u64::from(size));
-
-                self.offset = self.offset.checked_add(u64::from(size)).ok_or_else(|| {
+                *offset = offset.checked_add(size).ok_or_else(|| {
                     crate::parser_bad_input!(
                         crate::bytes::offset_overflowed(),
                         "unable to advance offset to read next code section entry"
                     )
                 })?;
 
-                Ok(Some(Code {
-                    index: self.count,
-                    content,
-                }))
-            }
-            Err(e) => {
-                self.count = 0;
-                Err(e)
-            }
-        }
+                parser::Result::Ok(Code { index, content })
+            })
+            .transpose()
+            .context("within code section")
     }
 
+    #[inline]
     pub(super) fn borrowed(&self) -> CodeSection<&B> {
-        CodeSection {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.entries.borrowed().into()
     }
 }
 
@@ -295,13 +167,16 @@ impl<B: Clone + Bytes> Iterator for CodeSection<B> {
     type Item = parser::Result<Code<B>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.parse()
-            .map(|result| result.map(|i| i.cloned()))
-            .transpose()
+        match self.parse() {
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+            Ok(Some(code)) => Some(Ok(code.cloned())),
+        }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        ((self.count > 0).into(), self.count.try_into().ok())
+        self.entries.size_hint()
     }
 }
 

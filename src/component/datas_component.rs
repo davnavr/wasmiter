@@ -1,7 +1,9 @@
-use crate::bytes::{Bytes, Window};
-use crate::index::MemIdx;
-use crate::instruction_set::InstructionSequence;
-use crate::parser::{self, Offset, Result, ResultExt};
+use crate::{
+    bytes::{Bytes, Window},
+    index::MemIdx,
+    instruction_set::InstructionSequence,
+    parser::{self, Offset, Result, ResultExt as _, Vector},
+};
 use core::fmt::{Debug, Formatter};
 
 /// Specifies the mode of a
@@ -49,62 +51,23 @@ impl<O: Offset, B: Bytes> Debug for DataMode<O, B> {
 /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section).
 #[derive(Clone, Copy)]
 pub struct DatasComponent<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    entries: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for DatasComponent<B> {
+    #[inline]
+    fn from(entries: Vector<u64, B>) -> Self {
+        Self { entries }
+    }
 }
 
 impl<B: Bytes> DatasComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *data section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("data section count")?,
-            bytes,
-            offset,
-        })
-    }
-
-    #[inline]
-    fn parse_inner<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Z>
-    where
-        M: FnOnce(&mut DataMode<&mut u64, &B>) -> Result<Y>,
-        D: FnOnce(Y, Window<&B>) -> Result<Z>,
-    {
-        let mode_offset = self.offset;
-        let mode_tag =
-            parser::leb128::u32(&mut self.offset, &self.bytes).context("data segment mode")?;
-
-        let mut mode = match mode_tag {
-            0 => DataMode::Active(
-                MemIdx::from(0u8),
-                InstructionSequence::new(&mut self.offset, &self.bytes),
-            ),
-            _ => {
-                return Err(crate::parser_bad_format_at_offset!(
-                    "file" @ mode_offset,
-                    "{mode_tag} is not a supported data segment mode"
-                ))
-            }
-        };
-
-        let data_arg = mode_f(&mut mode)?;
-        mode.finish()?;
-
-        let data_length =
-            parser::leb128::u64(&mut self.offset, &self.bytes).context("data segment length")?;
-
-        let data = Window::new(&self.bytes, self.offset, data_length);
-        let result = data_f(data_arg, data)?;
-
-        self.offset = self.offset.checked_add(data_length).ok_or_else(|| {
-            crate::parser_bad_format_at_offset!(
-                "file" @ self.offset,
-                "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached"
-            )
-        })?;
-
-        Ok(result)
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of data section")
+            .map(Self::from)
     }
 
     /// Parses the next data segment in the section.
@@ -113,40 +76,55 @@ impl<B: Bytes> DatasComponent<B> {
         M: FnOnce(&mut DataMode<&mut u64, &B>) -> Result<Y>,
         D: FnOnce(Y, Window<&B>) -> Result<Z>,
     {
-        if self.count == 0 {
-            return Ok(None);
-        }
+        self.entries.advance(|offset, bytes| {
+            let mode_offset = *offset;
+            let mode_tag=
+                parser::leb128::u32(offset, bytes).context("data segment mode")?;
 
-        let result = self.parse_inner(mode_f, data_f);
+            let mut copied_offset = *offset;
+            let mut mode: DataMode<&mut u64, &B> = match mode_tag {
+                0 => DataMode::Active(
+                    MemIdx::from(0u8),
+                    InstructionSequence::new(&mut copied_offset, bytes),
+                ),
+                _ => {
+                    return Err(crate::parser_bad_format_at_offset!(
+                        "file" @ mode_offset,
+                        "{mode_tag} is not a supported data segment mode"
+                    ))
+                }
+            };
 
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
+            let data_arg = mode_f(&mut mode)?;
+            mode.finish()?;
+            *offset = copied_offset;
 
-        result.map(Some)
+            let data_length =
+                parser::leb128::u64(offset, bytes).context("data segment length")?;
+
+            let data = Window::new(bytes, *offset, data_length);
+            let result = data_f(data_arg, data)?;
+
+            *offset = offset.checked_add(data_length).ok_or_else(|| {
+                crate::parser_bad_format_at_offset!(
+                    "file" @ offset,
+                    "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached"
+                )
+            })?;
+
+            Ok(result)
+        }).transpose().context("within data section")
     }
 
     /// Gets the expected remaining number of entires in the *data section* that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *data section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.entries.remaining_count()
     }
 
     #[inline]
     pub(crate) fn borrowed(&self) -> DatasComponent<&B> {
-        DatasComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.entries.borrowed().into()
     }
 }
 

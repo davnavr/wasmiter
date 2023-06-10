@@ -1,33 +1,55 @@
-//! Contains types for reading the sections of a WebAssembly module.
+//! Contains types for reading WebAssembly sections.
+//!
+//! A sequence of sections is a common structure in the WebAssembly binary format, used not only in
+//! the
+//! [encoding for modules](https://webassembly.github.io/spec/core/binary/modules.html#binary-section),
+//! but also in some custom sections. Examples include the
+//! [`name` custom section](crate::custom::name), and in the
+//! [`dylink.0` custom section described in the Dynamic Linking document](https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md).
 
 use crate::bytes::{Bytes, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
 
-mod section_kind;
+mod debug_module;
+mod display_module;
 
-pub use section_kind::{section_id as id, SectionId, SectionKind};
+pub mod id;
+
+pub use debug_module::{DebugModule, DebugModuleSection};
+pub use display_module::DisplayModule;
 
 /// Represents a
-/// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections).
+/// [WebAssembly section](https://webassembly.github.io/spec/core/binary/modules.html#sections),
+/// typically a
+/// [section within a module](https://webassembly.github.io/spec/core/binary/modules.html#binary-section).
+///
+/// To interpret the contents of a WebAssembly module section, consider using
+/// [`component::KnownSection::interpret`](crate::component::KnownSection::interpret), or in the
+/// case of a custom section,
+/// [`custom::KnownCustomSection::interpret`](crate::custom::KnownCustomSection::interpret).
 #[derive(Clone, Copy)]
 pub struct Section<B: Bytes> {
-    kind: SectionKind<B>,
+    id: u8,
     contents: Window<B>,
 }
 
 impl<B: Bytes> Section<B> {
-    /// Gets the
-    /// [*id* or custom section name](https://webassembly.github.io/spec/core/binary/modules.html#sections)
-    /// for this section.
+    /// Creates a new [`Section`] with the given
+    /// [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) and binary
+    /// `contents`.
+    pub fn new(id: u8, contents: Window<B>) -> Self {
+        Self { id, contents }
+    }
+
+    /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
+    /// this section.
     #[inline]
-    pub fn kind(&self) -> &SectionKind<B> {
-        &self.kind
+    pub fn id(&self) -> u8 {
+        self.id
     }
 
     /// Gets the length, in bytes, of the content of the section.
-    ///
-    /// Note that for custom sections, this does **not** include the section name.
     #[inline]
     pub fn length(&self) -> u64 {
         self.contents.length()
@@ -51,9 +73,16 @@ impl<B: Bytes> Section<B> {
     /// Returns a borrowed version of the [`Section`].
     pub fn borrowed(&self) -> Section<&B> {
         Section {
-            kind: self.kind.into_borrowed(),
+            id: self.id,
             contents: self.contents.borrowed(),
         }
+    }
+
+    /// Returns a [`Debug`] implementation that attempts to interpret the contents as a WebAssembly
+    /// module section.
+    #[inline]
+    pub fn debug_module(&self) -> DebugModuleSection<'_, B> {
+        DebugModuleSection::new(self)
     }
 }
 
@@ -61,7 +90,7 @@ impl<B: Bytes + Clone> Section<&B> {
     /// Returns a version of the [`Section`] with the contents cloned.
     pub fn cloned(&self) -> Section<B> {
         Section {
-            kind: self.kind.cloned(),
+            id: self.id,
             contents: self.contents.cloned(),
         }
     }
@@ -69,20 +98,15 @@ impl<B: Bytes + Clone> Section<&B> {
 
 impl<B: Bytes> Debug for Section<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match crate::component::KnownSection::try_from_section(self.borrowed()) {
-            Ok(known) => Debug::fmt(&known, f),
-            Err(unknown) => f
-                .debug_struct("Section")
-                .field("kind", &unknown.kind)
-                .field("contents", &unknown.contents)
-                .finish(),
-        }
+        f.debug_struct("Section")
+            .field("id", &self.id)
+            .field("contents", &self.contents)
+            .finish()
     }
 }
 
-/// Represents the
-/// [sequence of sections](https://webassembly.github.io/spec/core/binary/modules.html#binary-module)
-/// in a WebAssembly module.
+/// Represents a sequence of WebAssembly [`Section`]s, commonly the
+/// [sequence of sections in a WebAssembly module](https://webassembly.github.io/spec/core/binary/modules.html#binary-module).
 #[derive(Clone, Copy)]
 #[must_use]
 pub struct SectionSequence<B: Bytes> {
@@ -91,7 +115,7 @@ pub struct SectionSequence<B: Bytes> {
 }
 
 impl<B: Bytes> SectionSequence<B> {
-    /// Uses the given [`Bytes`] to read a sequence of sections starting at the specified `offset`.
+    /// Uses the given [`Bytes`] to parse a sequence of sections starting at the specified `offset`.
     pub fn new(offset: u64, bytes: B) -> Self {
         Self { offset, bytes }
     }
@@ -103,29 +127,15 @@ impl<B: Bytes> SectionSequence<B> {
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
     pub fn parse(&mut self) -> Result<Option<Section<&B>>> {
-        let id_byte = if let Some(id) = parser::one_byte(&mut self.offset, &self.bytes)? {
-            id
+        let id = if let Some(value) = parser::one_byte(&mut self.offset, &self.bytes)? {
+            value
         } else {
             return Ok(None);
         };
 
-        let kind = SectionId::new(id_byte);
-        let mut content_length = u64::from(
+        let content_length = u64::from(
             parser::leb128::u32(&mut self.offset, &self.bytes).context("section content size")?,
         );
-
-        let id = if let Some(id_number) = kind {
-            SectionKind::Id(id_number)
-        } else {
-            let name_start = self.offset;
-
-            let name = parser::name::parse(&mut self.offset, &self.bytes)
-                .context("custom section name")?;
-
-            content_length -= self.offset - name_start;
-
-            SectionKind::Custom(name)
-        };
 
         let contents = Window::new(&self.bytes, self.offset, content_length);
 
@@ -135,7 +145,7 @@ impl<B: Bytes> SectionSequence<B> {
         //     .context("section content")?;
         self.offset += content_length;
 
-        Ok(Some(Section { kind: id, contents }))
+        Ok(Some(Section { id, contents }))
     }
 
     pub(crate) fn borrowed(&self) -> SectionSequence<&B> {
@@ -143,6 +153,21 @@ impl<B: Bytes> SectionSequence<B> {
             offset: self.offset,
             bytes: &self.bytes,
         }
+    }
+
+    /// Returns a [`Debug`] implementation that attempts to interpret the sequence of sections as a
+    /// WebAssembly module's sections.
+    #[inline]
+    pub fn debug_module(&self) -> DebugModule<'_, B> {
+        DebugModule::new(self)
+    }
+
+    /// Returns a [`Display`](core::fmt::Display) implementation that attempts to interpret the
+    /// sequence of sections as a WebAssembly module's sections, and writing the corresponding
+    /// [WebAssembly text](https://webassembly.github.io/spec/core/text/index.html).
+    #[inline]
+    pub fn display_module(&self) -> DisplayModule<'_, B> {
+        DisplayModule::new(self)
     }
 }
 

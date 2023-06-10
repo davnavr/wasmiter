@@ -78,7 +78,7 @@ impl<B: Bytes> Name<B> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the name [`Bytes`] could not be feteched.
+    /// Returns an error if the name [`Bytes`] could not be fetched.
     pub fn copy_to_slice<'b>(&self, buffer: &'b mut [u8]) -> parser::Result<&'b mut [u8]> {
         let length = core::cmp::min(
             usize::try_from(self.length).ok().unwrap_or(usize::MAX),
@@ -93,6 +93,26 @@ impl<B: Bytes> Name<B> {
 
         Ok(destination)
     }
+
+    /// Returns the contents of the [`Name`] as a [`Window`](bytes::Window).
+    pub fn into_bytes_window(self) -> bytes::Window<B> {
+        let offset = self.offset;
+        let length = self.length();
+        bytes::Window::new(self.bytes, offset, length)
+    }
+
+    /// Attempts to compare this [`Name`] to a [`str`]ing, returning `true` if they are equal.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the name [`Bytes`] could not be fetched.
+    #[inline]
+    pub fn try_eq_str(&self, s: &str) -> parser::Result<bool> {
+        self.borrowed()
+            .into_bytes_window()
+            .try_eq_slice(s.as_bytes())
+            .map_err(Into::into)
+    }
 }
 
 impl<B: Bytes + Clone> Name<&B> {
@@ -101,6 +121,25 @@ impl<B: Bytes + Clone> Name<&B> {
             bytes: self.bytes.clone(),
             offset: self.offset,
             length: self.length,
+        }
+    }
+}
+
+impl<B: Bytes> Name<bytes::Window<B>> {
+    pub(crate) fn flatten_windowed(self) -> Name<B> {
+        let mut length = core::cmp::min(
+            self.length,
+            u32::try_from(self.bytes.length()).unwrap_or(u32::MAX),
+        );
+
+        if self.offset > self.bytes.base() + self.bytes.length() {
+            length = 0;
+        }
+
+        Name {
+            offset: self.offset,
+            length,
+            bytes: self.bytes.into_inner(),
         }
     }
 }
@@ -187,16 +226,6 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
             Err(crate::parser_bad_format!(
                 "byte slice has a length of {actual_length}, which is too large"
             ))
-        }
-    }
-}
-
-impl<'a> Name<&'a [u8]> {
-    pub(crate) const fn from_byte_slice(bytes: &'a [u8]) -> Self {
-        Self {
-            bytes,
-            length: bytes.len() as u32,
-            offset: 0,
         }
     }
 }

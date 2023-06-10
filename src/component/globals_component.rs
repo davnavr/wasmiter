@@ -1,7 +1,7 @@
 use crate::{
     bytes::Bytes,
     instruction_set::InstructionSequence,
-    parser::{self, Result, ResultExt},
+    parser::{Result, ResultExt as _, Vector},
     types::GlobalType,
 };
 
@@ -11,31 +11,23 @@ use crate::{
 /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
 #[derive(Clone, Copy)]
 pub struct GlobalsComponent<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    globals: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for GlobalsComponent<B> {
+    #[inline]
+    fn from(globals: Vector<u64, B>) -> Self {
+        Self { globals }
+    }
 }
 
 impl<B: Bytes> GlobalsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *global section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("global section count")?,
-            offset,
-            bytes,
-        })
-    }
-
-    fn parse_inner<T, F>(&mut self, f: F) -> Result<T>
-    where
-        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
-    {
-        let global_type = crate::component::global_type(&mut self.offset, &self.bytes)?;
-        let mut expression = InstructionSequence::new(&mut self.offset, &self.bytes);
-        let result = f(global_type, &mut expression).context("global expression")?;
-        expression.finish().context("global expression")?;
-        Ok(result)
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of global section")
+            .map(Self::from)
     }
 
     /// Parses a
@@ -44,39 +36,26 @@ impl<B: Bytes> GlobalsComponent<B> {
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
-        let result = self.parse_inner(f);
-
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
-
-        result.map(Some)
+        self.globals
+            .advance(|offset, bytes| {
+                let global_type = crate::component::global_type(offset, bytes)?;
+                let mut expression = InstructionSequence::new(offset, bytes);
+                let result = f(global_type, &mut expression).context("global expression")?;
+                expression.finish().context("global expression")?;
+                Result::Ok(result)
+            })
+            .transpose()
+            .context("within global section")
     }
 
     /// Gets the expected remaining number of entires in the *global section* that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *global section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.globals.remaining_count()
     }
 
     pub(crate) fn borrowed(&self) -> GlobalsComponent<&B> {
-        GlobalsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.globals.borrowed().into()
     }
 }
 

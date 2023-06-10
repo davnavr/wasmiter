@@ -1,7 +1,7 @@
 use crate::{
     bytes::Bytes,
     component, index,
-    parser::{self, name::Name, Result, ResultExt},
+    parser::{self, name::Name, Result, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -101,57 +101,42 @@ impl<B: Bytes> Debug for Export<B> {
 /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
 #[derive(Clone, Copy)]
 pub struct ExportsComponent<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    exports: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for ExportsComponent<B> {
+    #[inline]
+    fn from(exports: Vector<u64, B>) -> Self {
+        Self { exports }
+    }
 }
 
 impl<B: Bytes> ExportsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *export section* of a module, starting
     /// at the given `offset`.
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("export count")?,
-            offset,
-            bytes,
-        })
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of export section")
+            .map(Self::from)
     }
 
     /// Parses the next export in the section.
     pub fn parse(&mut self) -> Result<Option<Export<&B>>> {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
-        let result = Export::parse(&mut self.offset, &self.bytes);
-
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
-
-        result.map(Some)
+        self.exports
+            .advance(Export::parse)
+            .transpose()
+            .context("within export section")
     }
 
+    #[inline]
     pub(crate) fn borrowed(&self) -> ExportsComponent<&B> {
-        ExportsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.exports.borrowed().into()
     }
 
     /// Gets the expected remaining number of entires in the *export section* that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *export section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.exports.remaining_count()
     }
 }
 
@@ -159,13 +144,16 @@ impl<B: Clone + Bytes> Iterator for ExportsComponent<B> {
     type Item = Result<Export<B>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.parse()
-            .map(|result| result.map(|i| i.cloned()))
-            .transpose()
+        match self.parse() {
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+            Ok(Some(export)) => Some(Ok(export.cloned())),
+        }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        ((self.count > 0).into(), self.count.try_into().ok())
+        self.exports.size_hint()
     }
 }
 

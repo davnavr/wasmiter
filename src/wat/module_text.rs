@@ -1,20 +1,23 @@
 use crate::{
     component::KnownSection,
-    sections::SectionKind,
     wat::{self, Wat},
 };
 
-impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
+impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
         let mut function_types = None;
 
-        for result in self.borrowed() {
-            match KnownSection::try_from_section(result?) {
+        for result in self.as_sections().borrowed() {
+            match KnownSection::interpret(result?) {
                 Ok(known) => match known? {
                     KnownSection::Type(types) => Wat::write(types, w)?,
                     KnownSection::Import(imports) => Wat::write(imports, w)?,
                     KnownSection::Function(functions) => {
-                        write!(w, ";; function section count = {}", functions.len());
+                        write!(
+                            w,
+                            ";; function section count = {}",
+                            functions.remaining_count()
+                        );
                         function_types = Some(functions);
                     }
                     KnownSection::Table(tables) => Wat::write(tables, w)?,
@@ -31,7 +34,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                         if let Some(types) = function_types.take() {
                             Wat::write(crate::component::FuncsComponent::new(types, code)?, w)?;
                         } else {
-                            write!(w, ";; code section count = {}", code.len());
+                            write!(w, ";; code section count = {}", code.remaining_count());
                         }
                     }
                     KnownSection::Data(data) => Wat::write(data, w)?,
@@ -39,16 +42,20 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::SectionSequence<B> {
                     KnownSection::Tag(tags) => Wat::write(tags, w)?,
                 },
                 Err(section) => {
-                    write!(w, "(; ");
-                    match section.kind() {
-                        SectionKind::Custom(custom) => write!(w, "{custom:?} (custom)"),
-                        SectionKind::Id(id) => write!(w, "{id}"),
-                    }
-                    writeln!(w, " section @ {:#X}", section.contents().base());
+                    let id = section.id();
+                    let contents = section.into_contents();
                     writeln!(
                         w,
-                        "{:?}",
-                        crate::bytes::DebugBytes::from(section.into_contents())
+                        "(; UNRECOGNIZED ({id}) @ {:#X} to {:#X}",
+                        contents.base(),
+                        contents.base() + contents.length() - 1,
+                    );
+                    writeln!(
+                        w,
+                        "{:#?}",
+                        crate::bytes::DebugBytes::from(crate::bytes::BytesSlice::from_window(
+                            contents
+                        ))
                     );
                     w.write_str(";)");
                 }

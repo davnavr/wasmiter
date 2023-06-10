@@ -7,17 +7,31 @@ fn basic_module() {
         i32.add))
 "#;
     let wasm = wat::parse_str(wat).unwrap();
-    insta::assert_display_snapshot!(&wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
+    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
+        .unwrap()
+        .display_module());
 }
 
 #[test]
 fn exception_handling() {
     let wasm = wat::parse_str(include_str!("modules/exception_handling.wat")).unwrap();
-    insta::assert_display_snapshot!(&wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
+    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
+        .unwrap()
+        .display_module());
 }
 
 #[test]
 fn all_the_things() {
     let wasm = wat::parse_str(include_str!("modules/all_the_things.wat")).unwrap();
-    insta::assert_display_snapshot!(&wasmiter::parse_module_sections(wasm.as_slice()).unwrap());
+    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
+        .unwrap()
+        .display_module());
+}
+
+#[test]
+fn name_custom_section() {
+    let wasm = wat::parse_str(include_str!("modules/name_custom_section.wat")).unwrap();
+    insta::assert_debug_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
+        .unwrap()
+        .debug_module());
 }

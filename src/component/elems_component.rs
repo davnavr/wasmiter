@@ -1,40 +1,30 @@
 use crate::{
     bytes::Bytes,
-    component,
+    component::{self, IndexVector},
     index::{self, TableIdx},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Result, ResultExt, Vector},
+    parser::{self, Offset, Result, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
 /// Represents a vector of expressions that evaluate to references in an
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
 pub struct ElementExpressions<O: Offset, B: Bytes> {
-    count: u32,
-    offset: O,
-    bytes: B,
+    expressions: Vector<O, B>,
+}
+
+impl<O: Offset, B: Bytes> From<Vector<O, B>> for ElementExpressions<O, B> {
+    #[inline]
+    fn from(expressions: Vector<O, B>) -> Self {
+        Self { expressions }
+    }
 }
 
 impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
-    fn new(mut offset: O, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(offset.offset_mut(), &bytes)
-                .context("element segment expression count")?,
-            offset,
-            bytes,
-        })
-    }
-
-    fn next_inner<T, F>(&mut self, f: F) -> Result<T>
-    where
-        F: FnOnce(&mut InstructionSequence<&mut u64, &B>) -> Result<T>,
-    {
-        let mut offset_cell = self.offset.offset();
-        let mut expression = InstructionSequence::new(&mut offset_cell, &self.bytes);
-        let result = f(&mut expression)?;
-        let (_, final_offset) = expression.finish()?;
-        *self.offset.offset_mut() = *final_offset;
-        Ok(result)
+    fn new(offset: O, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of element segment expressions")
+            .map(Self::from)
     }
 
     /// Parses the next expression.
@@ -42,35 +32,32 @@ impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
     where
         F: FnOnce(&mut InstructionSequence<&mut u64, &B>) -> Result<T>,
     {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
-        let result = self.next_inner(f);
-
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
-
-        result.map(Some)
+        self.expressions
+            .advance(|offset, bytes| {
+                let mut offset_cell = *offset;
+                let mut expression = InstructionSequence::new(&mut offset_cell, bytes);
+                let result = f(&mut expression)?;
+                let (_, final_offset) = expression.finish()?;
+                *offset = *final_offset;
+                Result::Ok(result)
+            })
+            .transpose()
+            .context("could not parse element segment expression")
     }
 
     fn finish(mut self) -> Result<()> {
-        while let Some(Ok(())) = self.next(|_| Ok(())).transpose() {}
+        while self.next(|_| Result::Ok(()))?.is_some() {}
         Ok(())
+    }
+
+    fn borrowed(&self) -> ElementExpressions<u64, &B> {
+        self.expressions.borrowed().into()
     }
 }
 
 impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut borrowed = ElementExpressions {
-            count: self.count,
-            offset: self.offset.offset(),
-            bytes: &self.bytes,
-        };
-
+        let mut borrowed = self.borrowed();
         let mut list = f.debug_list();
         loop {
             let result = borrowed.next(|instructions| {
@@ -95,7 +82,7 @@ impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
 pub enum ElementInit<O: Offset, B: Bytes> {
     /// A vector of functions to create `funcref` elements from.
-    Functions(Vector<O, B, parser::SimpleParse<index::FuncIdx>>),
+    Functions(IndexVector<index::FuncIdx, O, B>),
     /// A vector of expressions that evaluate to references.
     Expressions(Option<crate::types::RefType>, ElementExpressions<O, B>),
 }
@@ -172,9 +159,14 @@ impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
 /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
 #[derive(Clone, Copy)]
 pub struct ElemsComponent<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    elements: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for ElemsComponent<B> {
+    #[inline]
+    fn from(elements: Vector<u64, B>) -> Self {
+        Self { elements }
+    }
 }
 
 fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
@@ -189,136 +181,10 @@ fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
 impl<B: Bytes> ElemsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *element section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("element section count")?,
-            bytes,
-            offset,
-        })
-    }
-
-    #[inline]
-    fn parse_inner<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Z>
-    where
-        M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
-        I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
-    {
-        let start = self.offset;
-        let segment_kind =
-            parser::leb128::u32(&mut self.offset, &self.bytes).context("element segment mode")?;
-
-        let mut init;
-        let init_arg: Y;
-        match segment_kind {
-            0 => {
-                let mut mode = ElementMode::Active(
-                    TableIdx::from(0u8),
-                    InstructionSequence::new(&mut self.offset, &self.bytes),
-                );
-
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?;
-                init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
-                        .context("function references in active element segment")?,
-                );
-            }
-            1 => {
-                let mut mode = ElementMode::Passive;
-                elem_kind(&mut self.offset, &self.bytes)?;
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?; // Does nothing
-                init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
-                        .context("function references in passive element segment")?,
-                );
-            }
-            2 => {
-                let mut mode = ElementMode::Active(
-                    component::index(&mut self.offset, &self.bytes)?,
-                    InstructionSequence::new(&mut self.offset, &self.bytes),
-                );
-
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?;
-                elem_kind(&mut self.offset, &self.bytes)?;
-                init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
-                        .context("function references in active element segment")?,
-                );
-            }
-            3 => {
-                let mut mode = ElementMode::Declarative;
-                elem_kind(&mut self.offset, &self.bytes)?;
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?; // Does nothing
-                init = ElementInit::Functions(
-                    Vector::new(&mut self.offset, &self.bytes, Default::default())
-                        .context("function references in declarative element segment")?,
-                );
-            }
-            4 => {
-                let mut mode = ElementMode::Active(
-                    TableIdx::from(0u8),
-                    InstructionSequence::new(&mut self.offset, &self.bytes),
-                );
-
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?;
-                init = ElementInit::Expressions(
-                    None,
-                    ElementExpressions::new(&mut self.offset, &self.bytes)
-                        .context("expressions in active element segment")?,
-                );
-            }
-            5 => {
-                let rtype = component::ref_type(&mut self.offset, &self.bytes)?;
-                let mut mode = ElementMode::Passive;
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?; // Does nothing
-                init = ElementInit::Expressions(
-                    Some(rtype),
-                    ElementExpressions::new(&mut self.offset, &self.bytes)
-                        .context("expressions in passive element segment")?,
-                );
-            }
-            6 => {
-                let mut mode = ElementMode::Active(
-                    component::index(&mut self.offset, &self.bytes)?,
-                    InstructionSequence::new(&mut self.offset, &self.bytes),
-                );
-
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?;
-                let rtype = component::ref_type(&mut self.offset, &self.bytes)?;
-                init = ElementInit::Expressions(
-                    Some(rtype),
-                    ElementExpressions::new(&mut self.offset, &self.bytes)
-                        .context("expressions in active element segment")?,
-                );
-            }
-            7 => {
-                let rtype = component::ref_type(&mut self.offset, &self.bytes)?;
-                let mut mode = ElementMode::Declarative;
-                init_arg = mode_f(&mut mode)?;
-                mode.finish()?; // Does nothing
-                init = ElementInit::Expressions(
-                    Some(rtype),
-                    ElementExpressions::new(&mut self.offset, &self.bytes)
-                        .context("expressions in declarative element segment")?,
-                );
-            }
-            _ => {
-                return Err(crate::parser_bad_format_at_offset!(
-                    "file" @ start,
-                    "{segment_kind} is not a supported element segment mode"
-                ))
-            }
-        }
-
-        let result = init_f(init_arg, &mut init)?;
-        init.finish()?;
-        Ok(result)
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of element section")
+            .map(Self::from)
     }
 
     /// Parses the next element segment in the section.
@@ -327,39 +193,150 @@ impl<B: Bytes> ElemsComponent<B> {
         M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
         I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
     {
-        if self.count == 0 {
-            return Ok(None);
-        }
+        self.elements
+            .advance(|offset, bytes| {
+                let start = *offset;
+                let segment_kind =
+                    parser::leb128::u32(offset, bytes).context("element segment mode")?;
 
-        let result = self.parse_inner(mode_f, init_f);
+                let mut init;
+                let init_arg: Y;
+                match segment_kind {
+                    0 => {
+                        let mut offset_copy = *offset;
+                        let mut mode = ElementMode::Active(
+                            TableIdx::from(0u8),
+                            InstructionSequence::new(&mut offset_copy, bytes),
+                        );
 
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?;
+                        *offset = offset_copy;
 
-        result.map(Some)
+                        init = ElementInit::Functions(
+                            IndexVector::parse(offset, bytes)
+                                .context("function references in active element segment")?,
+                        );
+                    }
+                    1 => {
+                        let mut mode = ElementMode::Passive;
+                        elem_kind(offset, bytes)?;
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?; // Does nothing
+                        init = ElementInit::Functions(
+                            IndexVector::parse(offset, bytes)
+                                .context("function references in passive element segment")?,
+                        );
+                    }
+                    2 => {
+                        let mut offset_copy = *offset;
+                        let mut mode = ElementMode::Active(
+                            component::index(&mut offset_copy, bytes)?,
+                            InstructionSequence::new(&mut offset_copy, bytes),
+                        );
+
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?;
+                        *offset = offset_copy;
+
+                        elem_kind(offset, bytes)?;
+                        init = ElementInit::Functions(
+                            IndexVector::parse(offset, bytes)
+                                .context("function references in active element segment")?,
+                        );
+                    }
+                    3 => {
+                        let mut mode = ElementMode::Declarative;
+                        elem_kind(offset, bytes)?;
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?; // Does nothing
+                        init = ElementInit::Functions(
+                            IndexVector::parse(offset, bytes)
+                                .context("function references in declarative element segment")?,
+                        );
+                    }
+                    4 => {
+                        let mut offset_copy = *offset;
+                        let mut mode = ElementMode::Active(
+                            TableIdx::from(0u8),
+                            InstructionSequence::new(&mut offset_copy, bytes),
+                        );
+
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?;
+                        *offset = offset_copy;
+
+                        init = ElementInit::Expressions(
+                            None,
+                            ElementExpressions::new(offset, bytes)
+                                .context("expressions in active element segment")?,
+                        );
+                    }
+                    5 => {
+                        let rtype = component::ref_type(offset, bytes)?;
+                        let mut mode = ElementMode::Passive;
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?; // Does nothing
+                        init = ElementInit::Expressions(
+                            Some(rtype),
+                            ElementExpressions::new(offset, bytes)
+                                .context("expressions in passive element segment")?,
+                        );
+                    }
+                    6 => {
+                        let mut offset_copy = *offset;
+                        let mut mode = ElementMode::Active(
+                            component::index(&mut offset_copy, bytes)?,
+                            InstructionSequence::new(&mut offset_copy, bytes),
+                        );
+
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?;
+                        *offset = offset_copy;
+
+                        let rtype = component::ref_type(offset, bytes)?;
+                        init = ElementInit::Expressions(
+                            Some(rtype),
+                            ElementExpressions::new(offset, bytes)
+                                .context("expressions in active element segment")?,
+                        );
+                    }
+                    7 => {
+                        let rtype = component::ref_type(offset, bytes)?;
+                        let mut mode = ElementMode::Declarative;
+                        init_arg = mode_f(&mut mode)?;
+                        mode.finish()?; // Does nothing
+                        init = ElementInit::Expressions(
+                            Some(rtype),
+                            ElementExpressions::new(offset, bytes)
+                                .context("expressions in declarative element segment")?,
+                        );
+                    }
+                    _ => {
+                        return Err(crate::parser_bad_format_at_offset!(
+                            "file" @ start,
+                            "{segment_kind} is not a supported element segment mode"
+                        ))
+                    }
+                }
+
+                let result = init_f(init_arg, &mut init)?;
+                init.finish()?;
+                Ok(result)
+            })
+            .transpose()
+            .context("within element section")
     }
 
     /// Gets the expected remaining number of entires in the *element section* that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
+    pub fn remaining_count(&self) -> u32 {
+        self.elements.remaining_count()
     }
 
-    /// Returns a value indicating if the *element section* is empty.
     #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     pub(crate) fn borrowed(&self) -> ElemsComponent<&B> {
-        ElemsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.elements.borrowed().into()
     }
 }
 
@@ -383,7 +360,7 @@ impl<B: Bytes> Debug for ElemsComponent<B> {
             }
         }
 
-        while elems.count > 0 {
+        while elems.remaining_count() > 0 {
             let result = elems.parse(
                 |mode| {
                     Ok(match mode {
@@ -397,7 +374,7 @@ impl<B: Bytes> Debug for ElemsComponent<B> {
                 |mode, elements| {
                     list.entry(&Elem { mode, elements });
 
-                    Ok(())
+                    Result::Ok(())
                 },
             );
 

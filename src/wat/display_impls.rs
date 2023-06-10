@@ -94,9 +94,9 @@ impl<O: crate::parser::Offset, B: Bytes> Display
     }
 }
 
-impl<B: Bytes> Display for crate::sections::SectionSequence<B> {
+impl<B: Bytes> Display for crate::sections::DisplayModule<'_, B> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write_wat(self.borrowed(), f)
+        write_wat(Self::new(self.as_sections()), f)
     }
 }

@@ -1,8 +1,9 @@
 use crate::{
     bytes::Bytes,
+    component,
     index::{self, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx},
     instruction_set::MemArg,
-    parser::{Result, ResultExt, SimpleParse, Vector},
+    parser::{Result, ResultExt},
     types::{self, BlockType},
 };
 
@@ -138,9 +139,9 @@ instructions! {
         /// instruction performs an indirect branch, with the target being determined by an index
         /// into a table of labels.
         ///
-        /// The table of labels is encoded as a [`Vector`] containing **at least one**
-        /// [`LabelIdx`], with the last label specifies the default target.
-        BrTable[(Vector<&'a mut u64, B, SimpleParse<LabelIdx>>)] = "br_table",
+        /// The table of labels is encoded as a vector containing **at least one** [`LabelIdx`],
+        /// with the last label specifies the default target.
+        BrTable[(component::IndexVector<LabelIdx, &'a mut u64, B>)] = "br_table",
         /// The
         /// [**return**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
         /// instruction transfers control flow back to the calling function.
@@ -177,7 +178,7 @@ instructions! {
         ///
         /// The types specify the type of the operand selected. Future versions of WebAssembly may
         /// allow selecting more than one value at a time, requiring more than one type.
-        Select[(Vector<&'a mut u64, B, SimpleParse<types::ValType>>)] = "select",
+        Select[(component::ResultType<&'a mut u64, B>)] = "select",
 
         // Variable Instructions
 

@@ -1,13 +1,8 @@
 use crate::{
     bytes::Bytes,
-    component,
-    parser::{self, Result, ResultExt},
-    types::ValType,
+    component::ResultType,
+    parser::{Result, ResultExt, Vector},
 };
-
-/// Parser for a
-/// [WebAssembly result type](https://webassembly.github.io/spec/core/binary/types.html#result-types).
-pub type ResultType<O, B> = parser::Vector<O, B, parser::SimpleParse<ValType>>;
 
 /// Represents the
 /// [**types** component](https://webassembly.github.io/spec/core/syntax/modules.html#types) of a
@@ -15,32 +10,29 @@ pub type ResultType<O, B> = parser::Vector<O, B, parser::SimpleParse<ValType>>;
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 #[derive(Clone, Copy)]
 pub struct TypesComponent<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    types: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for TypesComponent<B> {
+    #[inline]
+    fn from(types: Vector<u64, B>) -> Self {
+        Self { types }
+    }
 }
 
 impl<B: Bytes> TypesComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *type section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("type section count")?,
-            bytes,
-            offset,
-        })
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of type section")
+            .map(Self::from)
     }
 
     /// Gets the expected remaining number of types that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *type section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.types.remaining_count()
     }
 
     /// Parses the next function type in the section.
@@ -50,27 +42,16 @@ impl<B: Bytes> TypesComponent<B> {
         P: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<Y>,
         R: FnOnce(Y, &mut ResultType<&mut u64, &B>) -> Result<Z>,
     {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
-        let result =
-            component::func_type(&mut self.offset, &self.bytes, parameter_types, result_types);
-
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
-
-        result.map(Some)
+        self.types
+            .advance(|offset, bytes| {
+                crate::component::func_type(offset, bytes, parameter_types, result_types)
+            })
+            .transpose()
     }
 
     pub(crate) fn borrowed(&self) -> TypesComponent<&B> {
         TypesComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
+            types: self.types.borrowed(),
         }
     }
 }
@@ -94,7 +75,7 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
         let mut list = f.debug_list();
         let mut types = self.borrowed();
 
-        let empty_types = ResultType::empty(&self.bytes, Default::default());
+        let empty_types = ResultType::empty_with_offset(0, self.types.bytes());
         let mut last_parameters = empty_types;
         let mut last_results = empty_types;
 

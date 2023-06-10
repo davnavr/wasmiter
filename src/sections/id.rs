@@ -1,86 +1,24 @@
-use crate::{bytes::Bytes, parser::name::Name};
-
-/// A [section *id*](https://webassembly.github.io/spec/core/binary/modules.html#sections)
-/// is a byte value that indicates what kind of contents are contained within a WebAssembly
-/// [`Section`](crate::sections::Section).
-pub type SectionId = core::num::NonZeroU8;
-
-/// Indicates what kind of contents are contained within a WebAssembly
-/// [`Section`](crate::sections::Section).
-#[derive(Clone, Copy)]
-pub enum SectionKind<B: Bytes = &'static [u8]> {
-    /// The section is a known value documented in the
-    /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/modules.html#sections)
-    Id(SectionId),
-    /// The section is a
-    /// [custom section](https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec)
-    /// with the given name.
-    Custom(Name<B>),
-}
-
-impl<B: Bytes> SectionKind<B> {
-    /// Converts the [`SectionKind`], copying the section ID or borrowing the custom section name.
-    #[inline]
-    pub fn into_borrowed(&self) -> SectionKind<&B> {
-        match self {
-            Self::Id(id) => SectionKind::Id(*id),
-            Self::Custom(name) => SectionKind::Custom(name.borrowed()),
-        }
-    }
-}
-
-impl<B: Clone + Bytes> SectionKind<&B> {
-    pub(super) fn cloned(&self) -> SectionKind<B> {
-        match self {
-            Self::Id(id) => SectionKind::Id(*id),
-            Self::Custom(name) => SectionKind::Custom(name.really_cloned()),
-        }
-    }
-}
-
-impl<B: Bytes> core::fmt::Debug for SectionKind<B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Id(id) => f.debug_tuple("Id").field(id).finish(),
-            Self::Custom(name) => f.debug_tuple("Custom").field(name).finish(),
-        }
-    }
-}
+//! Contains well-known constants representing
+//! [WebAssembly section *id*s](https://webassembly.github.io/spec/core/binary/modules.html#sections).
 
 macro_rules! known_ids {
     ($(
         $(#[$meta:meta])*
         $name:ident = $value:literal;
     )*) => {
-        /// Contains well-known integer constants representing
-        /// [WebAssembly section *id*s](https://webassembly.github.io/spec/core/binary/modules.html#sections).
-        pub mod section_id {
-            use crate::sections::SectionId;
-
-            pub use crate::sections::section_kind::cached_custom_name;
-
-            $(
-                $(#[$meta])*
-                pub const $name: SectionId = {
-                    // Safety: value should not be zero
-                    unsafe {
-                        core::num::NonZeroU8::new_unchecked($value)
-                    }
-                };
-            )*
-        }
-
-        impl<B: Bytes> SectionKind<B> {
-            $(
-                $(#[$meta])*
-                pub const $name: Self = Self::Id(section_id::$name);
-            )*
-        }
+        $(
+            $(#[$meta])*
+            pub const $name: u8 = $value;
+        )*
     };
 }
 
-// Id should not be 0
 known_ids! {
+    /// [A *custom section*](https://webassembly.github.io/spec/core/binary/modules.html#custom-section).
+    ///
+    /// To interpret the section's contents, consider using
+    /// [`custom::KnownCustomSection::interpret`](crate::custom::KnownCustomSection::interpret).
+    CUSTOM = 0;
     /// [The *type* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-typesec).
     TYPE = 1;
     /// [The *import* section](https://webassembly.github.io/spec/core/binary/modules.html#binary-importsec).
@@ -129,12 +67,10 @@ macro_rules! known_custom_ids {
             }
         }
 
-        impl SectionKind<&'static [u8]> {
-            $(
-                $(#[$meta])*
-                pub const $name: Self = Self::Custom(Name::from_byte_slice($value.as_bytes()));
-            )*
-        }
+        $(
+            $(#[$meta])*
+            pub const $name: &str = $value;
+        )*
     };
 }
 
@@ -160,4 +96,19 @@ known_custom_ids! {
     /// [The `linking` custom section](https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md#linking-metadata-section),
     /// described in the [WebAssembly tool conventions](https://github.com/WebAssembly/tool-conventions) for static linking.
     LINKING = "linking";
+}
+
+pub(crate) fn is_custom_name_recognized<B: crate::bytes::Bytes>(
+    name: crate::parser::name::Name<B>,
+) -> Option<&'static str> {
+    let mut buffer = [0u8; 16]; // Should be enough to fit the largest known static custom name
+    if let Ok(slice) = name.copy_to_slice(&mut buffer) {
+        if let Ok(actual) = core::str::from_utf8(slice) {
+            cached_custom_name(actual)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }

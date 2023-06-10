@@ -1,6 +1,6 @@
 use crate::{
     bytes::Bytes,
-    parser::{Result, ResultExt, SimpleParse, Vector},
+    parser::{Result, ResultExt, Vector},
     types::MemType,
 };
 
@@ -13,13 +13,13 @@ use crate::{
 /// [multi-memory proposal](https://github.com/WebAssembly/multi-memory).
 #[derive(Clone, Copy)]
 pub struct MemsComponent<B: Bytes> {
-    limits: Vector<u64, B, SimpleParse<MemType>>,
+    types: Vector<u64, B>,
 }
 
-impl<B: Bytes> From<Vector<u64, B, SimpleParse<MemType>>> for MemsComponent<B> {
+impl<B: Bytes> From<Vector<u64, B>> for MemsComponent<B> {
     #[inline]
-    fn from(limits: Vector<u64, B, SimpleParse<MemType>>) -> Self {
-        Self { limits }
+    fn from(types: Vector<u64, B>) -> Self {
+        Self { types }
     }
 }
 
@@ -27,27 +27,21 @@ impl<B: Bytes> MemsComponent<B> {
     /// Uses the given [`Bytes`] to read the contents of the *memory section* of a module, starting
     /// at the specified `offset`.
     pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::new(offset, bytes, Default::default())
+        Vector::parse(offset, bytes)
+            .context("at start of memory section")
             .map(Self::from)
-            .context("memory section")
     }
 
     /// Gets the expected remaining number of entries in the *memory section* that have yet to be
     /// parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.limits.len()
-    }
-
-    /// Returns a value indicating if the *memory section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.limits.is_empty()
+    pub fn remaining_count(&self) -> u32 {
+        self.types.remaining_count()
     }
 
     pub(crate) fn borrowed(&self) -> MemsComponent<&B> {
         MemsComponent {
-            limits: self.limits.by_reference(),
+            types: self.types.borrowed(),
         }
     }
 }
@@ -57,12 +51,14 @@ impl<B: Bytes> core::iter::Iterator for MemsComponent<B> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.limits.next().map(|r| r.context("memory section"))
+        self.types.advance(|offset, bytes| {
+            crate::component::mem_type(offset, bytes).context("within memory section")
+        })
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.limits.size_hint()
+        self.types.size_hint()
     }
 }
 
@@ -70,6 +66,6 @@ impl<B: Clone + Bytes> core::iter::FusedIterator for MemsComponent<B> {}
 
 impl<B: Bytes> core::fmt::Debug for MemsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.limits, f)
+        core::fmt::Debug::fmt(&self.types, f)
     }
 }
