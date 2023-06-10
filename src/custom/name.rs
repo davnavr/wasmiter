@@ -5,7 +5,7 @@
 use crate::{
     bytes::{Bytes, Window},
     index, parser,
-    sections::{SectionSequence, Section},
+    sections::{Section, SectionSequence},
 };
 use core::fmt::Debug;
 

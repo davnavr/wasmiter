@@ -34,7 +34,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
                         if let Some(types) = function_types.take() {
                             Wat::write(crate::component::FuncsComponent::new(types, code)?, w)?;
                         } else {
-                            write!(w, ";; code section count = {}", code.len());
+                            write!(w, ";; code section count = {}", code.remaining_count());
                         }
                     }
                     KnownSection::Data(data) => Wat::write(data, w)?,

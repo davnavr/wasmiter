@@ -2,7 +2,7 @@ use crate::{
     bytes::{Bytes, Window},
     component,
     instruction_set::InstructionSequence,
-    parser::{self, Offset, ResultExt},
+    parser::{self, Offset, ResultExt, Vector},
     types::ValType,
 };
 use core::{
@@ -221,9 +221,14 @@ impl<B: Bytes> Debug for Code<B> {
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
 pub struct CodeSection<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    entries: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for CodeSection<B> {
+    #[inline]
+    fn from(entries: Vector<u64, B>) -> Self {
+        Self { entries }
+    }
 }
 
 impl<B: Bytes> CodeSection<B> {
@@ -231,63 +236,40 @@ impl<B: Bytes> CodeSection<B> {
     /// begins at the given `offset`.
     #[inline]
     pub fn new(mut offset: u64, bytes: B) -> parser::Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("code section count")?,
-            bytes,
-            offset,
-        })
+        Vector::parse(offset, bytes)
+            .context("at start of code section")
+            .map(Self::from)
     }
 
     /// Gets the expected remaining number of entries in the *code section* that have yet to be
     /// parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *code section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.entries.remaining_count()
     }
 
     /// Parses the next entry in the *code section*.
     pub fn parse(&mut self) -> parser::Result<Option<Code<&B>>> {
-        if self.count == 0 {
-            return Ok(None);
-        }
+        self.entries
+            .advance_with_index(|index, offset, bytes| {
+                let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
+                let content = Window::new(bytes, *offset, size);
 
-        let result = parser::leb128::u32(&mut self.offset, &self.bytes).context("code entry size");
-        match result {
-            Ok(size) => {
-                self.count -= 1;
-                let content = Window::new(&self.bytes, self.offset, u64::from(size));
-
-                self.offset = self.offset.checked_add(u64::from(size)).ok_or_else(|| {
+                *offset = offset.checked_add(size).ok_or_else(|| {
                     crate::parser_bad_input!(
                         crate::bytes::offset_overflowed(),
                         "unable to advance offset to read next code section entry"
                     )
                 })?;
 
-                Ok(Some(Code {
-                    index: self.count,
-                    content,
-                }))
-            }
-            Err(e) => {
-                self.count = 0;
-                Err(e)
-            }
-        }
+                Ok(Code { index, content })
+            })
+            .transpose()
     }
 
+    #[inline]
     pub(super) fn borrowed(&self) -> CodeSection<&B> {
-        CodeSection {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.entries.borrowed().into()
     }
 }
 
@@ -295,13 +277,16 @@ impl<B: Clone + Bytes> Iterator for CodeSection<B> {
     type Item = parser::Result<Code<B>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.parse()
-            .map(|result| result.map(|i| i.cloned()))
-            .transpose()
+        match self.parse() {
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+            Ok(Some(code)) => Some(Ok(code.cloned())),
+        }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        ((self.count > 0).into(), self.count.try_into().ok())
+        self.entries.size_hint()
     }
 }
 
