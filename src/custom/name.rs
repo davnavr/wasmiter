@@ -89,6 +89,18 @@ impl<B: Bytes> NameSubsection<Window<B>> {
             _ => Err(section),
         }
     }
+
+    /// Gets the byte
+    /// [*id*](https://webassembly.github.io/spec/core/appendix/custom.html#subsections) associated
+    /// with the name subsection.
+    pub fn id(&self) -> u8 {
+        match self {
+            Self::ModuleName(_) => MODULE_NAME_ID,
+            Self::FunctionName(_) => FUNCTION_NAME_ID,
+            Self::LocalName(_) => LOCAL_NAME_ID,
+            Self::TagName(_) => TAG_NAME_ID,
+        }
+    }
 }
 
 impl<B: Bytes> Debug for NameSubsection<B> {

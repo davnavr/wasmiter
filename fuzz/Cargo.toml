@@ -1,0 +1,42 @@
+[package]
+name = "wasmiter-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4.6", features = ["arbitrary-derive"] }
+wasm-smith = "0.12.10"
+wat = "1.0.64"
+
+[dependencies.wasmiter]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+debug-assertions = true
+overflow-checks = true
+
+[lib]
+path = "src/lib.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "parser_valid"
+path = "fuzz_targets/parser_valid.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "wat_valid"
+path = "fuzz_targets/wat_valid.rs"
+test = false
+doc = false

@@ -46,6 +46,11 @@ impl<B: Bytes> KnownCustomSection<Window<B>> {
             Err(section)
         }
     }
+
+    /// Gets the name of the custom section.
+    pub fn name(&self) -> &str {
+        section_id::NAME
+    }
 }
 
 impl<B: Bytes> Debug for KnownCustomSection<B> {
