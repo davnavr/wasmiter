@@ -2,7 +2,7 @@ use crate::{
     bytes::{Bytes, Window},
     component,
     instruction_set::InstructionSequence,
-    parser::{self, Offset, ResultExt, Vector},
+    parser::{self, Offset, ResultExt as _, Vector},
     types::ValType,
 };
 use core::{
@@ -235,7 +235,7 @@ impl<B: Bytes> CodeSection<B> {
     /// Uses the given [`Bytes`] to read the contents of the *code section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(mut offset: u64, bytes: B) -> parser::Result<Self> {
+    pub fn new(offset: u64, bytes: B) -> parser::Result<Self> {
         Vector::parse(offset, bytes)
             .context("at start of code section")
             .map(Self::from)
@@ -262,9 +262,10 @@ impl<B: Bytes> CodeSection<B> {
                     )
                 })?;
 
-                Ok(Code { index, content })
+                parser::Result::Ok(Code { index, content })
             })
             .transpose()
+            .context("within code section")
     }
 
     #[inline]
