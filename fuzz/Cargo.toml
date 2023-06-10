@@ -23,8 +23,19 @@ debug = 1
 debug-assertions = true
 overflow-checks = true
 
+[lib]
+path = "src/lib.rs"
+test = false
+doc = false
+
 [[bin]]
 name = "parser_valid"
 path = "fuzz_targets/parser_valid.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "wat_valid"
+path = "fuzz_targets/wat_valid.rs"
 test = false
 doc = false
