@@ -1,6 +1,9 @@
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
+use libfuzzer_sys::{
+    arbitrary::{self, Arbitrary},
+    fuzz_target,
+};
 use wasmiter::{component::KnownSection, custom::KnownCustomSection};
 
 fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
@@ -147,7 +150,56 @@ fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
     Ok(())
 }
 
-fuzz_target!(|module: wasm_smith::Module| {
-    let wasm = module.to_bytes();
+#[derive(Arbitrary, Clone, Copy, Debug, Default)]
+pub struct WasmiterConfig;
+
+impl wasm_smith::Config for WasmiterConfig {
+    fn bulk_memory_enabled(&self) -> bool {
+        true
+    }
+
+    fn reference_types_enabled(&self) -> bool {
+        true
+    }
+
+    fn tail_call_enabled(&self) -> bool {
+        true
+    }
+
+    fn simd_enabled(&self) -> bool {
+        true
+    }
+
+    fn exceptions_enabled(&self) -> bool {
+        true
+    }
+
+    fn multi_value_enabled(&self) -> bool {
+        true
+    }
+
+    fn saturating_float_to_int_enabled(&self) -> bool {
+        true
+    }
+
+    fn sign_extension_ops_enabled(&self) -> bool {
+        true
+    }
+
+    fn memory64_enabled(&self) -> bool {
+        true
+    }
+
+    fn generate_custom_sections(&self) -> bool {
+        true
+    }
+
+    fn threads_enabled(&self) -> bool {
+        true
+    }
+}
+
+fuzz_target!(|module: wasm_smith::ConfiguredModule<WasmiterConfig>| {
+    let wasm = module.module.to_bytes();
     process_sections(wasm.as_slice()).unwrap();
 });
