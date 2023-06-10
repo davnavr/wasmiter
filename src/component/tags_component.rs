@@ -81,6 +81,6 @@ impl<B: Bytes> core::iter::FusedIterator for TagsComponent<B> {}
 
 impl<B: Bytes> core::fmt::Debug for TagsComponent<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.tags, f)
+        f.debug_list().entries(self.borrowed()).finish()
     }
 }

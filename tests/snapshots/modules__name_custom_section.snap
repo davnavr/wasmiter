@@ -63,11 +63,15 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
     Ok(
         Ok(
             Tag(
-                Vector {
-                    remaining: 1,
-                    offset: 33,
-                    ..
-                },
+                [
+                    Ok(
+                        Exception(
+                            TypeIdx(
+                                0,
+                            ),
+                        ),
+                    ),
+                ],
             ),
         ),
     ),
