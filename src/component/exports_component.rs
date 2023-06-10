@@ -116,7 +116,7 @@ impl<B: Bytes> ExportsComponent<B> {
     /// at the given `offset`.
     pub fn new(offset: u64, bytes: B) -> Result<Self> {
         Vector::parse(offset, bytes)
-            .context("at start of exports section")
+            .context("at start of export section")
             .map(Self::from)
     }
 
@@ -125,7 +125,7 @@ impl<B: Bytes> ExportsComponent<B> {
         self.exports
             .advance(Export::parse)
             .transpose()
-            .context("within exports section")
+            .context("within export section")
     }
 
     #[inline]
