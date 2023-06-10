@@ -20,6 +20,9 @@ mod tables_component;
 mod tags_component;
 mod type_parser;
 mod types_component;
+mod index_order;
+
+pub(crate) use index_order::IndexOrder;
 
 pub use type_parser::{
     block_type, func_type, global_mutability, global_type, limits, mem_type, ref_type, table_type,

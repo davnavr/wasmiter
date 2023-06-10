@@ -3,6 +3,7 @@ use crate::{
     custom::name::NameAssoc,
     index::Index,
     parser::{Offset, Result, ResultExt as _, Vector},
+    component::IndexOrder,
 };
 
 /// A [*name map*](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps)
@@ -11,17 +12,15 @@ use crate::{
 /// Each index is checked in order to ensure they are unique and in increasing order.
 #[derive(Clone, Copy)]
 pub struct NameMap<I: Index, O: Offset, B: Bytes> {
-    previous_index: u32,
+    order: IndexOrder<I>,
     entries: Vector<O, B>,
-    _marker: core::marker::PhantomData<&'static I>,
 }
 
 impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for NameMap<I, O, B> {
     fn from(entries: Vector<O, B>) -> Self {
         Self {
-            previous_index: 0,
+            order: IndexOrder::new(),
             entries,
-            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -36,30 +35,15 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
     pub fn parse(&mut self) -> Result<Option<NameAssoc<I, &B>>> {
         self.entries.advance_with_index(|i, offset, bytes| {
             let name_assoc = NameAssoc::parse(offset, bytes).context("name map entry")?;
-
-            if i > 0 {
-                let actual_index = name_assoc.index();
-                let previous_index = self.previous_index;
-                if actual_index <= previous_index {
-                    return Err(if actual_index == previous_index {
-                        crate::parser_bad_format!("duplicate index {actual_index:?} in name map")
-                    } else {
-                        crate::parser_bad_format!("indices in name map must be in ascending order, index {actual_index:?} should come after {previous_index}")
-                    });
-                }
-
-                self.previous_index = Into::<u32>::into(actual_index);
-            }
-
+            self.order.check(name_assoc.index(), i == 0)?;
             Ok(name_assoc)
         }).transpose()
     }
 
     fn borrowed(&self) -> NameMap<I, u64, &B> {
         NameMap {
-            previous_index: self.previous_index,
+            order: self.order,
             entries: self.entries.borrowed(),
-            _marker: core::marker::PhantomData,
         }
     }
 }
