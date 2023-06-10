@@ -13,6 +13,7 @@ mod globals_component;
 mod imports_component;
 mod index_vector;
 mod known_section;
+mod locals;
 mod mems_component;
 mod result_type;
 mod tables_component;
@@ -25,7 +26,7 @@ pub use type_parser::{
     val_type,
 };
 
-pub use code_section::{Code, CodeSection, Locals};
+pub use code_section::{Code, CodeSection};
 pub use datas_component::{DataMode, DatasComponent};
 pub use elems_component::{ElementExpressions, ElementInit, ElementMode, ElemsComponent};
 pub use exports_component::{Export, ExportKind, ExportsComponent};
@@ -35,6 +36,7 @@ pub use globals_component::GlobalsComponent;
 pub use imports_component::{Import, ImportKind, ImportsComponent};
 pub use index_vector::IndexVector;
 pub use known_section::KnownSection;
+pub use locals::Locals;
 pub use mems_component::MemsComponent;
 pub use result_type::ResultType;
 pub use tables_component::TablesComponent;
