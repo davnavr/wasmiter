@@ -1,6 +1,6 @@
 //! Types to parse and describe the structure of the
 //! [`name` section, described in the WebAssembly specification appendix](https://webassembly.github.io/spec/core/appendix/custom.html),
-//! which associates UTF-8 [`Name`]s with definitions in a module.
+//! which associates UTF-8 [`Name`](parser::name::Name)s with definitions in a module.
 
 use crate::{
     bytes::{Bytes, Window},

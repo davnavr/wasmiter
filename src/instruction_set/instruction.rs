@@ -139,8 +139,8 @@ instructions! {
         /// instruction performs an indirect branch, with the target being determined by an index
         /// into a table of labels.
         ///
-        /// The table of labels is encoded as a [`Vector`] containing **at least one**
-        /// [`LabelIdx`], with the last label specifies the default target.
+        /// The table of labels is encoded as a vector containing **at least one** [`LabelIdx`],
+        /// with the last label specifies the default target.
         BrTable[(component::IndexVector<LabelIdx, &'a mut u64, B>)] = "br_table",
         /// The
         /// [**return**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)

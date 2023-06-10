@@ -94,7 +94,7 @@ impl<B: Bytes> Name<B> {
         Ok(destination)
     }
 
-    /// Returns the contents of the [`Name`] as a [`Window`].
+    /// Returns the contents of the [`Name`] as a [`Window`](bytes::Window).
     pub fn into_bytes_window(self) -> bytes::Window<B> {
         let offset = self.offset;
         let length = self.length();

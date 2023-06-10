@@ -38,7 +38,8 @@ impl<B: Bytes> Code<B> {
 
     /// Reads the contents of this code entry.
     ///
-    /// The first closure is given a [`Locals`] used to read the compressed local variable declarations.
+    /// The first closure is given a [`Locals`](component::Locals) used to read the compressed
+    /// local variable declarations.
     ///
     /// The second closure is given the output of the first closure, along with an
     /// [`InstructionSequence`] used to read the function *body*.
