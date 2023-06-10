@@ -39,7 +39,10 @@ pub enum NameSubsection<B: Bytes> {
     /// [functions](https://webassembly.github.io/spec/core/syntax/modules.html#functions) of a
     /// WebAssembly module.
     FunctionName(NameMap<index::FuncIdx, u64, B>),
-    //LocalName,
+    /// The
+    /// [*local name subsection*](https://webassembly.github.io/spec/core/appendix/custom.html#local-names)
+    /// assigns a [`NameMap`] of local variable names for the functions within a WebAssembly module.
+    LocalName(IndirectNameMap<index::FuncIdx, index::LocalIdx, u64, B>),
     /// The
     /// [*tag name subsection*](https://webassembly.github.io/exception-handling/core/appendix/custom.html#tag-names)
     /// assignes names to the
@@ -75,6 +78,10 @@ impl<B: Bytes> NameSubsection<Window<B>> {
                 let contents = section.into_contents();
                 Ok(NameMap::new(contents.base(), contents).map(Self::FunctionName))
             }
+            LOCAL_NAME_ID => {
+                let contents = section.into_contents();
+                Ok(IndirectNameMap::new(contents.base(), contents).map(Self::LocalName))
+            }
             TAG_NAME_ID => {
                 let contents = section.into_contents();
                 Ok(NameMap::new(contents.base(), contents).map(Self::TagName))
@@ -89,6 +96,7 @@ impl<B: Bytes> Debug for NameSubsection<B> {
         match self {
             Self::ModuleName(name) => f.debug_tuple("ModuleName").field(name).finish(),
             Self::FunctionName(names) => f.debug_tuple("FunctionName").field(names).finish(),
+            Self::LocalName(names) => f.debug_tuple("LocalName").field(names).finish(),
             Self::TagName(names) => f.debug_tuple("TagName").field(names).finish(),
         }
     }

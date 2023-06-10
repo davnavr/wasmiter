@@ -11,6 +11,7 @@ use crate::{
 ///
 /// Like a [`NameMap`], each primary index is checked to ensure they are unique and in increasing
 /// order.
+#[derive(Clone, Copy)]
 pub struct IndirectNameMap<K: Index, V: Index, O: Offset, B: Bytes> {
     entries: Vector<O, B>,
     order: AscendingOrder<u32, K>,
