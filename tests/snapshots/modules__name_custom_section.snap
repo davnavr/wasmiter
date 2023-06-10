@@ -1,0 +1,113 @@
+---
+source: tests/modules.rs
+expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_module()"
+---
+[
+    Ok(
+        Ok(
+            Type(
+                [
+                    FuncType {
+                        parameters: [
+                            Ok(
+                                I32,
+                            ),
+                        ],
+                        results: [
+                            Ok(
+                                I32,
+                            ),
+                        ],
+                    },
+                ],
+            ),
+        ),
+    ),
+    Ok(
+        Ok(
+            Function(
+                [
+                    Ok(
+                        TypeIdx(
+                            0,
+                        ),
+                    ),
+                ],
+            ),
+        ),
+    ),
+    Ok(
+        Ok(
+            Export(
+                [
+                    Ok(
+                        Export {
+                            name: "mul_six",
+                            kind: Function(
+                                FuncIdx(
+                                    0,
+                                ),
+                            ),
+                        },
+                    ),
+                ],
+            ),
+        ),
+    ),
+    Ok(
+        Ok(
+            Code(
+                [
+                    Ok(
+                        Func {
+                            locals: [],
+                            body: [
+                                Ok(
+                                    LocalGet(
+                                        LocalIdx(
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                                Ok(
+                                    I32Const(
+                                        6,
+                                    ),
+                                ),
+                                Ok(
+                                    I32Mul,
+                                ),
+                                Ok(
+                                    End,
+                                ),
+                            ],
+                        },
+                    ),
+                ],
+            ),
+        ),
+    ),
+    Ok(
+        [
+            Ok(
+                ModuleName(
+                    "my_module_name",
+                ),
+            ),
+            Ok(
+                FunctionName(
+                    [
+                        Ok(
+                            NameAssoc {
+                                index: FuncIdx(
+                                    0,
+                                ),
+                                name: "mul_six",
+                            },
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    ),
+]

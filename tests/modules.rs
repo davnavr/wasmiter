@@ -27,3 +27,11 @@ fn all_the_things() {
         .unwrap()
         .display_module());
 }
+
+#[test]
+fn name_custom_section() {
+    let wasm = wat::parse_str(include_str!("modules/name_custom_section.wat")).unwrap();
+    insta::assert_debug_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
+        .unwrap()
+        .debug_module());
+}
