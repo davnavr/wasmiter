@@ -16,6 +16,11 @@ mod name_map;
 pub use name_assoc::NameAssoc;
 pub use name_map::NameMap;
 
+const MODULE_NAME_ID: u8 = 0;
+const FUNCTION_NAME_ID: u8 = 1;
+const LOCAL_NAME_ID: u8 = 2;
+const TAG_NAME_ID: u8 = 11;
+
 /// Represents a
 /// [name subsection](https://webassembly.github.io/spec/core/appendix/custom.html#subsections)
 /// within the [`NameSection`].
@@ -28,8 +33,20 @@ pub enum NameSubsection<B: Bytes> {
     ModuleName(parser::name::Name<B>),
     /// The
     /// [*function name subsection*](https://webassembly.github.io/spec/core/appendix/custom.html#function-names)
-    /// assigns names to the functions of a WebAssembly module.
+    /// assigns names to the
+    /// [functions](https://webassembly.github.io/spec/core/syntax/modules.html#functions) of a
+    /// WebAssembly module.
     FunctionName(NameMap<index::FuncIdx, u64, B>),
+    //LocalName,
+    /// The
+    /// [*tag name subsection*](https://webassembly.github.io/exception-handling/core/appendix/custom.html#tag-names)
+    /// assignes names to the
+    /// [**tags**](https://webassembly.github.io/exception-handling/core/syntax/modules.html#tags)
+    /// of a WebAssembly module.
+    ///
+    /// Introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
+    TagName(NameMap<index::TagIdx, u64, B>),
 }
 
 /// Result type used when interpreting the contents of a [`NameSubsection`].
@@ -47,14 +64,18 @@ impl<B: Bytes> NameSubsection<Window<B>> {
     /// failed.
     pub fn interpret(section: Section<B>) -> InterpretedNameSubsection<B> {
         match section.id() {
-            0 => {
+            MODULE_NAME_ID => {
                 let contents = section.into_contents();
                 let mut offset = contents.base();
                 Ok(parser::name::parse(&mut offset, contents).map(Self::ModuleName))
             }
-            1 => {
+            FUNCTION_NAME_ID => {
                 let contents = section.into_contents();
                 Ok(NameMap::new(contents.base(), contents).map(Self::FunctionName))
+            }
+            TAG_NAME_ID => {
+                let contents = section.into_contents();
+                Ok(NameMap::new(contents.base(), contents).map(Self::TagName))
             }
             _ => Err(section),
         }
@@ -66,6 +87,7 @@ impl<B: Bytes> Debug for NameSubsection<B> {
         match self {
             Self::ModuleName(name) => f.debug_tuple("ModuleName").field(name).finish(),
             Self::FunctionName(names) => f.debug_tuple("FunctionName").field(names).finish(),
+            Self::TagName(names) => f.debug_tuple("TagName").field(names).finish(),
         }
     }
 }
