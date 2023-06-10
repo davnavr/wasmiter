@@ -127,12 +127,18 @@ impl<B: Bytes + Clone> Name<&B> {
 
 impl<B: Bytes> Name<bytes::Window<B>> {
     pub(crate) fn flatten_windowed(self) -> Name<B> {
+        let mut length = core::cmp::min(
+            self.length,
+            u32::try_from(self.bytes.length()).unwrap_or(u32::MAX),
+        );
+
+        if self.offset > self.bytes.base() + self.bytes.length() {
+            length = 0;
+        }
+
         Name {
-            offset: self.offset + self.bytes.base(),
-            length: core::cmp::min(
-                self.length,
-                u32::try_from(self.bytes.length()).unwrap_or(u32::MAX),
-            ),
+            offset: self.offset,
+            length,
             bytes: self.bytes.into_inner(),
         }
     }
