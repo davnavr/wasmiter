@@ -30,6 +30,12 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
         Vector::parse(offset, bytes).map(Self::from)
     }
 
+    /// Gets the remaining number of entries in the [`NameMap`].
+    #[inline]
+    pub fn remaining_count(&self) -> u32 {
+        self.entries.remaining_count()
+    }
+
     /// Parses the next entry in the [`NameMap`].
     pub fn parse(&mut self) -> Result<Option<NameAssoc<I, &B>>> {
         self.entries

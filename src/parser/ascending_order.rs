@@ -26,7 +26,9 @@ impl<C: Copy, I: Copy> AscendingOrder<C, I> {
             Err(if next == previous {
                 crate::parser_bad_format!("duplicate {next:?}")
             } else {
-                crate::parser_bad_format!("must be in ascending order, {next:?} should come after {previous}")
+                crate::parser_bad_format!(
+                    "must be in ascending order, {next:?} should come after {previous}"
+                )
             })
         } else {
             self.previous = Into::<C>::into(next);
