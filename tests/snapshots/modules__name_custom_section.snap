@@ -12,7 +12,26 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                             Ok(
                                 I32,
                             ),
+                            Ok(
+                                I32,
+                            ),
                         ],
+                        results: [],
+                    },
+                    FuncType {
+                        parameters: [
+                            Ok(
+                                I32,
+                            ),
+                        ],
+                        results: [
+                            Ok(
+                                I32,
+                            ),
+                        ],
+                    },
+                    FuncType {
+                        parameters: [],
                         results: [
                             Ok(
                                 I32,
@@ -29,10 +48,26 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                 [
                     Ok(
                         TypeIdx(
-                            0,
+                            1,
+                        ),
+                    ),
+                    Ok(
+                        TypeIdx(
+                            2,
                         ),
                     ),
                 ],
+            ),
+        ),
+    ),
+    Ok(
+        Ok(
+            Tag(
+                Vector {
+                    remaining: 1,
+                    offset: 33,
+                    ..
+                },
             ),
         ),
     ),
@@ -83,6 +118,28 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                             ],
                         },
                     ),
+                    Ok(
+                        Func {
+                            locals: [],
+                            body: [
+                                Ok(
+                                    I32Const(
+                                        42,
+                                    ),
+                                ),
+                                Ok(
+                                    Call(
+                                        FuncIdx(
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                                Ok(
+                                    End,
+                                ),
+                            ],
+                        },
+                    ),
                 ],
             ),
         ),
@@ -103,6 +160,14 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                                     0,
                                 ),
                                 name: "mul_six",
+                            },
+                        ),
+                        Ok(
+                            NameAssoc {
+                                index: FuncIdx(
+                                    1,
+                                ),
+                                name: "dance",
                             },
                         ),
                     ],
