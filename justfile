@@ -40,6 +40,12 @@ clippy_all: (clippy_full) (clippy_alloc) (clippy_nostd)
 
 # Fuzzing
 
+fmt_fuzz:
+    cd ./fuzz/ && cargo fmt
+
+clippy_fuzz:
+    cd ./fuzz/ && cargo clippy
+
 # Run cargo-fuzz on the given target; requires a nightly version of Rust.
 fuzz target='parser_valid':
     cargo +nightly fuzz run {{target}}
