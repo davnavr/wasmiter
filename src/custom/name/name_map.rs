@@ -1,9 +1,8 @@
 use crate::{
     bytes::Bytes,
-    component::IndexOrder,
     custom::name::NameAssoc,
     index::Index,
-    parser::{Offset, Result, ResultExt as _, Vector},
+    parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
 };
 
 /// A [*name map*](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps)
@@ -12,14 +11,14 @@ use crate::{
 /// Each index is checked in order to ensure they are unique and in increasing order.
 #[derive(Clone, Copy)]
 pub struct NameMap<I: Index, O: Offset, B: Bytes> {
-    order: IndexOrder<I>,
+    order: AscendingOrder<u32, I>,
     entries: Vector<O, B>,
 }
 
 impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for NameMap<I, O, B> {
     fn from(entries: Vector<O, B>) -> Self {
         Self {
-            order: IndexOrder::new(),
+            order: AscendingOrder::new(),
             entries,
         }
     }

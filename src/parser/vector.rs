@@ -62,7 +62,11 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
             return None;
         }
 
-        let result = f(self.total - self.remaining, self.offset.offset_mut(), &self.bytes);
+        let result = f(
+            self.total - self.remaining,
+            self.offset.offset_mut(),
+            &self.bytes,
+        );
 
         if result.is_ok() {
             self.remaining -= 1;

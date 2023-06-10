@@ -1,5 +1,8 @@
 //! Low-level types and functions for parsing.
 
+use crate::bytes::Bytes;
+
+mod ascending_order;
 mod error;
 mod offset;
 mod result_ext;
@@ -8,12 +11,12 @@ mod vector;
 pub mod leb128;
 pub mod name;
 
+pub(crate) use ascending_order::AscendingOrder;
+
 pub use error::{Context, Error, ErrorKind};
 pub use offset::Offset;
 pub use result_ext::ResultExt;
 pub use vector::Vector;
-
-use crate::bytes::Bytes;
 
 /// Result type used when parsing input.
 pub type Result<T> = core::result::Result<T, Error>;

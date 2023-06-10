@@ -11,7 +11,6 @@ mod funcs_component;
 mod function_section;
 mod globals_component;
 mod imports_component;
-mod index_order;
 mod index_vector;
 mod known_section;
 mod locals;
@@ -21,8 +20,6 @@ mod tables_component;
 mod tags_component;
 mod type_parser;
 mod types_component;
-
-pub(crate) use index_order::IndexOrder;
 
 pub use type_parser::{
     block_type, func_type, global_mutability, global_type, limits, mem_type, ref_type, table_type,
