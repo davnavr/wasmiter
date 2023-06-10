@@ -5,8 +5,8 @@ use crate::{
     parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
 };
 
-/// A [*name map*](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps)
-/// is a sequence of [`NameAssoc`] entries, which associate indices with names.
+/// A [*name map*](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps) is a
+/// sequence of [`NameAssoc`] entries, which associate indices with names.
 ///
 /// Each index is checked in order to ensure they are unique and in increasing order.
 #[derive(Clone, Copy)]
@@ -25,7 +25,7 @@ impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for NameMap<I, O, B> {
 }
 
 impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
-    /// Creates a new [`NameMap`] to parse at the given `offset`.
+    /// Parses a [`NameMap`] starting at the given `offset`.
     pub fn new(offset: O, bytes: B) -> Result<Self> {
         Vector::parse(offset, bytes).map(Self::from)
     }
@@ -50,6 +50,21 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
         NameMap {
             order: self.order,
             entries: self.entries.borrowed(),
+        }
+    }
+
+    /// Parses all remaining entries in the [`NameMap`].
+    pub fn finish(mut self) -> Result<O> {
+        while self.parse()?.is_some() {}
+        Ok(self.entries.into_offset())
+    }
+}
+
+impl<I: Index, O: Offset, B: Clone + Bytes> NameMap<I, O, &B> {
+    pub(super) fn dereferenced(&self) -> NameMap<I, u64, B> {
+        NameMap {
+            order: self.order,
+            entries: self.entries.dereferenced(),
         }
     }
 }

@@ -10,9 +10,11 @@ use crate::{
 };
 use core::fmt::Debug;
 
+mod indirect_name_map;
 mod name_assoc;
 mod name_map;
 
+pub use indirect_name_map::IndirectNameMap;
 pub use name_assoc::NameAssoc;
 pub use name_map::NameMap;
 
