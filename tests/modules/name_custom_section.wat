@@ -6,7 +6,8 @@
     i32.const 6
     i32.mul)
 
-  (func $dance (result i32)
-    ;; (local $my_local i32)
+  (func $dance (param $my_parameter i32) (result i32)
     i32.const 42
-    call $mul_six))
+    call $mul_six
+    local.get $my_parameter
+    i32.add))

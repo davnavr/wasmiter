@@ -30,14 +30,6 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                             ),
                         ],
                     },
-                    FuncType {
-                        parameters: [],
-                        results: [
-                            Ok(
-                                I32,
-                            ),
-                        ],
-                    },
                 ],
             ),
         ),
@@ -53,7 +45,7 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                     ),
                     Ok(
                         TypeIdx(
-                            2,
+                            1,
                         ),
                     ),
                 ],
@@ -139,6 +131,16 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                                     ),
                                 ),
                                 Ok(
+                                    LocalGet(
+                                        LocalIdx(
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                                Ok(
+                                    I32Add,
+                                ),
+                                Ok(
                                     End,
                                 ),
                             ],
@@ -174,6 +176,27 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().debug_mod
                                 name: "dance",
                             },
                         ),
+                    ],
+                ),
+            ),
+            Ok(
+                LocalName(
+                    [
+                        Entry {
+                            key: FuncIdx(
+                                1,
+                            ),
+                            names: [
+                                Ok(
+                                    NameAssoc {
+                                        index: LocalIdx(
+                                            0,
+                                        ),
+                                        name: "my_parameter",
+                                    },
+                                ),
+                            ],
+                        },
                     ],
                 ),
             ),
