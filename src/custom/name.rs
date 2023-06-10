@@ -87,6 +87,33 @@ impl<B: Bytes> NameSection<B> {
 
 impl<B: Bytes> Debug for NameSection<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!()
+        let mut list = f.debug_list();
+        for subsec in self.sections.borrowed() {
+            let err;
+            let unknown_subsection;
+            let known_subsection;
+
+            list.entry(match subsec {
+                Ok(section) => match NameSubsection::interpret(section) {
+                    Ok(Err(e)) => {
+                        err = parser::Result::<()>::Err(e);
+                        &err
+                    }
+                    Ok(Ok(known)) => {
+                        known_subsection = parser::Result::Ok(known);
+                        &known_subsection
+                    }
+                    Err(unknown) => {
+                        unknown_subsection = parser::Result::Ok(unknown);
+                        &unknown_subsection
+                    }
+                },
+                Err(e) => {
+                    err = parser::Result::<()>::Err(e);
+                    &err
+                }
+            });
+        }
+        list.finish()
     }
 }

@@ -11,6 +11,7 @@ mod funcs_component;
 mod function_section;
 mod globals_component;
 mod imports_component;
+mod index_order;
 mod index_vector;
 mod known_section;
 mod locals;
@@ -20,7 +21,6 @@ mod tables_component;
 mod tags_component;
 mod type_parser;
 mod types_component;
-mod index_order;
 
 pub(crate) use index_order::IndexOrder;
 

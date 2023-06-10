@@ -1,9 +1,9 @@
 use crate::{
     bytes::Bytes,
+    component::IndexOrder,
     custom::name::NameAssoc,
     index::Index,
     parser::{Offset, Result, ResultExt as _, Vector},
-    component::IndexOrder,
 };
 
 /// A [*name map*](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps)
@@ -33,11 +33,13 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
 
     /// Parses the next entry in the [`NameMap`].
     pub fn parse(&mut self) -> Result<Option<NameAssoc<I, &B>>> {
-        self.entries.advance_with_index(|i, offset, bytes| {
-            let name_assoc = NameAssoc::parse(offset, bytes).context("name map entry")?;
-            self.order.check(name_assoc.index(), i == 0)?;
-            Ok(name_assoc)
-        }).transpose()
+        self.entries
+            .advance_with_index(|i, offset, bytes| {
+                let name_assoc = NameAssoc::parse(offset, bytes).context("name map entry")?;
+                self.order.check(name_assoc.index(), i == 0)?;
+                Ok(name_assoc)
+            })
+            .transpose()
     }
 
     fn borrowed(&self) -> NameMap<I, u64, &B> {
