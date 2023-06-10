@@ -35,8 +35,13 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
     pub fn parse(&mut self) -> Result<Option<NameAssoc<I, &B>>> {
         self.entries
             .advance_with_index(|i, offset, bytes| {
-                let name_assoc = NameAssoc::parse(offset, bytes).context("name map entry")?;
-                self.order.check(name_assoc.index(), i == 0)?;
+                let name_assoc =
+                    NameAssoc::parse(offset, bytes).context("while parsing name map entry")?;
+
+                self.order
+                    .check(name_assoc.index(), i == 0)
+                    .context("name map index was invalid")?;
+
                 Ok(name_assoc)
             })
             .transpose()

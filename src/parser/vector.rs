@@ -8,7 +8,8 @@ use crate::{
 /// [`vec` or vector](https://webassembly.github.io/spec/core/binary/conventions.html#vectors).
 #[derive(Clone, Copy)]
 pub struct Vector<O: Offset, B: Bytes> {
-    counter: u32,
+    total: u32,
+    remaining: u32,
     offset: O,
     bytes: B,
 }
@@ -18,7 +19,8 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
     /// `offset` into the `Bytes`.
     pub fn new(count: u32, offset: O, bytes: B) -> Self {
         Self {
-            counter: count,
+            total: count,
+            remaining: count,
             offset,
             bytes,
         }
@@ -26,25 +28,23 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
 
     /// Parses the given [`Bytes`] to obtain the `u32` count of elements.
     pub fn parse(mut offset: O, bytes: B) -> parser::Result<Self> {
-        Ok(Self {
-            counter: parser::leb128::u32(offset.offset_mut(), &bytes)
-                .context("vector element count")?,
-            offset,
-            bytes,
-        })
+        let count =
+            parser::leb128::u32(offset.offset_mut(), &bytes).context("vector element count")?;
+
+        Ok(Self::new(count, offset, bytes))
     }
 
     /// Gets the expected remaining number of elements in the [`Vector`].
     #[inline]
     pub fn remaining_count(&self) -> u32 {
-        self.counter
+        self.remaining
     }
 
     /// Implementation of [`Iterator::size_hint`].
     pub fn size_hint(&self) -> (usize, Option<usize>) {
         (
-            usize::from(self.counter != 0),
-            usize::try_from(self.counter).ok(),
+            usize::from(self.remaining != 0),
+            usize::try_from(self.remaining).ok(),
         )
     }
 
@@ -58,16 +58,16 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
     where
         F: FnOnce(u32, &'a mut u64, &'a B) -> Result<T, E>,
     {
-        if self.counter == 0 {
+        if self.remaining == 0 {
             return None;
         }
 
-        let result = f(self.counter, self.offset.offset_mut(), &self.bytes);
+        let result = f(self.total - self.remaining, self.offset.offset_mut(), &self.bytes);
 
         if result.is_ok() {
-            self.counter -= 1;
+            self.remaining -= 1;
         } else {
-            self.counter = 0;
+            self.remaining = 0;
         }
 
         Some(result)
@@ -90,7 +90,8 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
     /// Returns a clone of the [`Vector`] by borrowing the underlying [`Bytes`].
     pub fn borrowed(&self) -> Vector<u64, &B> {
         Vector {
-            counter: self.counter,
+            total: self.total,
+            remaining: self.remaining,
             offset: self.offset.offset(),
             bytes: &self.bytes,
         }
@@ -110,7 +111,8 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
 impl<O: Offset, B: Clone + Bytes> Vector<O, &B> {
     pub(crate) fn dereferenced(&self) -> Vector<u64, B> {
         Vector {
-            counter: self.counter,
+            total: self.total,
+            remaining: self.remaining,
             offset: self.offset.offset(),
             bytes: self.bytes.clone(),
         }
@@ -120,7 +122,7 @@ impl<O: Offset, B: Clone + Bytes> Vector<O, &B> {
 impl<O: Offset, B: Bytes> core::fmt::Debug for Vector<O, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Vector")
-            .field("count", &self.counter)
+            .field("remaining", &self.remaining)
             .field("offset", &self.offset.offset())
             .finish_non_exhaustive()
     }
