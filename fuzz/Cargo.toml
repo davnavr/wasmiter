@@ -10,6 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = { version = "0.4.6", features = ["arbitrary-derive"] }
 wasm-smith = "0.12.10"
+wat = "1.0.64"
 
 [dependencies.wasmiter]
 path = ".."

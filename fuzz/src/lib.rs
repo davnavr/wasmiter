@@ -1,6 +1,4 @@
-use libfuzzer_sys::{
-    arbitrary::{self, Arbitrary},
-};
+use libfuzzer_sys::arbitrary::{self, Arbitrary};
 
 #[derive(Arbitrary, Clone, Copy, Debug, Default)]
 pub struct WasmiterConfig;
