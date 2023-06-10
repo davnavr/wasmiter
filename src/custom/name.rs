@@ -4,7 +4,8 @@
 
 use crate::{
     bytes::{Bytes, Window},
-    index, parser,
+    index,
+    parser::{self, AscendingOrder, ResultExt as _},
     sections::{Section, SectionSequence},
 };
 use core::fmt::Debug;
@@ -31,6 +32,10 @@ pub enum NameSubsection<B: Bytes> {
     FunctionName(NameMap<index::FuncIdx, u64, B>),
 }
 
+/// Result type used when interpreting the contents of a [`NameSubsection`].
+pub type InterpretedNameSubsection<B> =
+    Result<parser::Result<NameSubsection<Window<B>>>, Section<B>>;
+
 impl<B: Bytes> NameSubsection<Window<B>> {
     /// Attempts to interpret the contents of the given name subsection.
     ///
@@ -40,7 +45,7 @@ impl<B: Bytes> NameSubsection<Window<B>> {
     ///
     /// Returns `Ok(Err(_))` if the section **was** recognized, but an attempt to parse a field
     /// failed.
-    pub fn interpret(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
+    pub fn interpret(section: Section<B>) -> InterpretedNameSubsection<B> {
         match section.id() {
             0 => {
                 let contents = section.into_contents();
@@ -67,21 +72,69 @@ impl<B: Bytes> Debug for NameSubsection<B> {
 
 /// Represents the sequence of subsections in the
 /// [`name` section](https://webassembly.github.io/spec/core/appendix/custom.html).
+///
+/// Section IDs are checked to ensure that they are in **ascending** order.
 #[derive(Clone, Copy)]
 pub struct NameSection<B: Bytes> {
-    // TODO: subsection id order
+    order: AscendingOrder<u8>,
+    first: bool,
     sections: SectionSequence<B>,
 }
 
 impl<B: Bytes> NameSection<B> {
     /// Creates a [`NameSection`] from the given sequence of `sections`.
     pub fn new(sections: SectionSequence<B>) -> Self {
-        Self { sections }
+        Self {
+            order: AscendingOrder::new(),
+            first: true,
+            sections,
+        }
     }
 
     /// Consumes the [`NameSection`], returning the remaining subsections.
     pub fn into_sections(self) -> SectionSequence<B> {
         self.sections
+    }
+
+    fn parse_inner<'a, U: Bytes, F>(&'a mut self, f: F) -> Option<InterpretedNameSubsection<U>>
+    where
+        U: 'a,
+        F: FnOnce(Section<&'a B>) -> Section<U>,
+    {
+        match self.sections.parse().context("name subsection") {
+            Ok(Some(section)) => match self
+                .order
+                .check(section.id(), self.first)
+                .context("invalid name subsection order")
+            {
+                Ok(_) => {
+                    self.first = false;
+                    Some(NameSubsection::interpret(f(section)))
+                }
+                Err(e) => Some(Ok(Err(e))),
+            },
+            Ok(None) => None,
+            Err(e) => Some(Ok(Err(e))),
+        }
+    }
+
+    /// Attempts to parse the next subsection, returning `None` if no more remain.
+    ///
+    /// If a subsection is not recognized, `Some(Err(_))` is returned.
+    ///
+    /// # Errors
+    ///
+    /// `Some(Ok(Err(_)))` is returned for any parser errors or if section IDs are not in **ascending order**.
+    pub fn parse(&mut self) -> Option<InterpretedNameSubsection<&B>> {
+        self.parse_inner(core::convert::identity)
+    }
+}
+
+impl<B: Clone + Bytes> Iterator for NameSection<B> {
+    type Item = InterpretedNameSubsection<B>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parse_inner(|subsec| subsec.cloned())
     }
 }
 

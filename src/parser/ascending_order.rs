@@ -1,6 +1,6 @@
 /// Helper struct to ensure indices or numeric IDs are in **ascending** order.
 #[derive(Clone, Copy)]
-pub(crate) struct AscendingOrder<C: Copy, I: Copy> {
+pub(crate) struct AscendingOrder<C: Copy, I: Copy = C> {
     previous: C,
     _marker: core::marker::PhantomData<I>,
 }
@@ -16,21 +16,21 @@ impl<C: Copy, I: Copy> AscendingOrder<C, I> {
         }
     }
 
-    pub(crate) fn check(&mut self, index: I, first: bool) -> crate::parser::Result<I>
+    pub(crate) fn check(&mut self, next: I, first: bool) -> crate::parser::Result<I>
     where
         C: core::fmt::Display,
         I: core::fmt::Debug + Into<C> + core::cmp::PartialOrd<C>,
     {
-        let previous_index = self.previous;
-        if !first && index <= previous_index {
-            Err(if index == previous_index {
-                crate::parser_bad_format!("duplicate index {index:?}")
+        let previous = self.previous;
+        if !first && next <= previous {
+            Err(if next == previous {
+                crate::parser_bad_format!("duplicate index {next:?}")
             } else {
-                crate::parser_bad_format!("indices must be in ascending order, index {index:?} should come after {previous_index}")
+                crate::parser_bad_format!("indices must be in ascending order, index {next:?} should come after {previous}")
             })
         } else {
-            self.previous = Into::<C>::into(index);
-            Ok(index)
+            self.previous = Into::<C>::into(next);
+            Ok(next)
         }
     }
 }
