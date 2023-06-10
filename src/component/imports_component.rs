@@ -1,7 +1,7 @@
 use crate::{
     bytes::Bytes,
     component,
-    parser::{self, name::Name, Result, ResultExt},
+    parser::{self, name::Name, Result, ResultExt as _, Vector},
     types,
 };
 use core::fmt::{Debug, Formatter};
@@ -66,7 +66,6 @@ impl<B: Bytes> Import<B> {
 }
 
 impl<'a, B: Bytes> Import<&'a B> {
-    #[inline]
     fn parse(offset: &mut u64, bytes: &'a B) -> Result<Self> {
         let module = parser::name::parse(offset, bytes).context("module name")?;
         let name = parser::name::parse(offset, bytes).context("import name")?;
@@ -122,60 +121,44 @@ impl<B: Bytes> Debug for Import<B> {
 /// Represents the
 /// [**imports** component](https://webassembly.github.io/spec/core/syntax/modules.html#imports) of
 /// a WebAssembly module, stored in and parsed from the
-/// [*imports section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
+/// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
 #[derive(Clone, Copy)]
 pub struct ImportsComponent<B: Bytes> {
-    count: u32,
-    offset: u64,
-    bytes: B,
+    imports: Vector<u64, B>,
+}
+
+impl<B: Bytes> From<Vector<u64, B>> for ImportsComponent<B> {
+    #[inline]
+    fn from(imports: Vector<u64, B>) -> Self {
+        Self { imports }
+    }
 }
 
 impl<B: Bytes> ImportsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *imports section* of a
+    /// Uses the given [`Bytes`] to read the contents of the *import section* of a
     /// module, starting at the given `offset`.
-    pub fn new(mut offset: u64, bytes: B) -> Result<Self> {
-        Ok(Self {
-            count: parser::leb128::u32(&mut offset, &bytes).context("import count")?,
-            offset,
-            bytes,
-        })
+    pub fn new(offset: u64, bytes: B) -> Result<Self> {
+        Vector::parse(offset, bytes)
+            .context("at start of import section")
+            .map(Self::from)
     }
 
     /// Gets the expected remaining number of imports that have yet to be parsed.
     #[inline]
-    pub fn len(&self) -> u32 {
-        self.count
-    }
-
-    /// Returns a value indicating if the *imports section* is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn remaining_count(&self) -> u32 {
+        self.imports.remaining_count()
     }
 
     /// Parses the next import in the section.
     pub fn parse(&mut self) -> Result<Option<Import<&B>>> {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
-        let result = Import::parse(&mut self.offset, &self.bytes);
-
-        if result.is_ok() {
-            self.count -= 1;
-        } else {
-            self.count = 0;
-        }
-
-        result.map(Some)
+        self.imports
+            .advance(Import::parse)
+            .transpose()
+            .context("within import section")
     }
 
     pub(crate) fn borrowed(&self) -> ImportsComponent<&B> {
-        ImportsComponent {
-            count: self.count,
-            offset: self.offset,
-            bytes: &self.bytes,
-        }
+        self.imports.borrowed().into()
     }
 }
 
@@ -183,13 +166,16 @@ impl<B: Clone + Bytes> Iterator for ImportsComponent<B> {
     type Item = Result<Import<B>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.parse()
-            .map(|result| result.map(|i| i.cloned()))
-            .transpose()
+        match self.parse() {
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+            Ok(Some(import)) => Some(Ok(import.cloned())),
+        }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        ((self.count > 0).into(), self.count.try_into().ok())
+        self.imports.size_hint()
     }
 }
 

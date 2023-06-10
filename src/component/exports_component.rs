@@ -147,10 +147,11 @@ impl<B: Clone + Bytes> Iterator for ExportsComponent<B> {
         match self.parse() {
             Ok(None) => None,
             Err(e) => Some(Err(e)),
-            Ok(Some(code)) => Some(Ok(code.cloned())),
+            Ok(Some(export)) => Some(Ok(export.cloned())),
         }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.exports.size_hint()
     }
