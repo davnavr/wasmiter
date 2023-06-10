@@ -9,7 +9,6 @@ repository = "https://github.com/davnavr/wasmiter"
 [dependencies]
 cfg-if = "1.0.0"
 memmap2 = { version = "0.6.2", optional = true }
-allocator-api2 = { version = "0.2.14", optional = true, default-features = false, features = ["alloc"] }
 
 [features]
 default = ["backtrace", "std", "mmap"]
@@ -17,7 +16,6 @@ mmap = ["std", "dep:memmap2"]
 backtrace = ["std"]
 std = ["alloc"]
 alloc = []
-allocator-api2 = ["dep:allocator-api2", "alloc"]
 
 [dev-dependencies]
 criterion = "0.4.0"

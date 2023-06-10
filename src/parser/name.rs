@@ -169,41 +169,6 @@ impl<B: Bytes> Name<B> {
     }
 }
 
-#[cfg(feature = "allocator-api2")]
-impl<B: Bytes> Name<B> {
-    /// Allocates space within the given [`Allocator`](allocator_api2::alloc::Allocator) for the
-    /// contents of the [`Name`], checking that they are valid UTF-8.
-    ///
-    /// # Error
-    ///
-    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
-    /// the [`Name`] is not valid UTF-8.
-    #[inline]
-    pub fn into_str_in<A: allocator_api2::alloc::Allocator>(
-        self,
-        allocator: A,
-    ) -> parser::Result<allocator_api2::boxed::Box<str, A>> {
-        let mut bytes =
-            allocator_api2::vec![in allocator; 0u8; self.length.try_into().unwrap_or(usize::MAX)];
-
-        self.copy_to_slice(&mut bytes)?;
-
-        // Check for valid UTF-8
-        core::str::from_utf8(&bytes).map_err(|e| crate::parser_bad_format!("{e}"))?;
-
-        let (ptr, allocator) = allocator_api2::boxed::Box::<[u8], A>::into_raw_with_allocator(
-            bytes.into_boxed_slice(),
-        );
-
-        // Safety: Box<str> and Box<[u8]> have same layout, check for valid UTF-8 already occured
-        let s = unsafe {
-            allocator_api2::boxed::Box::<str, A>::from_raw_in(ptr as *mut str, allocator)
-        };
-
-        Ok(s)
-    }
-}
-
 /// Parses a UTF-8 string [`Name`].
 pub fn parse<B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<Name<B>> {
     let name = Name::new(bytes, offset)?;
