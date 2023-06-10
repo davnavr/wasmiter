@@ -79,12 +79,17 @@ impl<B: Bytes> DatasComponent<B> {
         self.entries.advance(|offset, bytes| {
             let mode_offset = *offset;
             let mode_tag=
-                parser::leb128::u32(offset, bytes).context("data segment mode")?;
+                parser::leb128::u32(offset, bytes).context("while parsing data segment mode")?;
 
             let mut copied_offset = *offset;
             let mut mode: DataMode<&mut u64, &B> = match mode_tag {
                 0 => DataMode::Active(
                     MemIdx::from(0u8),
+                    InstructionSequence::new(&mut copied_offset, bytes),
+                ),
+                1 => DataMode::Passive,
+                2 => DataMode::Active(
+                    crate::component::index(&mut copied_offset, bytes).context("could not parse target memory of active data segment")?,
                     InstructionSequence::new(&mut copied_offset, bytes),
                 ),
                 _ => {
