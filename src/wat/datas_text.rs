@@ -13,11 +13,14 @@ impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
                 move |m| match m {
                     DataMode::Passive => Ok(w),
                     DataMode::Active(memory, offset) => {
-                        w.open_paren();
-                        w.write_str("memory ");
-                        wat::write_index(false, *memory, w);
-                        w.close_paren();
-                        w.write_char(' ');
+                        if memory.to_u32() != 0 {
+                            w.open_paren();
+                            w.write_str("memory ");
+                            wat::write_index(false, *memory, w);
+                            w.close_paren();
+                            w.write_char(' ');
+                        }
+
                         w.open_paren();
                         w.write_str("offset ");
                         wat::instruction_text::expression_linear(offset, w)?;
