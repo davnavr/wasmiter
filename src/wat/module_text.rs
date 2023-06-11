@@ -5,9 +5,13 @@ use crate::{
 
 impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
+        w.open_paren();
+        w.write_str("module");
+
         let mut function_types = None;
 
         for result in self.as_sections().borrowed() {
+            writeln!(w);
             match KnownSection::interpret(result?) {
                 Ok(known) => match known? {
                     KnownSection::Type(types) => Wat::write(types, w)?,
@@ -58,12 +62,12 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
                         ))
                     );
                     w.write_str(";)");
+                    writeln!(w);
                 }
             }
-
-            writeln!(w);
         }
 
+        w.close_paren();
         Ok(())
     }
 }

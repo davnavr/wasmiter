@@ -2,6 +2,7 @@
 source: tests/modules.rs
 expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
 ---
+(module
 (type (; 0 ;) (func (param) (result)))
 (type (; 1 ;) (func (param) (result i32)))
 (type (; 2 ;) (func (param i32 i32) (result i32)))
@@ -45,4 +46,4 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
     485F5054_52,
 ]
 ;)
-
+)

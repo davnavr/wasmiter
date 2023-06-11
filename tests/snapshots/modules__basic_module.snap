@@ -1,7 +1,8 @@
 ---
 source: tests/modules.rs
-expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
+expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
 ---
+(module
 (type (; 0 ;) (func (param i32) (result i32)))
 
 ;; function section count = 1
@@ -12,5 +13,4 @@ expression: "&wasmiter::parse_module_sections(wasm.as_slice()).unwrap()"
   i32.const 0x00000005 (; 5 signed, 5 unsigned ;)
   i32.add
 )
-
-
+)
