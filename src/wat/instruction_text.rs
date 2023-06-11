@@ -243,10 +243,12 @@ fn instruction<B: Bytes>(
         }
         Instr::MemoryInit(data, mem) => {
             write_non_zero_index(*mem, w);
+            w.write_char(' ');
             wat::write_index(false, *data, w);
         }
         Instr::TableInit(elem, table) => {
             write_non_zero_index(*table, w);
+            w.write_char(' ');
             wat::write_index(false, *elem, w);
         }
         Instr::DataDrop(data) => {
