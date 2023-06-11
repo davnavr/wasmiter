@@ -7,5 +7,8 @@ fuzz_target!(|module: wasmiter_fuzz::ConfiguredModule| {
     let sections = wasmiter::parse_module_sections(wasm.as_slice()).unwrap();
     let module = sections.display_module();
     let text = format!("{module}");
-    let _ = wat::parse_str(text).unwrap();
+    match wat::parse_str(&text) {
+        Ok(_) => (),
+        Err(e) => panic!("{e}\n{text}\n"),
+    }
 });
