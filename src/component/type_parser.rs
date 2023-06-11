@@ -2,7 +2,7 @@ use crate::{
     bytes::Bytes,
     component,
     parser::{self, leb128, Error, Result, ResultExt},
-    types::{self, BlockType, GlobalMutability, Limits, TableType, ValType},
+    types::{self, BlockType, GlobalMutability, IdxType, Limits, TableType, ValType},
 };
 
 /// Parses a [`BlockType`].
@@ -85,40 +85,47 @@ pub fn mem_type<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<types::MemType>
 
 /// Parses [`Limits`].
 pub fn limits<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<Limits> {
-    let flag = parser::one_byte_exact(offset, bytes).context("limit flag")?;
+    let flag = parser::one_byte_exact(offset, bytes).context("parsing limit flag")?;
 
-    if !(0u8..=7).contains(&flag) {
+    if flag & (!0b111) != 0 {
         return Err(crate::parser_bad_format!(
             "{flag:#04X} is not a known limit flag"
         ));
     }
 
-    let index_type = match flag {
-        0..=3 => types::IdxType::I32,
-        4..=7 => types::IdxType::I64,
-        _ => unreachable!(),
+    const USE_MEMORY_64: u8 = 0b100;
+
+    let index_type = if flag & USE_MEMORY_64 == 0 {
+        IdxType::I32
+    } else {
+        IdxType::I64
     };
 
-    let minimum = match flag {
-        0..=3 | 6 | 7 => u64::from(leb128::u32(offset, bytes).context("32-bit limit minimum")?),
-        4 | 5 => leb128::u64(offset, bytes).context("64-bit limit minimum")?,
-        _ => unreachable!(),
+    // 64-bit shared memory should use 64-bit limits, see github.com/WebAssembly/memory64/issues/21
+    let minimum = match index_type {
+        IdxType::I32 => {
+            u64::from(leb128::u32(offset, bytes).context("parsing 32-bit limit minimum")?)
+        }
+        IdxType::I64 => leb128::u64(offset, bytes).context("parsing 64-bit limit minimum")?,
     };
 
-    let maximum = match flag {
-        0 | 2 | 4 | 6 => None,
-        1 | 3 | 7 => Some(u64::from(
-            leb128::u32(offset, bytes).context("32-bit limit maximum")?,
-        )),
-        5 => Some(leb128::u64(offset, bytes).context("64-bit limit maximum")?),
-        _ => unreachable!(),
+    const HAS_MAXIMUM: u8 = 1;
+
+    let maximum = if flag & HAS_MAXIMUM == 0 {
+        None
+    } else {
+        Some(match index_type {
+            IdxType::I32 => u64::from(leb128::u32(offset, bytes).context("32-bit limit maximum")?),
+            IdxType::I64 => leb128::u64(offset, bytes).context("64-bit limit maximum")?,
+        })
     };
 
-    // Note that only 2 and 3 is introduced in the threads proposal overview
-    let share = match flag {
-        0 | 1 | 4 | 5 => types::Sharing::Unshared,
-        2 | 3 | 6 | 7 => types::Sharing::Shared,
-        _ => unreachable!(),
+    const IS_SHARED: u8 = 0b10;
+
+    let share = if flag & IS_SHARED == 0 {
+        types::Sharing::Unshared
+    } else {
+        types::Sharing::Shared
     };
 
     Limits::new(minimum, maximum, share, index_type).ok_or_else(|| {
