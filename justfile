@@ -1,6 +1,7 @@
 #!/usr/bin/env -S just --justfile
 # Shebang should be compatible with Git Bash for Windows
 
+# Runs clippy, followed by all tests
 check: (clippy_all) (test_all)
 
 list:
@@ -16,12 +17,15 @@ cfg_alloc := "--no-default-features --features alloc"
 
 test_nostd $RUST_BACKTRACE="1":
     cargo nextest run {{cfg_nostd}}
+    cargo test --doc {{cfg_nostd}}
 
 test_alloc $RUST_BACKTRACE="1":
     cargo nextest run {{cfg_alloc}}
+    cargo test --doc {{cfg_alloc}}
 
 test_full $RUST_BACKTRACE="1":
     cargo nextest run
+    cargo test --doc
 
 test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTRACE) (test_nostd RUST_BACKTRACE)
 
@@ -51,5 +55,5 @@ clippy_fuzz:
     cd ./fuzz/ && cargo clippy
 
 # Runs cargo-fuzz on the given target; requires a nightly version of Rust
-fuzz target='parser_random' *FLAGS:
+fuzz target='parser_random' *FLAGS='':
     cargo +nightly fuzz run {{target}} {{FLAGS}}
