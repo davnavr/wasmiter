@@ -13,14 +13,14 @@ impl<B: Bytes> CharsLossy<B> {
                 f.write_char(c)?;
             } else {
                 match c {
-                    '\0' => f.write_str("\\0")?,
+                    '\0' => f.write_str("\\u{0}")?,
                     '\r' => f.write_str("\\r")?,
                     '\t' => f.write_str("\\t")?,
                     '\n' => f.write_str("\\n")?,
                     '\'' => f.write_str("\\'")?,
                     '\"' => f.write_str("\\\"")?,
                     '\\' => f.write_str("\\\\")?,
-                    _ => write!(f, "\\u{{{:#X}}}", u32::from(c))?,
+                    _ => write!(f, "\\u{{{:X}}}", u32::from(c))?,
                 }
             }
         }
