@@ -32,6 +32,7 @@ impl<B: Bytes> wat::Wat for crate::component::ElemsComponent<B> {
                         ElementInit::Functions(functions) => {
                             w.write_str("func");
                             for idx in functions {
+                                w.write_char(' ');
                                 wat::write_index(false, idx?, w);
                             }
                         }
