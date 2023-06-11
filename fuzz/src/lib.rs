@@ -7,7 +7,7 @@ mod config;
 pub use config::{ConfiguredModule, WasmiterConfig};
 
 pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
-    for result in wasmiter::parse_module_sections(wasm).unwrap() {
+    for result in wasmiter::parse_module_sections(wasm)? {
         match KnownSection::interpret(result?) {
             Ok(known) => match known? {
                 KnownSection::Type(mut types) => loop {
