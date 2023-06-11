@@ -6,6 +6,13 @@ mod config;
 
 pub use config::{ConfiguredModule, WasmiterConfig};
 
+pub fn print_reference_wat(wasm: &[u8]) -> String {
+    match wasmprinter::print_bytes(wasm) {
+        Ok(wat) => wat,
+        Err(e) => e.to_string(),
+    }
+}
+
 pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
     for result in wasmiter::parse_module_sections(wasm)? {
         match KnownSection::interpret(result?) {
