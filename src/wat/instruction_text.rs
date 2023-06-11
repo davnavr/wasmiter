@@ -250,9 +250,11 @@ fn instruction<B: Bytes>(
             wat::write_index(false, *elem, w);
         }
         Instr::DataDrop(data) => {
+            w.write_char(' ');
             wat::write_index(false, *data, w);
         }
         Instr::ElemDrop(elem) => {
+            w.write_char(' ');
             wat::write_index(false, *elem, w);
         }
         Instr::V128Load8Lane(mem, lane)
