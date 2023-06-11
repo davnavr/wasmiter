@@ -46,7 +46,7 @@ fn instruction<B: Bytes>(
     if let Some(mut level) = indentation {
         if matches!(
             instr,
-            Instr::Else | Instr::Catch(_) | Instr::CatchAll | Instr::Delegate(_)
+            Instr::Else | Instr::Catch(_) | Instr::CatchAll | Instr::Delegate(_) | Instr::End
         ) {
             level = level.saturating_sub(1);
         };
