@@ -46,7 +46,7 @@ impl<B: Clone + crate::bytes::Bytes> wat::Wat for crate::component::ImportsCompo
                     w.write_str("tag ");
                     wat::write_index(true, index::TagIdx::try_from(tag_count).unwrap(), w);
                     w.write_char(' ');
-                    wat::tags_text::write_tag(Ok(*tag), w)?;
+                    wat::tags_text::write_tag(*tag, w);
                     tag_count += 1;
                 }
             }

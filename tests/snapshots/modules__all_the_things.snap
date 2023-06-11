@@ -3,15 +3,17 @@ source: tests/modules.rs
 expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
 ---
 (module
-(type (; 0 ;) (func (param) (result)))
-(type (; 1 ;) (func (param) (result i32)))
-(type (; 2 ;) (func (param i32 i32) (result i32)))
+(type (; 0 ;) (func (param i32) (result)))
+(type (; 1 ;) (func (param) (result)))
+(type (; 2 ;) (func (param) (result i32)))
+(type (; 3 ;) (func (param i32 i32) (result i32)))
 
 (import "sample_api" "_handles" (table (; 0 ;) 0 externref))
 (import "sample_api" "_handles_start" (global (; 0 ;) (mut i32)))
+(import "sample_api" "panic" (tag (; 0 ;) (type 0)))
 (import "extern" "memory" (memory (; 0 ;) 16))
-(import "extern" "fun_startup" (func (; 0 ;) (type 0)))
-(import "extern" "fun_link_startup" (func (; 1 ;) (type 1)))
+(import "extern" "fun_startup" (func (; 0 ;) (type 1)))
+(import "extern" "fun_link_startup" (func (; 1 ;) (type 2)))
 
 ;; function section count = 3
 (table (; 0 ;) 0 funcref)
@@ -24,18 +26,18 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
 (export "_start" (func 3))
 
 (start 4)
-(func (type 2) ;; code size = 4
+(func (type 3) ;; code size = 4
   i32.const 0x00000000 (; 0 signed, 0 unsigned ;)
 )
-(func (type 0) ;; code size = 3
+(func (type 1) ;; code size = 3
   nop
 )
-(func (type 0) ;; code size = 5
+(func (type 1) ;; code size = 5
   call 1
   drop
 )
 
-(; UNRECOGNIZED (0) @ 0xD2 to 0x136
+(; UNRECOGNIZED (0) @ 0xEB to 0x14F
 [
     046E616D_65012304__010B6675_6E5F7374,
     61727475_7002046D__61696E03_065F7374,

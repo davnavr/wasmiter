@@ -1,6 +1,7 @@
 (module
     (import "sample_api" "_handles" (table $_HANDLES 0 externref))
     (import "sample_api" "_handles_start" (global (mut i32)))
+    (import "sample_api" "panic" (tag (param i32)))
 
     (import "extern" "memory" (memory 16))
     (import "extern" "fun_startup" (func))
