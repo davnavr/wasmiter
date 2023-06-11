@@ -62,14 +62,15 @@ impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
                                     b'\\' => w.write_str("\\\\"),
                                     _ => write!(w, "\\{b:02X}"),
                                 }
-
-                                // Write indentation for next line if there are more bytes to write
-                                if length > 0 {
-                                    writeln!(w);
-                                    w.write_str(wat::INDENTATION);
-                                }
                             }
+
                             w.write_char('"');
+
+                            // Write indentation for next line if there are more bytes to write
+                            if length > 0 {
+                                writeln!(w);
+                                w.write_str(wat::INDENTATION);
+                            }
                         }
                     } else {
                         w.write_str("\"\"");

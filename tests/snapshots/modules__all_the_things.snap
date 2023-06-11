@@ -38,8 +38,11 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
 )
 
 (data (; 0 ;) "el amor")
+(data (; 1 ;)
+  "\FF\FF\00QQQQQQQQQQQQQ"
+  "Q\07")
 
-(; UNRECOGNIZED (0) @ 0xF7 to 0x15B
+(; UNRECOGNIZED (0) @ 0x10B to 0x16F
 [
     046E616D_65012304__010B6675_6E5F7374,
     61727475_7002046D__61696E03_065F7374,

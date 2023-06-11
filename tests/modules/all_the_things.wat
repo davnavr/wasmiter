@@ -15,6 +15,9 @@
 
     (data "el amor")
 
+    ;; Thanks libFuzzer :)
+    (data "\FF\FF\00\51\51\51\51\51\51\51\51\51\51\51\51\51\51\07")
+
     (func $main (param i32 i32) (result i32)
         i32.const 0)
 
