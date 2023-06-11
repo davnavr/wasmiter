@@ -49,7 +49,18 @@ impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
 
                             w.write_char('"');
                             for b in &buffer[..buffer_size] {
-                                write!(w, "{}", core::ascii::escape_default(*b));
+                                match b {
+                                    0x20..=0x21 | 0x23..=0x26 | 0x28..=0x5B | 0x5D..=0x7E => {
+                                        w.write_char(char::from_u32(u32::from(*b)).unwrap())
+                                    }
+                                    b'\t' => w.write_str("\\t"),
+                                    b'\n' => w.write_str("\\n"),
+                                    b'\r' => w.write_str("\\r"),
+                                    b'\'' => w.write_str("\\'"),
+                                    b'\"' => w.write_str("\\\""),
+                                    b'\\' => w.write_str("\\\\"),
+                                    _ => write!(w, "\\{b:02X}"),
+                                }
 
                                 // Write indentation for next line if there are more bytes to write
                                 if length > 0 {
