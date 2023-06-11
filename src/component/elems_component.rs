@@ -84,7 +84,7 @@ pub enum ElementInit<O: Offset, B: Bytes> {
     /// A vector of functions to create `funcref` elements from.
     Functions(IndexVector<index::FuncIdx, O, B>),
     /// A vector of expressions that evaluate to references.
-    Expressions(Option<crate::types::RefType>, ElementExpressions<O, B>),
+    Expressions(crate::types::RefType, ElementExpressions<O, B>),
 }
 
 impl<O: Offset, B: Bytes> ElementInit<O, B> {
@@ -267,7 +267,7 @@ impl<B: Bytes> ElemsComponent<B> {
                         *offset = offset_copy;
 
                         init = ElementInit::Expressions(
-                            None,
+                            crate::types::RefType::Func,
                             ElementExpressions::new(offset, bytes)
                                 .context("expressions in active element segment")?,
                         );
@@ -278,7 +278,7 @@ impl<B: Bytes> ElemsComponent<B> {
                         init_arg = mode_f(&mut mode)?;
                         mode.finish()?; // Does nothing
                         init = ElementInit::Expressions(
-                            Some(rtype),
+                            rtype,
                             ElementExpressions::new(offset, bytes)
                                 .context("expressions in passive element segment")?,
                         );
@@ -296,7 +296,7 @@ impl<B: Bytes> ElemsComponent<B> {
 
                         let rtype = component::ref_type(offset, bytes)?;
                         init = ElementInit::Expressions(
-                            Some(rtype),
+                            rtype,
                             ElementExpressions::new(offset, bytes)
                                 .context("expressions in active element segment")?,
                         );
@@ -307,7 +307,7 @@ impl<B: Bytes> ElemsComponent<B> {
                         init_arg = mode_f(&mut mode)?;
                         mode.finish()?; // Does nothing
                         init = ElementInit::Expressions(
-                            Some(rtype),
+                            rtype,
                             ElementExpressions::new(offset, bytes)
                                 .context("expressions in declarative element segment")?,
                         );

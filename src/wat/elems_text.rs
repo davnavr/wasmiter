@@ -37,10 +37,7 @@ impl<B: Bytes> wat::Wat for crate::component::ElemsComponent<B> {
                             }
                         }
                         ElementInit::Expressions(ref_type, expressions) => {
-                            match ref_type {
-                                None => w.write_str("(; element type was not specified ;) "),
-                                Some(rt) => write!(w, "{rt} "),
-                            }
+                            write!(w, "{ref_type} ");
 
                             let writer = core::cell::RefCell::new(w);
 
