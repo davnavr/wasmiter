@@ -31,6 +31,6 @@ expression: "inputs.iter().map(|bytes| Name::try_from(*bytes)).collect::<Box<[_]
         "\u{1F643}",
     ),
     Ok(
-        "��",
+        "\u{FFFD}\u{FFFD}",
     ),
 ]
