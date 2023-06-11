@@ -1074,10 +1074,10 @@ instructions! {
         /// [**i16x8.extmul_high_i8x16_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
         I16x8ExtmulHighI8x16U = "i16x8.extmul_high_i8x16_u",
 
-        /// [**i32x4.extadd_pairwise_i16x8s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
-        I32x4ExtaddPairwiseI16x8S = "i32x4.extadd_pairwise_i16x8s",
-        /// [**i32x4.extadd_pairwise_i16x8u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
-        I32x4ExtaddPairwiseI16x8U = "i32x4.extadd_pairwise_i16x8u",
+        /// [**i32x4.extadd_pairwise_i16x8_s**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+        I32x4ExtaddPairwiseI16x8S = "i32x4.extadd_pairwise_i16x8_s",
+        /// [**i32x4.extadd_pairwise_i16x8_u**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+        I32x4ExtaddPairwiseI16x8U = "i32x4.extadd_pairwise_i16x8_u",
         /// [**i32x4.abs**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
         I32x4Abs = "i32x4.abs",
         /// [**i32x4.neg**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
