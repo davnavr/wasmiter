@@ -55,5 +55,5 @@ clippy_fuzz:
     cd ./fuzz/ && cargo clippy
 
 # Runs cargo-fuzz on the given target; requires a nightly version of Rust
-fuzz target='parser_random' *FLAGS='':
+fuzz target='parser_random' *FLAGS='-- -jobs=2':
     cargo +nightly fuzz run {{target}} {{FLAGS}}

@@ -1,2 +1,6 @@
+# Cargo
 Cargo.lock
 target/
+
+# libFuzzer
+/fuzz-*.log
