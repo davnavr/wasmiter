@@ -27,15 +27,19 @@ test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTR
 
 # Clippy
 
+# Runs clippy on the full no_std variant of wasmiter
 clippy_nostd:
     cargo clippy {{cfg_nostd}}
 
+# Runs clippy on the no_std+alloc variant of wasmiter
 clippy_alloc:
     cargo clippy {{cfg_alloc}}
 
+# Runs clippy on the default variant of wasmiter
 clippy_full:
     cargo clippy
 
+# Runs clippy on all 3 major variants of wasmiter
 clippy_all: (clippy_full) (clippy_alloc) (clippy_nostd)
 
 # Fuzzing
@@ -46,6 +50,6 @@ fmt_fuzz:
 clippy_fuzz:
     cd ./fuzz/ && cargo clippy
 
-# Run cargo-fuzz on the given target; requires a nightly version of Rust.
-fuzz target='parser_valid':
-    cargo +nightly fuzz run {{target}}
+# Runs cargo-fuzz on the given target; requires a nightly version of Rust
+fuzz target='parser_random' *FLAGS:
+    cargo +nightly fuzz run {{target}} {{FLAGS}}
