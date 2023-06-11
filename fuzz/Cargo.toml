@@ -40,3 +40,9 @@ name = "wat_valid"
 path = "fuzz_targets/wat_valid.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "parser_random"
+path = "fuzz_targets/parser_random.rs"
+test = false
+doc = false
