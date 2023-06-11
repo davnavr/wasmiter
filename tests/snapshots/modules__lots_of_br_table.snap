@@ -1,0 +1,51 @@
+---
+source: tests/modules.rs
+expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
+---
+(module
+(type (; 0 ;) (func (param) (result)))
+
+;; function section count = 1
+(func (type 0) ;; code size = 77
+  block 
+    block 
+      block 
+        block 
+          block 
+            block 
+              block 
+                block 
+                  block 
+                    block 
+                      block 
+                        block 
+                          block 
+                            block 
+                              block 
+                                block 
+                                  block 
+                                    block 
+                                      i32.const 0x0000000A (; 10 signed, 10 unsigned ;)
+                                      br_table 2 3 4 5 6 7 8 9 10 11 12 13 14 15 14
+                                      unreachable
+                                      drop
+                                      end
+                                    end
+                                  end
+                                end
+                              end
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+)
+)

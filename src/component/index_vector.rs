@@ -13,7 +13,14 @@ pub struct IndexVector<I: Index, O: Offset, B: Bytes> {
 }
 
 impl<I: Index, O: Offset, B: Bytes> IndexVector<I, O, B> {
+    /// Creates a new [`IndexVector`] with the given `count`, and whose elements start at the given `offset`.
+    #[inline]
+    pub fn new(count: u32, offset: O, bytes: B) -> Self {
+        Vector::new(count, offset, bytes).into()
+    }
+
     /// Creates a new [`IndexVector`] with a parsed `u32` count from the given [`Bytes`].
+    #[inline]
     pub fn parse(offset: O, bytes: B) -> Result<Self> {
         Vector::parse(offset, bytes).map(Self::from)
     }

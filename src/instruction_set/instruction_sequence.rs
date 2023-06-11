@@ -62,15 +62,16 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::Br => Instruction::Br(component::index(offset, bytes).context("br label")?),
         Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes).context("br_if label")?),
         Opcode::BrTable => {
-            let targets = component::IndexVector::parse(offset, bytes).context("branch table")?;
+            let branch_count = parser::leb128::u32(offset.offset_mut(), bytes)
+                .context("could not parse branch table label count")?;
 
-            if targets.remaining_count() == 0 {
-                return Err(crate::parser_bad_format!(
-                    "branch table must define at least one target"
-                ));
-            }
+            let total_count = branch_count.checked_add(1).ok_or_else(|| {
+                crate::parser_bad_format!(
+                    "branch table has a label count of {branch_count}, which is too large"
+                )
+            })?;
 
-            Instruction::BrTable(targets)
+            Instruction::BrTable(component::IndexVector::new(total_count, offset, bytes))
         }
         Opcode::Return => Instruction::Return,
         Opcode::Call => Instruction::Call(component::index(offset, bytes).context("call target")?),
