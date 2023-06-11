@@ -61,9 +61,17 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::End => Instruction::End,
         Opcode::Br => Instruction::Br(component::index(offset, bytes).context("br label")?),
         Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes).context("br_if label")?),
-        Opcode::BrTable => Instruction::BrTable(
-            component::IndexVector::parse(offset, bytes).context("branch table")?,
-        ),
+        Opcode::BrTable => {
+            let targets = component::IndexVector::parse(offset, bytes).context("branch table")?;
+
+            if targets.remaining_count() == 0 {
+                return Err(crate::parser_bad_format!(
+                    "branch table must define at least one target"
+                ));
+            }
+
+            Instruction::BrTable(targets)
+        }
         Opcode::Return => Instruction::Return,
         Opcode::Call => Instruction::Call(component::index(offset, bytes).context("call target")?),
         Opcode::CallIndirect => Instruction::CallIndirect(
