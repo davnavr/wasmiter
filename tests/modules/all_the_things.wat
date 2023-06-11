@@ -13,6 +13,8 @@
     (memory $SCRATCH 0 16)
     (global $SCRATCH_PTR (mut i32) i32.const 0)
 
+    (data "el amor")
+
     (func $main (param i32 i32) (result i32)
         i32.const 0)
 

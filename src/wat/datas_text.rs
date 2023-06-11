@@ -4,28 +4,29 @@ use crate::{component::DataMode, wat};
 impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
     fn write(mut self, mut w: &mut wat::Writer) -> wat::Parsed<()> {
         for i in (0u32..).flat_map(crate::index::DataIdx::try_from) {
-            w.open_paren();
-            w.write_str("data ");
-            wat::write_index(true, i, w);
-            w.write_char(' ');
-
             let result = self.parse(
-                move |m| match m {
-                    DataMode::Passive => Ok(w),
-                    DataMode::Active(memory, offset) => {
-                        if memory.to_u32() != 0 {
-                            w.open_paren();
-                            w.write_str("memory ");
-                            wat::write_index(false, *memory, w);
-                            w.close_paren();
-                            w.write_char(' ');
-                        }
+                move |m| {
+                    w.open_paren();
+                    w.write_str("data ");
+                    wat::write_index(true, i, w);
+                    match m {
+                        DataMode::Passive => Ok(w),
+                        DataMode::Active(memory, offset) => {
+                            if memory.to_u32() != 0 {
+                                w.write_char(' ');
+                                w.open_paren();
+                                w.write_str("memory ");
+                                wat::write_index(false, *memory, w);
+                                w.close_paren();
+                            }
 
-                        w.open_paren();
-                        w.write_str("offset ");
-                        wat::instruction_text::expression_linear(offset, w)?;
-                        w.close_paren();
-                        Ok(w)
+                            w.write_char(' ');
+                            w.open_paren();
+                            w.write_str("offset ");
+                            wat::instruction_text::expression_linear(offset, w)?;
+                            w.close_paren();
+                            Ok(w)
+                        }
                     }
                 },
                 |w: &mut wat::Writer, data| {
