@@ -1,0 +1,45 @@
+(module
+  ;; Found via libFuzzer
+  (func
+    block
+      block
+        block
+          block
+            block
+              block
+                block
+                  block
+                    block
+                      block
+                        block
+                          block
+                            block
+                              block
+                                block
+                                  block
+                                    block
+                                      block
+                                        i32.const 10
+                                        br_table 2 3 4 5 6 7 8 9 10 11 12 13 14 15 14
+                                        unreachable
+                                        drop
+                                      end
+                                    end
+                                  end
+                                end
+                              end
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  )
+)

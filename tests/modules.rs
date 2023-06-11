@@ -35,3 +35,12 @@ fn name_custom_section() {
         .unwrap()
         .debug_module());
 }
+
+#[test]
+fn lots_of_br_table() {
+    // Case found with libFuzzer
+    let wasm = wat::parse_str(include_str!("modules/lots_of_br_table.wat")).unwrap();
+    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
+        .unwrap()
+        .display_module());
+}
