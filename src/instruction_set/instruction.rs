@@ -842,8 +842,8 @@ instructions! {
         I16x8Splat = "i16x8.splat",
         /// [**i32x4.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
         I32x4Splat = "i32x4.splat",
-        /// [**i64x4.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
-        I64x2Splat = "i64x4.splat",
+        /// [**i64x2.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
+        I64x2Splat = "i64x2.splat",
         /// [**f32x4.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
         F32x4Splat = "f32x4.splat",
         /// [**f64x2.splat**](https://webassembly.github.io/spec/core/syntax/instructions.html#vector-instructions)
