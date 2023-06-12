@@ -83,7 +83,7 @@ trait Wat {
 }
 
 fn write_err(error: &parser::Error, w: &mut Writer) {
-    write!(w, "\n(;\n{error};)")
+    write!(w, "\n(;\n{error};)\n")
 }
 
 fn write_types<I: IntoIterator<Item = Parsed<types::ValType>>>(
