@@ -27,7 +27,17 @@ pub fn s32(c: &mut criterion::Criterion) {
     group.bench_with_input("wasmiter", input.as_slice(), |b, input| {
         b.iter(|| {
             let mut offset = 0u64;
-            wasmiter::parser::leb128::s32(&mut offset, input).unwrap();
+            for _ in 0..COUNT {
+                wasmiter::parser::leb128::s32(&mut offset, input).unwrap();
+            }
+        })
+    });
+    group.bench_with_input("leb128", input.as_slice(), |b, input| {
+        b.iter(|| {
+            let mut bytes = input;
+            for _ in 0..COUNT {
+                leb128::read::signed(&mut bytes).unwrap();
+            }
         })
     });
 
