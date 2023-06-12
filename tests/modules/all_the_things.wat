@@ -22,6 +22,9 @@
         i32.const 0)
 
     (func $_start
+        ;; Thanks libFuzzer
+        i32.const -669246436
+        drop
         nop)
 
     (func $_init
