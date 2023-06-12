@@ -28,7 +28,7 @@ pub fn s32(c: &mut criterion::Criterion) {
         b.iter(|| {
             let mut offset = 0u64;
             for _ in 0..COUNT {
-                wasmiter::parser::leb128::s32(&mut offset, input).unwrap();
+                criterion::black_box(wasmiter::parser::leb128::s32(&mut offset, input).unwrap());
             }
         })
     });
@@ -36,7 +36,7 @@ pub fn s32(c: &mut criterion::Criterion) {
         b.iter(|| {
             let mut bytes = input;
             for _ in 0..COUNT {
-                leb128::read::signed(&mut bytes).unwrap();
+                criterion::black_box(leb128::read::signed(&mut bytes).unwrap());
             }
         })
     });

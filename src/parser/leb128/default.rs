@@ -17,18 +17,28 @@ pub(super) fn s32_impl<B: Bytes>(offset: &mut u64, bytes: B) -> crate::parser::R
         let masks = (*remaining as u8) & (super::CONTINUATION | super::SIGN);
         *remaining >>= 8;
 
+        *offset += u64::from((masks & super::CONTINUATION) >> 7);
+
         // Following code should do the following:
         if masks & super::CONTINUATION == 0 {
             // Only lower 8 bits matter, but it doesn't matter here if entire value is assigned
             // since future calls to next_input will also "overwrite" remaining garbage values here
+
+            // This bit manipulation code should be equivalent to the code below
+            let replacement = (((((masks & super::SIGN) << 1) as i8) >> 7) as u8) & 0b0111_1111;
+            // Clear lower 8 bits
+            *remaining >>= 8;
+            *remaining <<= 8;
+            *remaining |= replacement as u64;
+
+            /*
             if masks & super::SIGN == 0 {
                 *remaining = 0;
             } else {
                 // Note that continuation bit is not set
                 *remaining = 0b0111_1111;
             }
-        } else {
-            *offset += 1;
+            */
         }
     }
 
