@@ -13,22 +13,6 @@ fn basic_module() {
 }
 
 #[test]
-fn exception_handling() {
-    let wasm = wat::parse_str(include_str!("modules/exception_handling.wat")).unwrap();
-    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
-        .unwrap()
-        .display_module());
-}
-
-#[test]
-fn all_the_things() {
-    let wasm = wat::parse_str(include_str!("modules/all_the_things.wat")).unwrap();
-    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
-        .unwrap()
-        .display_module());
-}
-
-#[test]
 fn name_custom_section() {
     let wasm = wat::parse_str(include_str!("modules/name_custom_section.wat")).unwrap();
     insta::assert_debug_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
@@ -36,11 +20,21 @@ fn name_custom_section() {
         .debug_module());
 }
 
-#[test]
-fn lots_of_br_table() {
+macro_rules! check_module_display {
+    ($($name:ident,)*) => {$(
+        #[test]
+        fn $name() {
+            const WAT: &str = include_str!(concat!("modules/", stringify!($name), ".wat"));
+            let wasm = wat::parse_str(WAT).unwrap();
+            let module = wasmiter::parse_module_sections(wasm.as_slice()).unwrap();
+            insta::assert_display_snapshot!(module.display_module());
+        }
+    )*};
+}
+
+check_module_display! {
+    all_the_things,
     // Case found with libFuzzer
-    let wasm = wat::parse_str(include_str!("modules/lots_of_br_table.wat")).unwrap();
-    insta::assert_display_snapshot!(wasmiter::parse_module_sections(wasm.as_slice())
-        .unwrap()
-        .display_module());
+    lots_of_br_table,
+    exception_handling,
 }
