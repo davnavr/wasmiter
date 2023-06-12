@@ -5,7 +5,7 @@ use crate::bytes::{self, Bytes};
 use crate::parser::{Error, Result, ResultExt};
 
 // TODO: Expose specific parsers for use in benchmarks (#[cfg(bench)])?
-mod default;
+mod simple;
 
 const CONTINUATION: u8 = 0b1000_0000u8;
 const SIGN: u8 = 0b0100_0000u8;
@@ -18,6 +18,15 @@ fn too_large<T>(signed: bool) -> Error {
     crate::parser_bad_format!(
         "decoded value cannot fit into a {}-bit {signedness} integer",
         core::mem::size_of::<T>() / 8
+    )
+}
+
+#[cold]
+#[inline(never)]
+fn bad_continuation(bytes: &[u8]) -> Error {
+    crate::parser_bad_format!(
+        "continuation flag was set in integer {:?}, but no more bytes remain in the input",
+        crate::bytes::DebugBytes::from(bytes)
     )
 }
 
@@ -222,7 +231,7 @@ pub fn u64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u64> {
 /// Attempts to parse a signed 32-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
-    default::s32_impl(offset, bytes).context("could not parse signed 32-bit integer")
+    simple::s32(offset, bytes).context("could not parse signed 32-bit integer")
 }
 
 /// Attempts to parse a signed 64-bit integer encoded in the
