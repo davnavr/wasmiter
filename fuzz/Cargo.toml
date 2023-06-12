@@ -8,6 +8,7 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
+leb128 = "0.2.5"
 libfuzzer-sys = { version = "0.4.6", features = ["arbitrary-derive"] }
 wasm-smith = "0.12.10"
 wasmprinter = "0.2.59"
@@ -45,5 +46,11 @@ doc = false
 [[bin]]
 name = "parser_random"
 path = "fuzz_targets/parser_random.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "leb128_s32"
+path = "fuzz_targets/leb128_s32.rs"
 test = false
 doc = false
