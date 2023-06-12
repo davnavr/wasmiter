@@ -58,7 +58,8 @@ pub(super) fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
 
         if b & super::CONTINUATION == 0 {
             // Sign extend the value
-            let sign = (((b & super::SIGN) as u64).rotate_right(7) as i64) >> (63u8 - shift_amount);
+            let sign = (((b & super::SIGN) as u64).rotate_right(7) as i64) >> (56u8 - shift_amount);
+
             return Ok(destination as i64 | sign);
         }
     }

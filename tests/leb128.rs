@@ -53,4 +53,18 @@ fn examples_s32() {
     assert_eq_decoded!(-134217728, &[0x80, 0x80, 0x80, 0x40]);
     assert_eq_decoded!(i32::MAX, &[0xFF, 0xFF, 0xFF, 0xFF, 0x07]);
     assert_eq_decoded!(i32::MIN, &[0x80, 0x80, 0x80, 0x80, 0x78]);
+    assert_eq_decoded!(-17, [0x6F]);
+}
+
+#[test]
+fn examples_s64() {
+    macro_rules! assert_eq_decoded {
+        ($expected:expr, $actual:expr) => {{
+            assert_eq!($expected, leb128::s64(&mut 0, $actual.as_slice()).unwrap());
+        }};
+    }
+
+    assert_eq_decoded!(0, &[0]);
+    assert_eq_decoded!(-1, &[0x7F]);
+    assert_eq_decoded!(-17, [0x6F]);
 }
