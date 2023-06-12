@@ -67,23 +67,17 @@ impl IntegerEncoding for u64 {
     type Buffer = [u8; Self::MAX_LENGTH as usize];
 }
 
-trait SignedInteger: IntegerEncoding + core::ops::ShrAssign<u8> {}
-
 impl IntegerEncoding for i32 {
     const MAX_LENGTH: u8 = 5;
     const BITS: u8 = 32;
     type Buffer = [u8; Self::MAX_LENGTH as usize];
 }
 
-impl SignedInteger for i32 {}
-
 impl IntegerEncoding for i64 {
     const MAX_LENGTH: u8 = 10;
     const BITS: u8 = 64;
     type Buffer = [u8; Self::MAX_LENGTH as usize];
 }
-
-impl SignedInteger for i64 {}
 
 fn unsigned<N: IntegerEncoding, B: Bytes>(offset: &mut u64, bytes: B) -> Result<N> {
     let mut buffer = N::Buffer::default();
@@ -131,76 +125,6 @@ fn unsigned<N: IntegerEncoding, B: Bytes>(offset: &mut u64, bytes: B) -> Result<
     Ok(value)
 }
 
-fn signed<N: SignedInteger, B: Bytes>(offset: &mut u64, bytes: B) -> Result<N> {
-    let mut buffer = N::Buffer::default();
-    let mut value = N::default();
-    let input = bytes.read_at(*offset, buffer.as_mut())?;
-
-    let mut more = true;
-    let mut i = 0u8;
-    let mut has_sign = false;
-    // Duplicated code from leb128_unsigned
-    for byte in input.iter().copied() {
-        let bits = byte & 0x7F;
-        more = byte & 0x80 == 0x80;
-        has_sign = bits & 0x40 == 0x40;
-
-        let shift = 7u8 * i;
-
-        // Check for overflowing bits in last byte
-        if i == N::MAX_LENGTH - 1 {
-            if !has_sign {
-                let leading_zeroes = (bits & 0x3F).leading_zeros() as u8;
-                if leading_zeroes < 8 - (N::BITS - shift) {
-                    return Err(crate::parser_bad_format!(
-                        "encoded positive value requires {} bits, which cannot fit in the destination",
-                        shift + (8 - leading_zeroes)
-                    ));
-                }
-            } else {
-                // TODO: Is the amount to check for correct here?
-                let leading_ones = (bits | 0xC0).leading_ones() as u8;
-                if leading_ones > (N::BITS - shift) + 1 {
-                    return Err(crate::parser_bad_format!(
-                        "negative value cannot be encoded in {} bits",
-                        N::BITS
-                    ));
-                }
-            }
-        }
-
-        debug_assert!(shift <= N::BITS);
-
-        value |= N::from(bits & 0x7F) << shift;
-        i += 1;
-
-        if !more {
-            break;
-        }
-    }
-
-    if more {
-        return Err(N::buffer_overflowed());
-    }
-
-    if has_sign {
-        let mut sign_mask = N::from(1u8) << (N::BITS - 1);
-
-        if i < N::MAX_LENGTH {
-            // Right shift fills with sign
-            sign_mask >>= N::BITS - (i * 7) - 1;
-        }
-
-        value |= sign_mask;
-    }
-
-    *offset = offset
-        .checked_add(u64::from(i))
-        .ok_or_else(bytes::offset_overflowed)?;
-
-    Ok(value)
-}
-
 /// Attempts to a parse an unsigned 32-bit integer encoded in
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn u32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u32> {
@@ -237,5 +161,5 @@ pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
 /// Attempts to parse a signed 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
-    signed(offset, bytes).context("could not parse s64")
+    simple::s64(offset, bytes).context("could not parse signed 64-bit integer")
 }
