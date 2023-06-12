@@ -54,3 +54,9 @@ name = "leb128_s32"
 path = "fuzz_targets/leb128_s32.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "leb128_u32"
+path = "fuzz_targets/leb128_u32.rs"
+test = false
+doc = false
