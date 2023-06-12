@@ -1,4 +1,4 @@
-use crate::parser::{Context, Result};
+use crate::parser::{Context, Error, Result};
 
 mod sealed {
     pub trait Sealed {}
@@ -6,7 +6,7 @@ mod sealed {
     impl<T, E: Into<crate::parser::Error>> Sealed for core::result::Result<T, E> {}
 }
 
-/// Provides helper methods to add additional context to [`Error`](crate::parser::Error)s.
+/// Provides helper methods to add additional context to [`Error`]s.
 ///
 /// If the `std` and `alloc` features are not specified, then these methods do nothing.
 ///
@@ -24,15 +24,19 @@ pub trait ResultExt<T>: sealed::Sealed {
     fn with_context<C: Into<Context>, F: FnOnce() -> C>(self, f: F) -> Result<T>;
 }
 
-impl<T, E: Into<crate::parser::Error>> ResultExt<T> for core::result::Result<T, E> {
+impl<T, E: Into<Error>> ResultExt<T> for core::result::Result<T, E> {
     fn with_context<C: Into<Context>, F: FnOnce() -> C>(self, f: F) -> Result<T> {
+        #[cold]
+        #[inline(never)]
+        fn create_error<C: Into<Context>>(e: impl Into<Error>, f: impl FnOnce() -> C) -> Error {
+            let mut err = e.into();
+            err.context(f());
+            err
+        }
+
         match self {
             Ok(value) => Ok(value),
-            Err(e) => {
-                let mut err = e.into();
-                err.context(f());
-                Err(err)
-            }
+            Err(e) => Err(create_error(e, f)),
         }
     }
 }

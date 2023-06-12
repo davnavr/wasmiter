@@ -4,6 +4,23 @@
 use crate::bytes::{self, Bytes};
 use crate::parser::{Error, Result, ResultExt};
 
+// TODO: Expose specific parsers for use in benchmarks (#[cfg(bench)])?
+mod default;
+
+const CONTINUATION: u8 = 0b1000_0000u8;
+const SIGN: u8 = 0b0100_0000u8;
+
+#[cold]
+#[inline(never)]
+fn too_large<T>(signed: bool) -> Error {
+    let signedness = if signed { "signed" } else { "unsigned" };
+
+    crate::parser_bad_format!(
+        "decoded value cannot fit into a {}-bit {signedness} integer",
+        core::mem::size_of::<T>() / 8
+    )
+}
+
 trait IntegerEncoding:
     From<u8> + Default + core::ops::BitOrAssign + core::ops::Shl<u8, Output = Self>
 {
@@ -196,19 +213,19 @@ pub fn usize<B: Bytes>(offset: &mut u64, bytes: B) -> Result<usize> {
     usize::try_from(length).map_err(|_| crate::parser_bad_format!("length ({length}) is too large"))
 }
 
-/// Attempts to a parse an unsigned 64-bit integer encoded in
+/// Attempts to a parse an unsigned 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn u64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u64> {
     unsigned(offset, bytes).context("could not parse u64")
 }
 
-/// Attempts to parse a signed 32-bit integer encoded in
+/// Attempts to parse a signed 32-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
-    signed(offset, bytes).context("could not parse s32")
+    default::s32_impl(offset, bytes).context("could not parse signed 32-bit integer")
 }
 
-/// Attempts to parse a signed 64-bit integer encoded in
+/// Attempts to parse a signed 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
     signed(offset, bytes).context("could not parse s64")
