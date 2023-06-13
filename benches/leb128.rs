@@ -52,9 +52,9 @@ benchmark_parsers! {
         let mixed_size_input = {
             const BITS: core::ops::RangeInclusive<i32> = 0..=31;
             const PERMUTATION_LEN: usize = 5;
-        
+
             let mut input = Vec::<u8>::with_capacity((*BITS.end() as usize + 1) * 2 * PERMUTATION_LEN);
-        
+
             BITS.map(|i| 1i32 << i)
                 .flat_map::<[i32; PERMUTATION_LEN], _>(|i| {
                     [
@@ -68,7 +68,7 @@ benchmark_parsers! {
                 .for_each(|i| {
                     leb128::write::signed(&mut input, i.into()).unwrap();
                 });
-        
+
             input
         };
 
@@ -80,8 +80,7 @@ benchmark_parsers! {
 
             RANGE
                 .flat_map::<[i32; PERMUTATION_LEN], _>(|b| {
-                    let i = i32::from(b);
-                    [i.wrapping_sub(1), i, i.wrapping_add(i)]
+                    [i32::from(b.wrapping_sub(1)), i32::from(b), i32::from(b.wrapping_add(1))]
                 })
                 .for_each(|i| {
                     leb128::write::signed(&mut input, i.into()).unwrap();
@@ -101,6 +100,62 @@ benchmark_parsers! {
             let mut bytes = input;
             while !bytes.is_empty() {
                 black_box(leb128::read::signed::<&[u8]>(&mut bytes).unwrap());
+            }
+        };
+    };
+
+    u32 => {
+        let mixed_size_input = {
+            const BITS: core::ops::RangeInclusive<u8> = 0..=31;
+            const PERMUTATION_LEN: usize = 5;
+
+            let mut input = Vec::<u8>::with_capacity((*BITS.end() as usize + 1) * 2 * PERMUTATION_LEN);
+
+            BITS.map(|i| 1u32 << i)
+                .flat_map::<[u32; PERMUTATION_LEN], _>(|i| {
+                    [
+                        i.wrapping_sub(2),
+                        i.wrapping_sub(1),
+                        i,
+                        i.wrapping_add(1),
+                        i.wrapping_add(2),
+                    ]
+                })
+                .for_each(|i| {
+                    leb128::write::unsigned(&mut input, i.into()).unwrap();
+                });
+
+            input
+        };
+
+        let small_input = {
+            const RANGE: core::ops::RangeInclusive<u32> = 1u32..=254;
+            const PERMUTATION_LEN: usize = 4;
+
+            let mut input = Vec::<u8>::with_capacity(*RANGE.end() as usize * 2 * PERMUTATION_LEN);
+
+            RANGE
+                .flat_map::<[u32; PERMUTATION_LEN], _>(|i| {
+                    [i.wrapping_sub(1), i, i.wrapping_add(1), i.wrapping_add(2)]
+                })
+                .for_each(|i| {
+                    leb128::write::unsigned(&mut input, i.into()).unwrap();
+                });
+
+            input
+        };
+
+        fn wasmiter_simple = |input| {
+            let mut offset = 0u64;
+            while offset < input.len() as u64 {
+                black_box(wasmiter::parser::leb128::simple::u32(&mut offset, input).unwrap());
+            }
+        };
+
+        fn iter_leb128 = |input| {
+            let mut bytes = input;
+            while !bytes.is_empty() {
+                black_box(leb128::read::unsigned::<&[u8]>(&mut bytes).unwrap());
             }
         };
     };
