@@ -4,8 +4,14 @@
 use crate::bytes::Bytes;
 use crate::parser::{Error, Result, ResultExt as _};
 
-// TODO: Expose specific parsers for use in benchmarks (#[cfg(bench)])?
-mod simple;
+// Implementation modules, used in benchmarks
+
+#[doc(hidden)]
+pub mod simple;
+
+// TODO: Add modules for platform-specific SIMD acceleration
+
+use simple as implementation;
 
 const CONTINUATION: u8 = 0b1000_0000u8;
 const SIGN: u8 = 0b0100_0000u8;
@@ -33,7 +39,7 @@ fn bad_continuation(bytes: &[u8]) -> Error {
 /// Attempts to a parse an unsigned 32-bit integer encoded in
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn u32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u32> {
-    simple::u32(offset, bytes).context("could not parse unsigned 32-bit integer")
+    implementation::u32(offset, bytes).context("could not parse unsigned 32-bit integer")
 }
 
 /// Attempts to parse a [`u32`](prim@u32) in *LEB128* format, interpreting the result as a
@@ -52,17 +58,17 @@ pub fn usize<B: Bytes>(offset: &mut u64, bytes: B) -> Result<usize> {
 /// Attempts to a parse an unsigned 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn u64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u64> {
-    simple::u64(offset, bytes).context("could not parse unsigned 64-bit integer")
+    implementation::u64(offset, bytes).context("could not parse unsigned 64-bit integer")
 }
 
 /// Attempts to parse a signed 32-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
-    simple::s32(offset, bytes).context("could not parse signed 32-bit integer")
+    implementation::s32(offset, bytes).context("could not parse signed 32-bit integer")
 }
 
 /// Attempts to parse a signed 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
-    simple::s64(offset, bytes).context("could not parse signed 64-bit integer")
+    implementation::s64(offset, bytes).context("could not parse signed 64-bit integer")
 }

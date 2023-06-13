@@ -1,5 +1,8 @@
 //! Simple *LEB128* parsers written in Rust, without making explicit use of any architecture
-//! specific intrinsics (such as those in [`core::arch::*`](core::arch))
+//! specific intrinsics (such as those in [`core::arch::*`](core::arch)).
+//!
+//! This API is **an implementation detail and is not stable**, it is only made public for use in
+//! benchmarks.
 
 use crate::{
     bytes::{offset_overflowed, Bytes},
@@ -7,7 +10,11 @@ use crate::{
 };
 
 macro_rules! unsigned {
-    ($($vis:vis fn $name:ident => $ty:ty;)*) => {$(
+    ($(
+        $(#[$meta:meta])*
+        $vis:vis fn $name:ident => $ty:ty;
+    )*) => {$(
+        $(#[$meta])*
         $vis fn $name<B: Bytes>(offset: &mut u64, bytes: B) -> Result<$ty> {
             const BITS: u8 = <$ty>::BITS as u8;
             const MAX_BYTE_WIDTH: u8 = (BITS / 7) + 1;
@@ -57,11 +64,14 @@ macro_rules! unsigned {
 }
 
 unsigned! {
-    pub(super) fn u32 => u32;
-    pub(super) fn u64 => u64;
+    #[doc(hidden)]
+    pub fn u32 => u32;
+    #[doc(hidden)]
+    pub fn u64 => u64;
 }
 
-pub(super) fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
+#[doc(hidden)]
+pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
     let mut destination = 0u32;
     let mut buffer = [0u8; 5];
     let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
@@ -101,7 +111,8 @@ pub(super) fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
     }
 }
 
-pub(super) fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
+#[doc(hidden)]
+pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
     let mut destination = 0u64;
     let mut buffer = [0u8; 10];
     let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
