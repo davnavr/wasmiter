@@ -1,7 +1,65 @@
 //! Simple *LEB128* parsers written in Rust, without making explicit use of any architecture
 //! specific intrinsics (such as those in [`core::arch::*`](core::arch))
 
-use crate::{bytes::Bytes, parser::Result};
+use crate::{
+    bytes::{offset_overflowed, Bytes},
+    parser::Result,
+};
+
+macro_rules! unsigned {
+    ($($vis:vis fn $name:ident => $ty:ty;)*) => {$(
+        $vis fn $name<B: Bytes>(offset: &mut u64, bytes: B) -> Result<$ty> {
+            const BITS: u8 = <$ty>::BITS as u8;
+            const MAX_BYTE_WIDTH: u8 = (BITS / 7) + 1;
+
+            let mut buffer = [0u8; MAX_BYTE_WIDTH as usize];
+            let mut value: $ty = 0;
+            let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
+
+            let mut more = true;
+            let mut i: u8 = 0u8;
+            for byte in input.iter().copied() {
+                let bits = byte & 0x7F;
+                more = byte & 0x80 == 0x80;
+
+                let shift = 7u8 * i;
+
+                // Check for overflowing bits in last byte
+                if i == MAX_BYTE_WIDTH - 1 {
+                    let leading_zeroes = bits.leading_zeros() as u8;
+                    if leading_zeroes < 8 - (BITS - shift) {
+                        // Overflow, the number of value bits will not fit in the destination
+                        return Err(super::too_large::<$ty>(false));
+                    }
+                }
+
+                debug_assert!(shift <= BITS);
+
+                value |= bits as $ty << shift;
+                i += 1;
+
+                if !more {
+                    break;
+                }
+            }
+
+            if more {
+                return Err(super::bad_continuation(&input));
+            }
+
+            *offset = offset
+                .checked_add(u64::from(i))
+                .ok_or_else(offset_overflowed)?;
+
+            Ok(value)
+        }
+    )*};
+}
+
+unsigned! {
+    pub(super) fn u32 => u32;
+    pub(super) fn u64 => u64;
+}
 
 pub(super) fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
     let mut destination = 0u32;
@@ -16,7 +74,8 @@ pub(super) fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
             .ok_or_else(|| super::bad_continuation(input))?;
 
         destination |= ((b & 0x7Fu8) as u32) << shift_amount;
-        *offset += 1;
+
+        *offset = offset.checked_add(1).ok_or_else(offset_overflowed)?;
 
         if b & super::CONTINUATION == 0 {
             // Sign extend the value
@@ -32,7 +91,8 @@ pub(super) fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
         .ok_or_else(|| super::bad_continuation(input))?;
 
     destination |= ((last & 0b1111) as u32) << 28;
-    *offset += 1;
+
+    *offset = offset.checked_add(1).ok_or_else(offset_overflowed)?;
 
     if matches!(last & 0b1111_0000, 0 | 0b0111_0000) {
         Ok(destination as i32)
@@ -54,7 +114,8 @@ pub(super) fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
             .ok_or_else(|| super::bad_continuation(input))?;
 
         destination |= ((b & 0x7Fu8) as u64) << shift_amount;
-        *offset += 1;
+
+        *offset = offset.checked_add(1).ok_or_else(offset_overflowed)?;
 
         if b & super::CONTINUATION == 0 {
             // Sign extend the value
@@ -70,7 +131,8 @@ pub(super) fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
         .ok_or_else(|| super::bad_continuation(input))?;
 
     destination |= ((last & 1) as u64) << 63;
-    *offset += 1;
+
+    *offset = offset.checked_add(1).ok_or_else(offset_overflowed)?;
 
     if matches!(last & 0b1111_1110, 0 | 0b0111_1110) {
         Ok(destination as i64)

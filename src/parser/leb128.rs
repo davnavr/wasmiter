@@ -1,8 +1,8 @@
 //! Functions for parsing integers in the
 //! [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 
-use crate::bytes::{self, Bytes};
-use crate::parser::{Error, Result, ResultExt};
+use crate::bytes::Bytes;
+use crate::parser::{Error, Result, ResultExt as _};
 
 // TODO: Expose specific parsers for use in benchmarks (#[cfg(bench)])?
 mod simple;
@@ -30,107 +30,10 @@ fn bad_continuation(bytes: &[u8]) -> Error {
     )
 }
 
-trait IntegerEncoding:
-    From<u8> + Default + core::ops::BitOrAssign + core::ops::Shl<u8, Output = Self>
-{
-    /// The maximum number of bytes that a value is allowed to be encoded in.
-    ///
-    /// According to the
-    /// [WebAssembly specification](https://webassembly.github.io/spec/core/binary/values.html#integers),
-    /// this should be equal to `ceil(BITS / 7)`.
-    const MAX_LENGTH: u8;
-
-    /// The bit-width of the integer.
-    const BITS: u8;
-
-    /// A buffer to contain the bytes encoding the integer.
-    ///
-    /// Should have a length equal to `MAX_LENGTH`.
-    type Buffer: AsRef<[u8]> + AsMut<[u8]> + Default + IntoIterator<Item = u8>;
-
-    #[cold]
-    #[inline(never)]
-    fn buffer_overflowed() -> Error {
-        crate::parser_bad_format!("integer can only be encoded in {} bytes", Self::MAX_LENGTH)
-    }
-}
-
-impl IntegerEncoding for u32 {
-    const MAX_LENGTH: u8 = 5;
-    const BITS: u8 = 32;
-    type Buffer = [u8; Self::MAX_LENGTH as usize];
-}
-
-impl IntegerEncoding for u64 {
-    const MAX_LENGTH: u8 = 10;
-    const BITS: u8 = 64;
-    type Buffer = [u8; Self::MAX_LENGTH as usize];
-}
-
-impl IntegerEncoding for i32 {
-    const MAX_LENGTH: u8 = 5;
-    const BITS: u8 = 32;
-    type Buffer = [u8; Self::MAX_LENGTH as usize];
-}
-
-impl IntegerEncoding for i64 {
-    const MAX_LENGTH: u8 = 10;
-    const BITS: u8 = 64;
-    type Buffer = [u8; Self::MAX_LENGTH as usize];
-}
-
-fn unsigned<N: IntegerEncoding, B: Bytes>(offset: &mut u64, bytes: B) -> Result<N> {
-    let mut buffer = N::Buffer::default();
-    let mut value = N::default();
-    let input = bytes.read_at(*offset, buffer.as_mut())?;
-
-    let mut more = true;
-    let mut i: u8 = 0u8;
-    for byte in input.iter().copied() {
-        let bits = byte & 0x7F;
-        more = byte & 0x80 == 0x80;
-
-        let shift = 7u8 * i;
-
-        // Check for overflowing bits in last byte
-        if i == N::MAX_LENGTH - 1 {
-            let leading_zeroes = bits.leading_zeros() as u8;
-            if leading_zeroes < 8 - (N::BITS - shift) {
-                // Overflow, the number of value bits will not fit in the destination
-                return Err(crate::parser_bad_format!(
-                    "encoded value requires {} bits, which cannot fit in the destination",
-                    shift + (8 - leading_zeroes)
-                ));
-            }
-        }
-
-        debug_assert!(shift <= N::BITS);
-
-        value |= N::from(bits) << shift;
-        i += 1;
-
-        if !more {
-            break;
-        }
-    }
-
-    if more {
-        return Err(N::buffer_overflowed());
-    }
-
-    *offset = offset
-        .checked_add(u64::from(i))
-        .ok_or_else(bytes::offset_overflowed)?;
-
-    Ok(value)
-}
-
 /// Attempts to a parse an unsigned 32-bit integer encoded in
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn u32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u32> {
-    // TODO: less branches variant? have buffer = [0u8; 5] // 0 means end, even if peek does not fill buffer completely
-    // copy-paste code that reads from buffer[0], buffer[1], etc. Only return at the very end?
-    unsigned(offset, bytes).context("could not parse u32")
+    simple::u32(offset, bytes).context("could not parse unsigned 32-bit integer")
 }
 
 /// Attempts to parse a [`u32`](prim@u32) in *LEB128* format, interpreting the result as a
@@ -142,14 +45,14 @@ pub fn u32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u32> {
 ///
 /// See [`leb128::u32`](self::u32) for more information.
 pub fn usize<B: Bytes>(offset: &mut u64, bytes: B) -> Result<usize> {
-    let length = unsigned::<u32, B>(offset, bytes).context("could not parse length")?;
+    let length = self::u32(offset, bytes).context("could not parse length")?;
     usize::try_from(length).map_err(|_| crate::parser_bad_format!("length ({length}) is too large"))
 }
 
 /// Attempts to a parse an unsigned 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 pub fn u64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<u64> {
-    unsigned(offset, bytes).context("could not parse u64")
+    simple::u64(offset, bytes).context("could not parse unsigned 64-bit integer")
 }
 
 /// Attempts to parse a signed 32-bit integer encoded in the
