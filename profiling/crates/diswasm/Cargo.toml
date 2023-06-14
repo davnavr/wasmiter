@@ -1,0 +1,15 @@
+[package]
+name = "diswasm"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+cfg-if = "1.0.0"
+clap = { version = "4.3.3", features = ["derive"] }
+wasmiter = { path = "../../../" }
+
+[[bin]]
+name = "diswasm"
+path = "../../../crates/wasmiter-dis/src/main.rs"
+test = false
+bench = false

@@ -27,7 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if #[cfg(any(unix, windows))] {
             let sections = wasmiter::parse_module_sections_from_mmap_file(cli.file)?;
         } else {
-            compile_error!("std::io::File fallback is not yet implemented")
+            let bytes = std::fs::read(cli.file)?;
+            let sections = wasmiter::parse_module_sections(bytes.as_slice())?;
         }
     };
 
