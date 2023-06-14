@@ -40,6 +40,10 @@ wat = "1.0.64"
 name = "leb128"
 harness = false
 
+[profile.release]
+codegen-units = 1
+lto = true
+
 [profile.profiling]
 inherits = "release"
 debug = 2
