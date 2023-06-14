@@ -1,5 +1,6 @@
 #!/usr/bin/env -S just --justfile
-# Shebang should be compatible with Git Bash for Windows
+
+wasmiter_dis := justfile_directory() + "/../target/profiling/wasmiter-dis"
 
 list:
     @just --list --justfile {{ justfile() }}
@@ -13,6 +14,9 @@ fmt:
 build *FLAGS='--release':
     cargo build --target wasm32-wasi {{ FLAGS }}
 
-# Invoke wasmiter-dis with the specified target
-dis target profile='release' *FLAGS='': (build '--package ' + target + ' --profile ' + profile)
-    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && cd ../ && cargo run --package wasmiter-dis --profile profiling --quiet -- $wasm {{ FLAGS }}
+build_dis:
+    cd ../ && cargo build --package wasmiter-dis --profile profiling --quiet
+
+# Records an invocation of wasmiter-dis with the specified target using samply
+samply_dis target profile='release' *FLAGS='': (build_dis) (build '--package ' + target + ' --profile ' + profile)
+    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && samply record --no-open {{wasmiter_dis}} $wasm {{ FLAGS }} > /dev/null
