@@ -1,0 +1,13 @@
+[package]
+name = "wasmiter-dis"
+description = "Rust implementation of wasm2wat"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+repository.workspace = true
+
+[dependencies]
+cfg-if = { workspace = true }
+clap = { version = "4.3.3", features = ["derive"] }
+wasmiter = { path = "../../" }
