@@ -78,7 +78,7 @@ pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
     for shift_amount in (0u8..4).map(|i| i * 7) {
         let byte = next_byte(input, &mut remaining)?;
 
-        destination |= ((byte & 0x7Fu8) as u32) << shift_amount;
+        destination |= ((byte & super::VALUE_MASK) as u32) << shift_amount;
 
         increment_offset(offset)?;
 
@@ -92,12 +92,8 @@ pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
     }
 
     // Read the last byte
-    let last = remaining
-        .next()
-        .ok_or_else(|| super::bad_continuation(input))?;
-
+    let last = next_byte(input, &mut remaining)?;
     destination |= ((last & 0b1111) as u32) << 28;
-
     increment_offset(offset)?;
 
     if matches!(last & 0b1111_0000, 0 | 0b0111_0000) {
@@ -118,7 +114,7 @@ pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
     for shift_amount in (0u8..9).map(|i| i * 7) {
         let byte = next_byte(input, &mut remaining)?;
 
-        destination |= ((byte & 0x7Fu8) as u64) << shift_amount;
+        destination |= ((byte & super::VALUE_MASK) as u64) << shift_amount;
 
         increment_offset(offset)?;
 
@@ -132,12 +128,8 @@ pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
     }
 
     // Read the last byte
-    let last = remaining
-        .next()
-        .ok_or_else(|| super::bad_continuation(input))?;
-
+    let last = next_byte(input, &mut remaining)?;
     destination |= ((last & 1) as u64) << 63;
-
     increment_offset(offset)?;
 
     if matches!(last & 0b1111_1110, 0 | 0b0111_1110) {
