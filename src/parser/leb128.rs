@@ -13,8 +13,9 @@ pub mod simple;
 
 use simple as implementation;
 
-const CONTINUATION: u8 = 0b1000_0000u8;
-const SIGN: u8 = 0b0100_0000u8;
+const CONTINUATION: u8 = 0b1000_0000;
+const VALUE_MASK: u8 = 0b0111_1111;
+const SIGN: u8 = 0b0100_0000;
 
 #[cold]
 #[inline(never)]

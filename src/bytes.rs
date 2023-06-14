@@ -139,11 +139,13 @@ pub trait Bytes {
 }
 
 impl Bytes for [u8] {
+    #[inline]
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        let source = usize::try_from(offset)
-            .ok()
-            .and_then(|start| self.get(start..))
-            .unwrap_or_default();
+        let source = if let Some(src) = self.get(usize::try_from(offset).unwrap_or(usize::MAX)..) {
+            src
+        } else {
+            return Ok(&mut []);
+        };
 
         let copy_amount = core::cmp::min(source.len(), buffer.len());
         let destination = &mut buffer[..copy_amount];

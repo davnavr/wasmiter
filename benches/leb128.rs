@@ -96,7 +96,7 @@ benchmark_parsers! {
             }
         };
 
-        fn iter_leb128 = |input| {
+        fn leb128 = |input| {
             let mut bytes = input;
             while !bytes.is_empty() {
                 black_box(leb128::read::signed::<&[u8]>(&mut bytes).unwrap());
@@ -152,7 +152,7 @@ benchmark_parsers! {
             }
         };
 
-        fn iter_leb128 = |input| {
+        fn leb128 = |input| {
             let mut bytes = input;
             while !bytes.is_empty() {
                 black_box(leb128::read::unsigned::<&[u8]>(&mut bytes).unwrap());
