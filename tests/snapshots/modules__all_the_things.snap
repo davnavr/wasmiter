@@ -1,6 +1,6 @@
 ---
 source: tests/modules.rs
-expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
+expression: module.display_module()
 ---
 (module
 (type (; 0 ;) (func (param i32) (result)))
@@ -29,7 +29,9 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
 (func (type 3) ;; code size = 4
   i32.const 0x00000000 (; 0 signed, 0 unsigned ;)
 )
-(func (type 1) ;; code size = 3
+(func (type 1) ;; code size = 10
+  i32.const 0xD81C1C1C (; -669246436 signed, 3625720860 unsigned ;)
+  drop
   nop
 )
 (func (type 1) ;; code size = 5
@@ -42,7 +44,7 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
   "\FF\FF\00QQQQQQQQQQQQQ"
   "Q\07")
 
-(; UNRECOGNIZED (0) @ 0x10B to 0x16F
+(; UNRECOGNIZED (0) @ 0x112 to 0x176
 [
     046E616D_65012304__010B6675_6E5F7374,
     61727475_7002046D__61696E03_065F7374,

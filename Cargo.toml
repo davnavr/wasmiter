@@ -18,12 +18,13 @@ std = ["alloc"]
 alloc = []
 
 [dev-dependencies]
-criterion = "0.4.0"
-wat = "1.0.64"
+criterion = "0.5.1"
 insta = "1.29.0"
+leb128 = "0.2.5"
+wat = "1.0.64"
 
 [[bench]]
-name = "bytes"
+name = "leb128"
 harness = false
 
 [profile.dev.package.insta]
