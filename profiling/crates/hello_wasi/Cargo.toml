@@ -1,0 +1,9 @@
+[package]
+name = "hello_wasi"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "hello_wasi"
+test = false
+bench = false

@@ -1,0 +1,18 @@
+#!/usr/bin/env -S just --justfile
+# Shebang should be compatible with Git Bash for Windows
+
+list:
+    @just --list --justfile {{ justfile() }}
+
+clippy:
+    cargo clippy --target wasm32-wasi
+
+fmt:
+    cargo fmt
+
+build *FLAGS='--release':
+    cargo build --target wasm32-wasi {{ FLAGS }}
+
+# Invoke wasmiter-dis with the specified target
+dis target profile='release' *FLAGS='': (build '--package ' + target + ' --profile ' + profile)
+    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && cd ../ && cargo run --package wasmiter-dis --release --quiet -- $wasm {{ FLAGS }}
