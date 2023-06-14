@@ -15,4 +15,4 @@ build *FLAGS='--release':
 
 # Invoke wasmiter-dis with the specified target
 dis target profile='release' *FLAGS='': (build '--package ' + target + ' --profile ' + profile)
-    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && cd ../ && cargo run --package wasmiter-dis --release --quiet -- $wasm {{ FLAGS }}
+    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && cd ../ && cargo run --package wasmiter-dis --profile profiling --quiet -- $wasm {{ FLAGS }}
