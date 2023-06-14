@@ -4,3 +4,10 @@ edition = "2021"
 
 [workspace]
 members = ["./crates/*"]
+
+[workspace.dependencies]
+wasmiter = { path = "../" }
+
+[profile.default]
+inherits = "dev"
+debug = false

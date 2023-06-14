@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 cfg-if = "1.0.0"
 clap = { version = "4.3.3", features = ["derive"] }
-wasmiter = { path = "../../../" }
+wasmiter = { workspace = true }
 
 [[bin]]
 name = "diswasm"
