@@ -21,5 +21,5 @@ build_dis:
     cd ../ && cargo build --package wasmiter-dis --profile profiling --quiet
 
 # Records an invocation of wasmiter-dis with the specified target using samply
-samply_dis target profile='default' *FLAGS='': build_dis (build '--package ' + target + ' --profile ' + profile)
-    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && samply record --no-open {{ wasmiter_dis }} $wasm {{ FLAGS }} > /dev/null
+samply_dis target profile='default' sample_rate='6000' *FLAGS='': build_dis (build '--package ' + target + ' --profile ' + profile)
+    wasm="{{ justfile_directory() }}/target/wasm32-wasi/{{ profile }}/{{ target }}.wasm" && samply record --no-open --rate {{ sample_rate }} {{ wasmiter_dis }} $wasm {{ FLAGS }} > /dev/null
