@@ -1,10 +1,8 @@
 //! Helper structs and functions for fuzzing targets.
 
-use wasmiter::{component::KnownSection, custom::KnownCustomSection};
+mod wasm;
 
-mod config;
-
-pub use config::{ConfiguredModule, WasmiterConfig};
+pub use wasm::Wasm;
 
 pub fn print_reference_wat(wasm: &[u8]) -> String {
     match wasmprinter::print_bytes(wasm) {
@@ -14,6 +12,8 @@ pub fn print_reference_wat(wasm: &[u8]) -> String {
 }
 
 pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
+    use wasmiter::{component::KnownSection, custom::KnownCustomSection};
+
     for result in wasmiter::parse_module_sections(wasm)? {
         match KnownSection::interpret(result?) {
             Ok(known) => match known? {

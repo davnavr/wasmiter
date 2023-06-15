@@ -2,8 +2,8 @@
 
 use libfuzzer_sys::fuzz_target;
 
-fuzz_target!(|module: wasmiter_fuzz::ConfiguredModule| {
-    let wasm = module.module.to_bytes();
+fuzz_target!(|module: wasmiter_fuzz::Wasm| {
+    let wasm = module.into_bytes();
     let sections = wasmiter::parse_module_sections(wasm.as_slice()).unwrap();
     let module = sections.display_module();
     let text = format!("{module}");

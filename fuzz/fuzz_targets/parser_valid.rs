@@ -1,7 +1,7 @@
 #![no_main]
 
-libfuzzer_sys::fuzz_target!(|module: wasmiter_fuzz::ConfiguredModule| {
-    let wasm = module.module.to_bytes();
+libfuzzer_sys::fuzz_target!(|module: wasmiter_fuzz::Wasm| {
+    let wasm = module.into_bytes();
     match wasmiter_fuzz::process_sections(wasm.as_slice()) {
         Ok(()) => (),
         Err(e) => {
