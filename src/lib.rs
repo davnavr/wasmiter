@@ -17,6 +17,7 @@ pub mod bytes;
 pub mod component;
 pub mod custom;
 pub mod index;
+pub mod input;
 pub mod instruction_set;
 pub mod parser;
 pub mod sections;
