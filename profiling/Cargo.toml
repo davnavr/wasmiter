@@ -1,0 +1,13 @@
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+
+[workspace]
+members = ["./crates/*"]
+
+[workspace.dependencies]
+wasmiter = { path = "../" }
+
+[profile.default]
+inherits = "dev"
+debug = false

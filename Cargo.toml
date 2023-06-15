@@ -1,13 +1,26 @@
 [package]
 name = "wasmiter"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+repository.workspace = true
+
+[workspace]
+members = ["crates/wasmiter-dis"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.64"
 readme = "README.md"
 repository = "https://github.com/davnavr/wasmiter"
 
-[dependencies]
+[workspace.dependencies]
 cfg-if = "1.0.0"
+
+[dependencies]
+cfg-if = { workspace = true }
 memmap2 = { version = "0.6.2", optional = true }
 
 [features]
@@ -26,6 +39,14 @@ wat = "1.0.64"
 [[bench]]
 name = "leb128"
 harness = false
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.profiling]
+inherits = "release"
+debug = 2
 
 [profile.dev.package.insta]
 opt-level = 3
