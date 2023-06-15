@@ -5,8 +5,10 @@
 
 mod error;
 mod input_impls;
+mod window;
 
 pub use error::Error;
+pub use window::Window;
 
 /// Result type used when an operation to read [`Input`] fails.
 pub type Result<T> = core::result::Result<T, Error>;
