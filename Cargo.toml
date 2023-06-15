@@ -1,5 +1,6 @@
 [package]
 name = "wasmiter"
+description = "Low-level zero-allocation WebAssembly parser usable in a no_std environment."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
