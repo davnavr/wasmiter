@@ -70,6 +70,19 @@ impl<I: Input> Window<I> {
     pub(super) fn shrink(&mut self, amount: u64) {
         self.length = self.length.saturating_sub(amount);
     }
+
+    #[inline]
+    fn bounds_check(&self, offset: u64) -> Result<u64> {
+        if offset >= self.base && offset < self.base.saturating_add(self.length) {
+            Ok(self.length - offset)
+        } else {
+            Err(input::Error::new(
+                input::error::ErrorKind::OutOfBounds,
+                offset,
+                self.inner.length_at(offset).ok(),
+            ))
+        }
+    }
 }
 
 impl<I: Input> From<I> for Window<I> {
@@ -83,11 +96,16 @@ impl<I: Input> From<I> for Window<I> {
 
 impl<I: Input> Input for Window<I> {
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        todo!()
+        let remaining = usize::try_from(self.bounds_check(offset)?).unwrap_or(usize::MAX);
+        let actual_len = core::cmp::min(remaining, buffer.len());
+        self.inner.read_at(offset, &mut buffer[0..actual_len])
     }
 
     fn length_at(&self, offset: u64) -> Result<u64> {
-        todo!()
+        Ok(core::cmp::min(
+            self.bounds_check(offset)?,
+            self.inner.length_at(offset)?,
+        ))
     }
 }
 
