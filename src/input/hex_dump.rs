@@ -64,9 +64,12 @@ impl HexDumpRow {
         }
 
         // Padding
-        let pad_amount = (self.offset % 16) as u8 * 3 + u8::from(self.offset % 16 >= 8);
-        for _ in 0..pad_amount {
-            f.write_char(' ')?;
+        let skipped = (self.offset % 16) as u8;
+        {
+            let pad_amount = skipped * 3 + u8::from(skipped >= 8);
+            for _ in 0..pad_amount {
+                f.write_char(' ')?;
+            }
         }
 
         // Bytes
@@ -81,13 +84,22 @@ impl HexDumpRow {
             }
 
             first = false;
-            write!(f, "{byte:X}")?;
+            write!(f, "{byte:02X}")?;
         }
 
         if f.alternate() {
+            let written = self.count.get() + skipped;
+            let remaining = 16 - written;
+            if remaining > 0 {
+                let pad_amount = remaining * 3 + u8::from(remaining <= 8 && remaining > 0);
+                for _ in 0..=pad_amount {
+                    f.write_char(' ')?;
+                }
+            }
+
             f.write_str("  |")?;
 
-            for _ in 0..(self.offset % 16) {
+            for _ in 0..skipped {
                 f.write_char(' ')?;
             }
 
@@ -101,6 +113,10 @@ impl HexDumpRow {
                 } else {
                     f.write_char('.')?;
                 }
+            }
+
+            for _ in 0..remaining {
+                f.write_char('.')?;
             }
 
             f.write_char('|')?;
