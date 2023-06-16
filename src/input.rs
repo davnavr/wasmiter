@@ -4,10 +4,12 @@
 //! WebAssembly binary from a source.
 
 mod error;
+mod hex_dump;
 mod input_impls;
 mod window;
 
 pub use error::Error;
+pub use hex_dump::{HexDump, Row};
 pub use window::Window;
 
 /// Result type used when an operation to read [`Input`] fails.

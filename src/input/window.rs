@@ -1,4 +1,4 @@
-use crate::input::Input;
+use crate::input::{self, Input, Result};
 
 /// Adapts an [`Input`] implementation to limit the amount of bytes that can be read to a specific
 /// range.
@@ -52,12 +52,47 @@ impl<I: Input> Window<I> {
     pub fn into_inner(self) -> I {
         self.inner
     }
+
+    #[inline]
+    pub(super) fn advance(&mut self, amount: u64) -> Result<()> {
+        if self.length > 0 {
+            input::increment_offset(&mut self.base, amount)?;
+            self.shrink(amount);
+            Ok(())
+        } else {
+            Err(input::offset_overflowed(self.base))
+        }
+    }
+
+    /// Reduces the [`length`](Window::length) of the [`Window`] by the given `amount`, returning
+    /// the new length.
+    #[inline]
+    pub(super) fn shrink(&mut self, amount: u64) {
+        self.length = self.length.saturating_sub(amount);
+    }
 }
 
 impl<I: Input> From<I> for Window<I> {
     /// Creates a new [`Window`] into the specified [`Input`] that allows reading the first
     /// [`u64::MAX`] bytes.
+    #[inline]
     fn from(inner: I) -> Self {
         Self::with_offset(inner, 0)
+    }
+}
+
+impl<I: Input> Input for Window<I> {
+    fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+        todo!()
+    }
+
+    fn length_at(&self, offset: u64) -> Result<u64> {
+        todo!()
+    }
+}
+
+impl<I: Input> core::fmt::Debug for Window<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        todo!("View with borrowed")
     }
 }
