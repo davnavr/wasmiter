@@ -4,17 +4,15 @@ use core::{
     num::NonZeroU8,
 };
 
-/// An array of at most 16 bytes read from an [`Input`].
-///
-/// Returned by the [`HexDump`] iterator.
+/// A row of at most 16 bytes obtained from a [`HexDump`].
 #[derive(Clone, Copy)]
-pub struct Row {
+pub struct HexDumpRow {
     offset: u64,
     count: NonZeroU8,
     bytes: [u8; 16],
 }
 
-impl Row {
+impl HexDumpRow {
     /// The offset of into the [`Input`] to the first byte of the [`Row`]'s contents.
     #[inline]
     pub fn offset(&self) -> u64 {
@@ -25,6 +23,10 @@ impl Row {
     #[inline]
     pub fn contents(&self) -> &[u8] {
         &self.bytes[..self.count.get().into()]
+    }
+
+    fn bytes(&self) -> impl core::iter::FusedIterator<Item = (u64, u8)> + '_ {
+        (self.offset..=u64::MAX).zip(self.contents().iter().copied())
     }
 
     #[inline]
@@ -38,7 +40,7 @@ impl Row {
         }
 
         let mut first = true;
-        for (offset, byte) in (self.offset..=u64::MAX).zip(self.contents().iter().copied()) {
+        for (offset, byte) in self.bytes() {
             if !first {
                 if offset % 4 == 0 {
                     f.write_char('_')?;
@@ -55,28 +57,81 @@ impl Row {
 
         Ok(())
     }
+
+    fn fmt_display(&self, f: &mut Formatter<'_>, offset_width: usize) -> core::fmt::Result {
+        if f.alternate() {
+            write!(f, "{:#width$X}  ", self.offset, width = offset_width.into())?;
+        }
+
+        // Padding
+        {
+            let pad_amount = (self.offset % 16) as u8 * 3 + u8::from(self.offset >= 8);
+            for _ in 0..pad_amount {
+                f.write_char(' ')?;
+            }
+        }
+
+        // Bytes
+        let mut first = true;
+        for (offset, byte) in self.bytes() {
+            if !first {
+                f.write_char(' ')?;
+
+                if offset % 16 == 8 {
+                    f.write_char(' ')?;
+                }
+            }
+
+            first = false;
+            write!(f, "{byte:X}")?;
+        }
+
+        if f.alternate() {
+            f.write_str("  |")?;
+
+            for _ in 0..(self.offset % 16) {
+                f.write_char(' ')?;
+            }
+
+            for byte in self.contents().iter() {
+                if matches!(byte, 0x20..=0x7E) {
+                    if let Some(c) = char::from_u32(u32::from(*byte)) {
+                        f.write_char(c)?;
+                    } else {
+                        return Err(core::fmt::Error);
+                    }
+                } else {
+                    f.write_char('.')?;
+                }
+            }
+
+            f.write_char('|')?;
+        }
+
+        Ok(())
+    }
 }
 
-impl UpperHex for Row {
+impl UpperHex for HexDumpRow {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.fmt_hex(f, |byte, f| write!(f, "{byte:X}"))
     }
 }
 
-impl LowerHex for Row {
+impl LowerHex for HexDumpRow {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.fmt_hex(f, |byte, f| write!(f, "{byte:x}"))
     }
 }
 
-impl Debug for Row {
+impl Debug for HexDumpRow {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         #[repr(transparent)]
-        struct Contents<'a>(&'a Row);
+        struct Contents<'a>(&'a HexDumpRow);
 
         impl Debug for Contents<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{:#X}", self.0)
+                write!(f, "{:X}", self.0)
             }
         }
 
@@ -87,15 +142,9 @@ impl Debug for Row {
     }
 }
 
-impl Display for Row {
+impl Display for HexDumpRow {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        if f.alternate() {
-            write!(f, "{:#08X} ", self.offset)
-        }
-
-        // TODO: Print contents
-
-        Ok(())
+        self.fmt_display(f, 4)
     }
 }
 
@@ -113,7 +162,7 @@ impl<I: Input> From<Window<I>> for HexDump<I> {
 }
 
 impl<I: Input> Iterator for HexDump<I> {
-    type Item = Result<Row>;
+    type Item = Result<HexDumpRow>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.window.length() == 0 {
@@ -135,7 +184,7 @@ impl<I: Input> Iterator for HexDump<I> {
         };
 
         match length {
-            Ok(count) => Some(Ok(Row {
+            Ok(count) => Some(Ok(HexDumpRow {
                 offset: start,
                 count,
                 bytes: buffer,
