@@ -1,4 +1,4 @@
-use crate::input::{Input, Result, Window};
+use crate::input::{BorrowInput, Input, Result, Window};
 use core::{
     fmt::{Debug, Display, Formatter, LowerHex, UpperHex, Write as _},
     num::NonZeroU8,
@@ -135,10 +135,14 @@ impl Debug for HexDumpRow {
             }
         }
 
-        f.debug_struct("Row")
-            .field("offset", &self.offset)
-            .field("contents", &Contents(self))
-            .finish()
+        if !f.alternate() {
+            f.debug_struct("Row")
+                .field("offset", &self.offset)
+                .field("contents", &Contents(self))
+                .finish()
+        } else {
+            UpperHex::fmt(&self, f)
+        }
     }
 }
 
@@ -158,6 +162,14 @@ impl<I: Input> From<Window<I>> for HexDump<I> {
     #[inline]
     fn from(window: Window<I>) -> Self {
         Self { window }
+    }
+}
+
+impl<I: Input> BorrowInput for HexDump<I> {
+    type Borrowed<'a> = HexDump<&'a I> where I: 'a;
+
+    fn borrow_input(&self) -> HexDump<&I> {
+        HexDump { window: self.window.borrow_input() }
     }
 }
 
@@ -199,6 +211,6 @@ impl<I: Input> Iterator for HexDump<I> {
 
 impl<I: Input> core::fmt::Debug for HexDump<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!("View with borrowed Window")
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }
