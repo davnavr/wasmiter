@@ -64,11 +64,9 @@ impl HexDumpRow {
         }
 
         // Padding
-        {
-            let pad_amount = (self.offset % 16) as u8 * 3 + u8::from(self.offset >= 8);
-            for _ in 0..pad_amount {
-                f.write_char(' ')?;
-            }
+        let pad_amount = (self.offset % 16) as u8 * 3 + u8::from(self.offset % 16 >= 8);
+        for _ in 0..pad_amount {
+            f.write_char(' ')?;
         }
 
         // Bytes
@@ -201,13 +199,17 @@ impl<I: Input> Iterator for HexDump<I> {
             return None;
         }
 
-        let mut buffer = [0u8; 16];
+        let mut bytes = [0u8; 16];
         let start = self.window.base();
-        let result = self.window.read_at(start, &mut buffer).and_then(|buf| {
-            let len = buf.len() as u8;
-            self.window.advance(len.into())?;
-            Ok(NonZeroU8::new(len))
-        });
+        let fill_length = 16 - (start % 16) as usize;
+        let result = self
+            .window
+            .read_at(start, &mut bytes[0..fill_length])
+            .and_then(|buf| {
+                let len = buf.len() as u8;
+                self.window.advance(len.into())?;
+                Ok(NonZeroU8::new(len))
+            });
 
         let length = match result {
             Ok(Some(len)) => Ok(len),
@@ -219,7 +221,7 @@ impl<I: Input> Iterator for HexDump<I> {
             Ok(count) => Some(Ok(HexDumpRow {
                 offset: start,
                 count,
-                bytes: buffer,
+                bytes,
             })),
             Err(e) => {
                 self.window.shrink(self.window.length());
