@@ -19,6 +19,12 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[cold]
 #[inline(never)]
+pub(crate) fn out_of_bounds(offset: u64, length: Option<u64>) -> Error {
+    Error::new(error::ErrorKind::OutOfBounds, offset, length)
+}
+
+#[cold]
+#[inline(never)]
 pub(crate) fn offset_overflowed(offset: u64) -> Error {
     Error::new(error::ErrorKind::OffsetOverflow, offset, None)
 }

@@ -1,4 +1,4 @@
-use crate::input::{error::ErrorKind, Error, Input, Result};
+use crate::input::{self, Input, Result};
 
 impl Input for [u8] {
     #[inline]
@@ -10,22 +10,27 @@ impl Input for [u8] {
             destination.copy_from_slice(&source[..copy_amount]);
             Ok(destination)
         } else {
-            let length = self
-                .len()
-                .checked_sub(start)
-                .and_then(|len| u64::try_from(len).ok());
-
-            Err(Error::new(ErrorKind::OutOfBounds, offset, length))
+            Err(input::out_of_bounds(
+                offset,
+                self.len()
+                    .checked_sub(start)
+                    .and_then(|len| u64::try_from(len).ok()),
+            ))
         }
     }
 
     #[inline]
     fn length_at(&self, offset: u64) -> Result<u64> {
-        usize::try_from(offset)
+        let length = usize::try_from(offset)
             .ok()
             .and_then(|start| self.len().checked_sub(start))
-            .and_then(|len| u64::try_from(len).ok())
-            .ok_or_else(|| Error::new(ErrorKind::OutOfBounds, offset, None))
+            .and_then(|len| u64::try_from(len).ok());
+
+        if let Some(len) = length {
+            Ok(len)
+        } else {
+            Err(input::out_of_bounds(offset, None))
+        }
     }
 }
 
