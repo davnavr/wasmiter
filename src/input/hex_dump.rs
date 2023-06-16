@@ -13,7 +13,7 @@ pub struct HexDumpRow {
 }
 
 impl HexDumpRow {
-    /// The offset of into the [`Input`] to the first byte of the [`Row`]'s contents.
+    /// The offset of into the [`Input`] to the first byte of the [`HexDumpRow`]'s contents.
     #[inline]
     pub fn offset(&self) -> u64 {
         self.offset
@@ -165,6 +165,16 @@ impl<I: Input> From<Window<I>> for HexDump<I> {
     }
 }
 
+impl<'a> From<&'a [u8]> for HexDump<&'a [u8]> {
+    fn from(bytes: &'a [u8]) -> Self {
+        Self::from(Window::with_offset_and_length(
+            bytes,
+            0,
+            u64::try_from(bytes.len()).unwrap_or(u64::MAX),
+        ))
+    }
+}
+
 impl<I: Input> BorrowInput for HexDump<I> {
     type Borrowed<'a> = HexDump<&'a I> where I: 'a;
 
@@ -215,16 +225,16 @@ impl<I: Input> Display for HexDump<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         const OFFSET_HEADER: &str = "offset";
 
-        let max_width = self
-            .window
-            .base()
-            .checked_add(self.window.length())
-            .and_then(|max| {
-                usize::try_from(max.checked_ilog(16).unwrap_or(0u32))
-                    .ok()?
-                    .checked_add(1)
-            })
-            .unwrap_or(4);
+        let max_width = usize::try_from(
+            self.window
+                .base()
+                .saturating_add(self.window.length())
+                .checked_ilog(16)
+                .unwrap_or(0u32),
+        )
+        .map(|log| log.saturating_add(1))
+        .unwrap_or(4);
+
         let width = core::cmp::max(max_width, OFFSET_HEADER.len());
 
         if f.alternate() {
