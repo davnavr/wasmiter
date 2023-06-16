@@ -60,7 +60,7 @@ impl HexDumpRow {
 
     fn fmt_display(&self, f: &mut Formatter<'_>, offset_width: usize) -> core::fmt::Result {
         if f.alternate() {
-            write!(f, "{:#width$X}  ", self.offset, width = offset_width.into())?;
+            write!(f, "{:#offset_width$X}  ", self.offset)?;
         }
 
         // Padding
@@ -169,7 +169,9 @@ impl<I: Input> BorrowInput for HexDump<I> {
     type Borrowed<'a> = HexDump<&'a I> where I: 'a;
 
     fn borrow_input(&self) -> HexDump<&I> {
-        HexDump { window: self.window.borrow_input() }
+        HexDump {
+            window: self.window.borrow_input(),
+        }
     }
 }
 
@@ -209,7 +211,38 @@ impl<I: Input> Iterator for HexDump<I> {
     }
 }
 
-impl<I: Input> core::fmt::Debug for HexDump<I> {
+impl<I: Input> Display for HexDump<I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        const OFFSET_HEADER: &str = "offset";
+
+        let max_width = self
+            .window
+            .base()
+            .checked_add(self.window.length())
+            .and_then(|max| {
+                usize::try_from(max.checked_ilog(16).unwrap_or(0u32))
+                    .ok()?
+                    .checked_add(1)
+            })
+            .unwrap_or(4);
+        let width = core::cmp::max(max_width, OFFSET_HEADER.len());
+
+        if f.alternate() {
+            write!(f, "{:<width$}  ", OFFSET_HEADER)?;
+        }
+
+        writeln!(f, " 0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F")?;
+
+        for row in self.borrow_input().filter_map(Result::ok) {
+            Display::fmt(&row, f)?;
+            writeln!(f)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<I: Input> Debug for HexDump<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrow_input()).finish()
     }

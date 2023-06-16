@@ -98,7 +98,7 @@ impl<I: Input> BorrowInput for Window<I> {
         Window {
             base: self.base,
             length: self.length,
-            inner: &self.inner
+            inner: &self.inner,
         }
     }
 }
