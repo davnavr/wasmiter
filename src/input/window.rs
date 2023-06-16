@@ -2,6 +2,22 @@ use crate::input::{self, BorrowInput, Input, Result};
 
 /// Adapts an [`Input`] implementation to limit the amount of bytes that can be read to a specific
 /// range.
+///
+/// # Example
+///
+/// ```
+/// use wasmiter::input::{Input, Window};
+///
+/// let bytes: &[u8] = b"This is a test of the Window struct";
+/// let window = Window::with_offset_and_length(bytes, 10, 18); // "test of the Window"
+///
+/// assert_eq!(window.length_at(22)?, 6);
+///
+/// let mut buffer = [0u8; 6];
+/// let copied = window.read_at(15, &mut buffer)?;
+/// assert_eq!(copied, b"of the");
+/// # wasmiter::input::Result::Ok(())
+/// ```
 #[derive(Clone, Copy)]
 pub struct Window<I: Input> {
     base: u64,
@@ -73,8 +89,9 @@ impl<I: Input> Window<I> {
 
     #[inline]
     fn bounds_check(&self, offset: u64) -> Result<u64> {
-        if offset >= self.base && offset < self.base.saturating_add(self.length) {
-            Ok(self.length - offset)
+        let (end, overflow) = self.base.overflowing_add(self.length);
+        if offset >= self.base && offset < end && !overflow {
+            Ok(self.length - (offset - self.base))
         } else {
             Err(input::Error::new(
                 input::error::ErrorKind::OutOfBounds,
