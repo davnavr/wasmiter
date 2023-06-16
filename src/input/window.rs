@@ -138,6 +138,17 @@ impl<I: Input> BorrowInput for Window<I> {
     }
 }
 
+/// Clones the underlying [`Input`].
+impl<I: Clone + Input> From<&Window<&I>> for Window<I> {
+    fn from(borrowed: &Window<&I>) -> Self {
+        Window {
+            base: borrowed.base,
+            length: borrowed.length,
+            inner: borrowed.inner.clone(),
+        }
+    }
+}
+
 impl<I: Input> core::fmt::Debug for Window<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&input::HexDump::from(self.borrow_input()), f)
