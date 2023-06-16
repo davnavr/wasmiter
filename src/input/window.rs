@@ -1,4 +1,4 @@
-use crate::input::{self, BorrowInput, Input, Result};
+use crate::input::{self, Input, Result};
 
 /// Adapts an [`Input`] implementation to limit the amount of bytes that can be read to a specific
 /// range.
@@ -126,14 +126,13 @@ impl<I: Input> Input for Window<I> {
     }
 }
 
-impl<I: Input> BorrowInput for Window<I> {
-    type Borrowed<'a> = Window<&'a I> where I: 'a;
-
-    fn borrow_input(&self) -> Self::Borrowed<'_> {
+/// Borrows the underlying [`Input`].
+impl<'a, I: Input> From<&'a Window<I>> for Window<&'a I> {
+    fn from(borrow: &'a Window<I>) -> Self {
         Window {
-            base: self.base,
-            length: self.length,
-            inner: &self.inner,
+            base: borrow.base,
+            length: borrow.length,
+            inner: &borrow.inner,
         }
     }
 }
@@ -151,6 +150,7 @@ impl<I: Clone + Input> From<&Window<&I>> for Window<I> {
 
 impl<I: Input> core::fmt::Debug for Window<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&input::HexDump::from(self.borrow_input()), f)
+        let borrow: Window<&I> = self.into();
+        core::fmt::Debug::fmt(&input::HexDump::from(borrow), f)
     }
 }

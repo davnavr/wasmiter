@@ -3,13 +3,11 @@
 //! The [`Input`] trait provides this functionality, and is used by [`wasmiter`](crate) to parse a
 //! WebAssembly binary from a source.
 
-mod borrowed;
 mod error;
 mod hex_dump;
 mod input_impls;
 mod window;
 
-pub use borrowed::BorrowInput;
 pub use error::Error;
 pub use hex_dump::{HexDump, HexDumpRow};
 pub use window::Window;
