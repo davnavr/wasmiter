@@ -60,7 +60,7 @@ impl HexDumpRow {
 
     fn fmt_display(&self, f: &mut Formatter<'_>, offset_width: usize) -> core::fmt::Result {
         if f.alternate() {
-            write!(f, "{:#offset_width$X}  ", self.offset)?;
+            write!(f, "{:0offset_width$X}  ", self.offset)?;
         }
 
         // Padding
@@ -243,17 +243,16 @@ impl<I: Input> Display for HexDump<I> {
         .map(|log| log.saturating_add(1))
         .unwrap_or(4);
 
-        let width = core::cmp::max(max_width, OFFSET_HEADER.len());
+        let offset_width = core::cmp::max(max_width, OFFSET_HEADER.len());
 
         if f.alternate() {
-            write!(f, "{:<width$}  ", OFFSET_HEADER)?;
+            write!(f, "{:<offset_width$}  ", OFFSET_HEADER)?;
+            writeln!(f, " 0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F")?;
         }
-
-        writeln!(f, " 0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F")?;
 
         let hex_dump: HexDump<&I> = self.into();
         for row in hex_dump.filter_map(Result::ok) {
-            Display::fmt(&row, f)?;
+            row.fmt_display(f, offset_width)?;
             writeln!(f)?;
         }
 
