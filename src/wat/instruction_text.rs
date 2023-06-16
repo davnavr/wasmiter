@@ -1,5 +1,5 @@
 use crate::{
-    bytes::Bytes,
+    input::Input,
     instruction_set::{self, Instruction as Instr, InstructionSequence},
     parser::Offset,
     types::{self, BlockType},
@@ -33,8 +33,8 @@ fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) {
     }
 }
 
-fn instruction<B: Bytes>(
-    instr: &mut Instr<'_, B>,
+fn instruction<I: Input>(
+    instr: &mut Instr<'_, I>,
     indentation: Option<u32>,
     last: bool,
     w: &mut Writer,
@@ -303,20 +303,20 @@ fn instruction<B: Bytes>(
     Ok(())
 }
 
-impl<B: Bytes> wat::Wat for Instr<'_, B> {
+impl<I: Input> wat::Wat for Instr<'_, I> {
     fn write(mut self, writer: &mut Writer) -> wat::Parsed<()> {
         instruction(&mut self, None, false, writer)
     }
 }
 
-impl<O: Offset, B: Bytes> wat::Wat for InstructionSequence<O, B> {
+impl<O: Offset, I: Input> wat::Wat for InstructionSequence<O, I> {
     fn write(mut self, writer: &mut Writer) -> crate::parser::Result<()> {
         expression_indented(&mut self, false, writer)
     }
 }
 
 pub(super) fn expression_linear(
-    expr: &mut instruction_set::InstructionSequence<impl Offset, &impl Bytes>,
+    expr: &mut instruction_set::InstructionSequence<impl Offset, &impl Input>,
     w: &mut Writer,
 ) -> wat::Parsed<()> {
     loop {
@@ -336,7 +336,7 @@ pub(super) fn expression_linear(
 }
 
 pub(super) fn expression_indented(
-    expr: &mut instruction_set::InstructionSequence<impl Offset, impl Bytes>,
+    expr: &mut instruction_set::InstructionSequence<impl Offset, impl Input>,
     is_function: bool,
     w: &mut Writer,
 ) -> wat::Parsed<()> {

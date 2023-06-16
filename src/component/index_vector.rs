@@ -1,28 +1,29 @@
 use crate::{
-    bytes::Bytes,
     component,
     index::Index,
+    input::Input,
     parser::{Offset, Result, Vector},
 };
 
 /// Represents a [`Vector`] of WebAssembly indices.
 #[derive(Clone, Copy)]
-pub struct IndexVector<I: Index, O: Offset, B: Bytes> {
-    indices: Vector<O, B>,
-    _marker: core::marker::PhantomData<&'static I>,
+pub struct IndexVector<N: Index, O: Offset, I: Input> {
+    indices: Vector<O, I>,
+    _marker: core::marker::PhantomData<&'static N>,
 }
 
-impl<I: Index, O: Offset, B: Bytes> IndexVector<I, O, B> {
-    /// Creates a new [`IndexVector`] with the given `count`, and whose elements start at the given `offset`.
+impl<N: Index, O: Offset, I: Input> IndexVector<N, O, I> {
+    /// Creates a new [`IndexVector`] with the given `count`, and whose elements start in the
+    /// [`Input`] at the given `offset`.
     #[inline]
-    pub fn new(count: u32, offset: O, bytes: B) -> Self {
-        Vector::new(count, offset, bytes).into()
+    pub fn new(count: u32, offset: O, input: I) -> Self {
+        Vector::new(count, offset, input).into()
     }
 
-    /// Creates a new [`IndexVector`] with a parsed `u32` count from the given [`Bytes`].
+    /// Creates a new [`IndexVector`] with a parsed `u32` count from the given [`Input`].
     #[inline]
-    pub fn parse(offset: O, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes).map(Self::from)
+    pub fn parse(offset: O, input: I) -> Result<Self> {
+        Vector::parse(offset, input).map(Self::from)
     }
 
     /// Gets the remaining number of indices.
@@ -33,7 +34,7 @@ impl<I: Index, O: Offset, B: Bytes> IndexVector<I, O, B> {
 
     /// Returns a clone of the [`IndexVector`], borrowing the underlying [`Bytes`].
     #[inline]
-    pub fn borrowed(&self) -> IndexVector<I, u64, &B> {
+    pub fn borrowed(&self) -> IndexVector<N, u64, &I> {
         self.indices.borrowed().into()
     }
 
@@ -47,9 +48,9 @@ impl<I: Index, O: Offset, B: Bytes> IndexVector<I, O, B> {
     }
 }
 
-impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for IndexVector<I, O, B> {
+impl<N: Index, O: Offset, I: Input> From<Vector<O, I>> for IndexVector<N, O, I> {
     #[inline]
-    fn from(indices: Vector<O, B>) -> Self {
+    fn from(indices: Vector<O, I>) -> Self {
         Self {
             indices,
             _marker: core::marker::PhantomData,
@@ -57,8 +58,8 @@ impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for IndexVector<I, O, B> 
     }
 }
 
-impl<I: Index, O: Offset, B: Bytes> Iterator for IndexVector<I, O, B> {
-    type Item = Result<I>;
+impl<N: Index, O: Offset, I: Input> Iterator for IndexVector<N, O, I> {
+    type Item = Result<N>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -71,9 +72,9 @@ impl<I: Index, O: Offset, B: Bytes> Iterator for IndexVector<I, O, B> {
     }
 }
 
-impl<I: Index, O: Offset, B: Bytes> core::iter::FusedIterator for IndexVector<I, O, B> {}
+impl<N: Index, O: Offset, I: Input> core::iter::FusedIterator for IndexVector<N, O, I> {}
 
-impl<I: Index, O: Offset, B: Bytes> core::fmt::Debug for IndexVector<I, O, B> {
+impl<N: Index, O: Offset, I: Input> core::fmt::Debug for IndexVector<N, O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

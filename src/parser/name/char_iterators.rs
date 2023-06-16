@@ -1,5 +1,5 @@
 use crate::{
-    bytes::Bytes,
+    input::Input,
     parser::name::{InvalidCodePoint, Name, NameError},
 };
 
@@ -86,7 +86,7 @@ impl CharsBuffer {
         &mut self,
         offset: &mut u64,
         length: &mut u32,
-        bytes: &impl Bytes,
+        input: &impl Input,
     ) -> Result<(), NameError> {
         // take_char would return Ok(Some) or Err for the same conditions here
         if self.valid_len() > 0 || self.bad_sequence.is_some() {
@@ -97,7 +97,7 @@ impl CharsBuffer {
         if saved_length < self.buffer.len() {
             let remaining = self.buffer.len() - saved_length;
             let actual_remaining = core::cmp::min(remaining, *length as usize);
-            let result = bytes
+            let result = input
                 .read(offset, &mut self.buffer[saved_length..][..actual_remaining])
                 .map(|buf| buf.len() as u8);
 
@@ -143,20 +143,20 @@ impl CharsBuffer {
 /// See the documentation for [`Name::chars()`] for more information.
 #[derive(Clone, Copy)]
 #[must_use]
-pub struct Chars<B: Bytes> {
-    name: Name<B>,
+pub struct Chars<I: Input> {
+    name: Name<I>,
     buffer: CharsBuffer,
 }
 
-impl<B: Bytes> Chars<B> {
-    pub(super) fn new(name: Name<B>) -> Self {
+impl<I: Input> Chars<I> {
+    pub(super) fn new(name: Name<I>) -> Self {
         Self {
             name,
             buffer: Default::default(),
         }
     }
 
-    pub(super) fn borrowed(&self) -> Chars<&B> {
+    pub(super) fn borrowed(&self) -> Chars<&I> {
         Chars {
             name: self.name.borrowed(),
             buffer: self.buffer,
@@ -171,14 +171,14 @@ impl<B: Bytes> Chars<B> {
         self.buffer.fill(
             &mut self.name.offset,
             &mut self.name.length,
-            &self.name.bytes,
+            &self.name.input,
         )?;
 
         self.buffer.take_char()
     }
 }
 
-impl<B: Bytes> Iterator for Chars<B> {
+impl<I: Input> Iterator for Chars<I> {
     type Item = Result<char, NameError>;
 
     #[inline]
@@ -192,30 +192,30 @@ impl<B: Bytes> Iterator for Chars<B> {
     }
 }
 
-impl<B: Bytes> core::iter::FusedIterator for Chars<B> {}
+impl<I: Input> core::iter::FusedIterator for Chars<I> {}
 
 /// An iterator over the [`char`]s of a [`Name`] that substitutes invalid byte sequences and other errors with [`char::REPLACEMENT_CHARACTER`].
 ///
 /// See the documentation for [`Name::chars_lossy()`] for more information.
 #[derive(Clone, Copy)]
 #[must_use]
-pub struct CharsLossy<B: Bytes> {
-    inner: Chars<B>,
+pub struct CharsLossy<I: Input> {
+    inner: Chars<I>,
 }
 
-impl<B: Bytes> CharsLossy<B> {
+impl<I: Input> CharsLossy<I> {
     #[inline]
-    pub(super) fn new(inner: Chars<B>) -> CharsLossy<B> {
+    pub(super) fn new(inner: Chars<I>) -> CharsLossy<I> {
         Self { inner }
     }
 
     #[inline]
-    pub(super) fn borrowed(&self) -> CharsLossy<&B> {
+    pub(super) fn borrowed(&self) -> CharsLossy<&I> {
         CharsLossy::new(self.inner.borrowed())
     }
 }
 
-impl<B: Bytes> Iterator for CharsLossy<B> {
+impl<I: Input> Iterator for CharsLossy<I> {
     type Item = char;
 
     fn next(&mut self) -> Option<char> {
@@ -231,4 +231,4 @@ impl<B: Bytes> Iterator for CharsLossy<B> {
     }
 }
 
-impl<B: Bytes> core::iter::FusedIterator for CharsLossy<B> {}
+impl<I: Input> core::iter::FusedIterator for CharsLossy<I> {}

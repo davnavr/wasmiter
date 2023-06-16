@@ -1,6 +1,6 @@
 use crate::wat;
 
-impl<B: crate::bytes::Bytes> wat::Wat for crate::component::TypesComponent<B> {
+impl<B: crate::input::Input> wat::Wat for crate::component::TypesComponent<B> {
     fn write(mut self, mut w: &mut wat::Writer) -> crate::parser::Result<()> {
         for i in (0u32..).flat_map(crate::index::TypeIdx::try_from) {
             let result = self.parse(

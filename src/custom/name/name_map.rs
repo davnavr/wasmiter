@@ -1,7 +1,7 @@
 use crate::{
-    bytes::Bytes,
     custom::name::NameAssoc,
     index::Index,
+    input::Input,
     parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
 };
 
@@ -10,13 +10,13 @@ use crate::{
 ///
 /// Each index is checked in order to ensure they are unique and in increasing order.
 #[derive(Clone, Copy)]
-pub struct NameMap<I: Index, O: Offset, B: Bytes> {
-    order: AscendingOrder<u32, I>,
-    entries: Vector<O, B>,
+pub struct NameMap<N: Index, O: Offset, I: Input> {
+    order: AscendingOrder<u32, N>,
+    entries: Vector<O, I>,
 }
 
-impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for NameMap<I, O, B> {
-    fn from(entries: Vector<O, B>) -> Self {
+impl<N: Index, O: Offset, I: Input> From<Vector<O, I>> for NameMap<N, O, I> {
+    fn from(entries: Vector<O, I>) -> Self {
         Self {
             order: AscendingOrder::new(),
             entries,
@@ -24,10 +24,10 @@ impl<I: Index, O: Offset, B: Bytes> From<Vector<O, B>> for NameMap<I, O, B> {
     }
 }
 
-impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
+impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
     /// Parses a [`NameMap`] starting at the given `offset`.
-    pub fn new(offset: O, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes).map(Self::from)
+    pub fn new(offset: O, input: I) -> Result<Self> {
+        Vector::parse(offset, input).map(Self::from)
     }
 
     /// Gets the remaining number of entries in the [`NameMap`].
@@ -37,7 +37,7 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
     }
 
     /// Parses the next entry in the [`NameMap`].
-    pub fn parse(&mut self) -> Result<Option<NameAssoc<I, &B>>> {
+    pub fn parse(&mut self) -> Result<Option<NameAssoc<N, &I>>> {
         self.entries
             .advance_with_index(|i, offset, bytes| {
                 let name_assoc =
@@ -52,7 +52,7 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
             .transpose()
     }
 
-    fn borrowed(&self) -> NameMap<I, u64, &B> {
+    fn borrowed(&self) -> NameMap<N, u64, &I> {
         NameMap {
             order: self.order,
             entries: self.entries.borrowed(),
@@ -66,8 +66,8 @@ impl<I: Index, O: Offset, B: Bytes> NameMap<I, O, B> {
     }
 }
 
-impl<I: Index, O: Offset, B: Clone + Bytes> NameMap<I, O, &B> {
-    pub(super) fn dereferenced(&self) -> NameMap<I, u64, B> {
+impl<N: Index, O: Offset, I: Clone + Input> NameMap<N, O, &I> {
+    pub(super) fn dereferenced(&self) -> NameMap<N, u64, I> {
         NameMap {
             order: self.order,
             entries: self.entries.dereferenced(),
@@ -75,8 +75,8 @@ impl<I: Index, O: Offset, B: Clone + Bytes> NameMap<I, O, &B> {
     }
 }
 
-impl<I: Index, O: Offset, B: Clone + Bytes> Iterator for NameMap<I, O, B> {
-    type Item = Result<NameAssoc<I, B>>;
+impl<N: Index, O: Offset, I: Clone + Input> Iterator for NameMap<N, O, I> {
+    type Item = Result<NameAssoc<N, I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {
@@ -92,9 +92,9 @@ impl<I: Index, O: Offset, B: Clone + Bytes> Iterator for NameMap<I, O, B> {
     }
 }
 
-impl<I: Index, O: Offset, B: Clone + Bytes> core::iter::FusedIterator for NameMap<I, O, B> {}
+impl<N: Index, O: Offset, I: Clone + Input> core::iter::FusedIterator for NameMap<N, O, I> {}
 
-impl<I: Index, O: Offset, B: Bytes> core::fmt::Debug for NameMap<I, O, B> {
+impl<N: Index, O: Offset, I: Input> core::fmt::Debug for NameMap<N, O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

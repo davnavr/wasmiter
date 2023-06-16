@@ -1,6 +1,6 @@
 use crate::{
-    bytes::Bytes,
     component,
+    input::Input,
     parser::{self, name::Name, Result, ResultExt as _, Vector},
     types,
 };
@@ -39,22 +39,22 @@ impl ImportKind {
 /// Note that importing more than one memory requires the
 /// [multi-memory proposal](https://github.com/WebAssembly/multi-memory).
 #[derive(Clone, Copy)]
-pub struct Import<B: Bytes> {
-    module: Name<B>,
-    name: Name<B>,
+pub struct Import<I: Input> {
+    module: Name<I>,
+    name: Name<I>,
     kind: ImportKind,
 }
 
-impl<B: Bytes> Import<B> {
+impl<I: Input> Import<I> {
     /// Gets the name of the module that this import originates from.
     #[inline]
-    pub fn module(&self) -> &Name<B> {
+    pub fn module(&self) -> &Name<I> {
         &self.module
     }
 
     /// Gets the name of the import.
     #[inline]
-    pub fn name(&self) -> &Name<B> {
+    pub fn name(&self) -> &Name<I> {
         &self.name
     }
 
@@ -65,26 +65,26 @@ impl<B: Bytes> Import<B> {
     }
 }
 
-impl<'a, B: Bytes> Import<&'a B> {
-    fn parse(offset: &mut u64, bytes: &'a B) -> Result<Self> {
-        let module = parser::name::parse(offset, bytes).context("module name")?;
-        let name = parser::name::parse(offset, bytes).context("import name")?;
+impl<'a, I: Input> Import<&'a I> {
+    fn parse(offset: &mut u64, input: &'a I) -> Result<Self> {
+        let module = parser::name::parse(offset, input).context("module name")?;
+        let name = parser::name::parse(offset, input).context("import name")?;
 
         let kind_offset = *offset;
-        let kind = match parser::one_byte_exact(offset, bytes).context("import kind")? {
+        let kind = match parser::one_byte_exact(offset, input).context("import kind")? {
             0 => ImportKind::Function(
-                component::index(offset, bytes).context("function import type")?,
+                component::index(offset, input).context("function import type")?,
             ),
             1 => ImportKind::Table(
-                component::table_type(offset, bytes).context("table import type")?,
+                component::table_type(offset, input).context("table import type")?,
             ),
             2 => ImportKind::Memory(
-                component::mem_type(offset, bytes).context("memory import type")?,
+                component::mem_type(offset, input).context("memory import type")?,
             ),
             3 => ImportKind::Global(
-                component::global_type(offset, bytes).context("global import type")?,
+                component::global_type(offset, input).context("global import type")?,
             ),
-            4 => ImportKind::Tag(component::tag(offset, bytes).context("tag import")?),
+            4 => ImportKind::Tag(component::tag(offset, input).context("tag import")?),
             bad => {
                 return Err(crate::parser_bad_format_at_offset!(
                     "input" @ kind_offset,
@@ -97,9 +97,9 @@ impl<'a, B: Bytes> Import<&'a B> {
     }
 }
 
-impl<B: Clone + Bytes> Import<&B> {
+impl<I: Clone + Input> Import<&I> {
     /// Clones the [`Import`] by cloning the underlying [`Bytes`].
-    pub fn cloned(&self) -> Import<B> {
+    pub fn cloned(&self) -> Import<I> {
         Import {
             module: self.module.really_cloned(),
             name: self.name.really_cloned(),
@@ -108,7 +108,7 @@ impl<B: Clone + Bytes> Import<&B> {
     }
 }
 
-impl<B: Bytes> Debug for Import<B> {
+impl<I: Input> Debug for Import<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Import")
             .field("module", &self.module)
@@ -123,22 +123,22 @@ impl<B: Bytes> Debug for Import<B> {
 /// a WebAssembly module, stored in and parsed from the
 /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
 #[derive(Clone, Copy)]
-pub struct ImportsComponent<B: Bytes> {
-    imports: Vector<u64, B>,
+pub struct ImportsComponent<I: Input> {
+    imports: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for ImportsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for ImportsComponent<I> {
     #[inline]
-    fn from(imports: Vector<u64, B>) -> Self {
+    fn from(imports: Vector<u64, I>) -> Self {
         Self { imports }
     }
 }
 
-impl<B: Bytes> ImportsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *import section* of a
+impl<I: Input> ImportsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *import section* of a
     /// module, starting at the given `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Result<Self> {
+        Vector::parse(offset, input)
             .context("at start of import section")
             .map(Self::from)
     }
@@ -150,20 +150,20 @@ impl<B: Bytes> ImportsComponent<B> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse(&mut self) -> Result<Option<Import<&B>>> {
+    pub fn parse(&mut self) -> Result<Option<Import<&I>>> {
         self.imports
             .advance(Import::parse)
             .transpose()
             .context("within import section")
     }
 
-    pub(crate) fn borrowed(&self) -> ImportsComponent<&B> {
+    pub(crate) fn borrowed(&self) -> ImportsComponent<&I> {
         self.imports.borrowed().into()
     }
 }
 
-impl<B: Clone + Bytes> Iterator for ImportsComponent<B> {
-    type Item = Result<Import<B>>;
+impl<I: Clone + Input> Iterator for ImportsComponent<I> {
+    type Item = Result<Import<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {
@@ -179,9 +179,9 @@ impl<B: Clone + Bytes> Iterator for ImportsComponent<B> {
     }
 }
 
-impl<B: Clone + Bytes> core::iter::FusedIterator for ImportsComponent<B> {}
+impl<I: Clone + Input> core::iter::FusedIterator for ImportsComponent<I> {}
 
-impl<B: Bytes> Debug for ImportsComponent<B> {
+impl<I: Input> Debug for ImportsComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

@@ -1,7 +1,7 @@
 use crate::{
-    bytes::Bytes,
     component::IndexVector,
     index::TypeIdx,
+    input::Input,
     parser::{Result, ResultExt},
 };
 
@@ -13,23 +13,23 @@ use crate::{
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
-pub struct FunctionSection<B: Bytes> {
-    indices: IndexVector<TypeIdx, u64, B>,
+pub struct FunctionSection<I: Input> {
+    indices: IndexVector<TypeIdx, u64, I>,
 }
 
-impl<B: Bytes> From<IndexVector<TypeIdx, u64, B>> for FunctionSection<B> {
+impl<I: Input> From<IndexVector<TypeIdx, u64, I>> for FunctionSection<I> {
     #[inline]
-    fn from(indices: IndexVector<TypeIdx, u64, B>) -> Self {
+    fn from(indices: IndexVector<TypeIdx, u64, I>) -> Self {
         Self { indices }
     }
 }
 
-impl<B: Bytes> FunctionSection<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *function section* of a module, which
+impl<I: Input> FunctionSection<I> {
+    /// Uses the given [`Input`] to read the contents of the *function section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        IndexVector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Result<Self> {
+        IndexVector::parse(offset, input)
             .context("at start of function section")
             .map(Self::from)
     }
@@ -41,14 +41,14 @@ impl<B: Bytes> FunctionSection<B> {
         self.indices.remaining_count()
     }
 
-    pub(super) fn borrowed(&self) -> FunctionSection<&B> {
+    pub(super) fn borrowed(&self) -> FunctionSection<&I> {
         FunctionSection {
             indices: self.indices.borrowed(),
         }
     }
 }
 
-impl<B: Bytes> Iterator for FunctionSection<B> {
+impl<I: Input> Iterator for FunctionSection<I> {
     type Item = Result<TypeIdx>;
 
     #[inline]
@@ -64,9 +64,9 @@ impl<B: Bytes> Iterator for FunctionSection<B> {
     }
 }
 
-impl<B: Clone + Bytes> core::iter::FusedIterator for FunctionSection<B> {}
+impl<I: Clone + Input> core::iter::FusedIterator for FunctionSection<I> {}
 
-impl<B: Bytes> core::fmt::Debug for FunctionSection<B> {
+impl<I: Input> core::fmt::Debug for FunctionSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.indices, f)
     }

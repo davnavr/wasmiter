@@ -53,9 +53,9 @@ impl std::error::Error for InvalidCodePoint {}
 /// UTF-8 string.
 #[derive(Debug)]
 pub enum NameError {
-    /// An operation to read the UTF-8 string contents from the [`Bytes`](crate::bytes::Bytes)
+    /// An operation to read the UTF-8 string contents from the [`Bytes`](crate::input::Input)
     /// failed.
-    BadInput(crate::bytes::Error),
+    BadInput(crate::input::Error),
     /// The UTF-8 string itself is malformed.
     BadBytes(InvalidCodePoint),
 }

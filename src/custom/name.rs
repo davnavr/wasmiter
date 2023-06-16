@@ -3,8 +3,8 @@
 //! which associates UTF-8 [`Name`](parser::name::Name)s with definitions in a module.
 
 use crate::{
-    bytes::{Bytes, Window},
     index,
+    input::{Input, Window},
     parser::{self, AscendingOrder, ResultExt as _},
     sections::{Section, SectionSequence},
 };
@@ -28,21 +28,21 @@ const TAG_NAME_ID: u8 = 11;
 /// within the [`NameSection`].
 #[derive(Clone, Copy)]
 #[non_exhaustive]
-pub enum NameSubsection<B: Bytes> {
+pub enum NameSubsection<I: Input> {
     /// The
     /// [*module name subsection*](https://webassembly.github.io/spec/core/appendix/custom.html#module-names)
     /// assigns a name to the WebAssembly module.
-    ModuleName(parser::name::Name<B>),
+    ModuleName(parser::name::Name<I>),
     /// The
     /// [*function name subsection*](https://webassembly.github.io/spec/core/appendix/custom.html#function-names)
     /// assigns names to the
     /// [functions](https://webassembly.github.io/spec/core/syntax/modules.html#functions) of a
     /// WebAssembly module.
-    FunctionName(NameMap<index::FuncIdx, u64, B>),
+    FunctionName(NameMap<index::FuncIdx, u64, I>),
     /// The
     /// [*local name subsection*](https://webassembly.github.io/spec/core/appendix/custom.html#local-names)
     /// assigns a [`NameMap`] of local variable names for the functions within a WebAssembly module.
-    LocalName(IndirectNameMap<index::FuncIdx, index::LocalIdx, u64, B>),
+    LocalName(IndirectNameMap<index::FuncIdx, index::LocalIdx, u64, I>),
     /// The
     /// [*tag name subsection*](https://webassembly.github.io/exception-handling/core/appendix/custom.html#tag-names)
     /// assignes names to the
@@ -51,14 +51,14 @@ pub enum NameSubsection<B: Bytes> {
     ///
     /// Introduced as part of the
     /// [exception handling proposal](https://github.com/WebAssembly/exception-handling).
-    TagName(NameMap<index::TagIdx, u64, B>),
+    TagName(NameMap<index::TagIdx, u64, I>),
 }
 
 /// Result type used when interpreting the contents of a [`NameSubsection`].
-pub type InterpretedNameSubsection<B> =
-    Result<parser::Result<NameSubsection<Window<B>>>, Section<B>>;
+pub type InterpretedNameSubsection<I> =
+    Result<parser::Result<NameSubsection<Window<I>>>, Section<I>>;
 
-impl<B: Bytes> NameSubsection<Window<B>> {
+impl<I: Input> NameSubsection<Window<I>> {
     /// Attempts to interpret the contents of the given name subsection.
     ///
     /// Returns `Err(_)` if the section's
@@ -67,7 +67,7 @@ impl<B: Bytes> NameSubsection<Window<B>> {
     ///
     /// Returns `Ok(Err(_))` if the section **was** recognized, but an attempt to parse a field
     /// failed.
-    pub fn interpret(section: Section<B>) -> InterpretedNameSubsection<B> {
+    pub fn interpret(section: Section<I>) -> InterpretedNameSubsection<I> {
         match section.id() {
             MODULE_NAME_ID => {
                 let contents = section.into_contents();
@@ -103,7 +103,7 @@ impl<B: Bytes> NameSubsection<Window<B>> {
     }
 }
 
-impl<B: Bytes> Debug for NameSubsection<B> {
+impl<I: Input> Debug for NameSubsection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ModuleName(name) => f.debug_tuple("ModuleName").field(name).finish(),
@@ -119,15 +119,15 @@ impl<B: Bytes> Debug for NameSubsection<B> {
 ///
 /// Section IDs are checked to ensure that they are in **ascending** order.
 #[derive(Clone, Copy)]
-pub struct NameSection<B: Bytes> {
+pub struct NameSection<I: Input> {
     order: AscendingOrder<u8>,
     first: bool,
-    sections: SectionSequence<B>,
+    sections: SectionSequence<I>,
 }
 
-impl<B: Bytes> NameSection<B> {
+impl<I: Input> NameSection<I> {
     /// Creates a [`NameSection`] from the given sequence of `sections`.
-    pub fn new(sections: SectionSequence<B>) -> Self {
+    pub fn new(sections: SectionSequence<I>) -> Self {
         Self {
             order: AscendingOrder::new(),
             first: true,
@@ -136,14 +136,14 @@ impl<B: Bytes> NameSection<B> {
     }
 
     /// Consumes the [`NameSection`], returning the remaining subsections.
-    pub fn into_sections(self) -> SectionSequence<B> {
+    pub fn into_sections(self) -> SectionSequence<I> {
         self.sections
     }
 
-    fn parse_inner<'a, U: Bytes, F>(&'a mut self, f: F) -> Option<InterpretedNameSubsection<U>>
+    fn parse_inner<'a, U: Input, F>(&'a mut self, f: F) -> Option<InterpretedNameSubsection<U>>
     where
         U: 'a,
-        F: FnOnce(Section<&'a B>) -> Section<U>,
+        F: FnOnce(Section<&'a I>) -> Section<U>,
     {
         match self.sections.parse().context("name subsection") {
             Ok(Some(section)) => match self
@@ -169,20 +169,20 @@ impl<B: Bytes> NameSection<B> {
     /// # Errors
     ///
     /// `Some(Ok(Err(_)))` is returned for any parser errors or if section IDs are not in **ascending order**.
-    pub fn parse(&mut self) -> Option<InterpretedNameSubsection<&B>> {
+    pub fn parse(&mut self) -> Option<InterpretedNameSubsection<&I>> {
         self.parse_inner(core::convert::identity)
     }
 }
 
-impl<B: Clone + Bytes> Iterator for NameSection<B> {
-    type Item = InterpretedNameSubsection<B>;
+impl<I: Clone + Input> Iterator for NameSection<I> {
+    type Item = InterpretedNameSubsection<I>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.parse_inner(|subsec| subsec.cloned())
     }
 }
 
-impl<B: Bytes> Debug for NameSection<B> {
+impl<I: Input> Debug for NameSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
         for subsec in self.sections.borrowed() {

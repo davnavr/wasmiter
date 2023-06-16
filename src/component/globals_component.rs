@@ -1,5 +1,5 @@
 use crate::{
-    bytes::Bytes,
+    input::Input,
     instruction_set::InstructionSequence,
     parser::{Result, ResultExt as _, Vector},
     types::GlobalType,
@@ -10,22 +10,22 @@ use crate::{
 /// a WebAssembly module, stored in and parsed from the
 /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
 #[derive(Clone, Copy)]
-pub struct GlobalsComponent<B: Bytes> {
-    globals: Vector<u64, B>,
+pub struct GlobalsComponent<I: Input> {
+    globals: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for GlobalsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for GlobalsComponent<I> {
     #[inline]
-    fn from(globals: Vector<u64, B>) -> Self {
+    fn from(globals: Vector<u64, I>) -> Self {
         Self { globals }
     }
 }
 
-impl<B: Bytes> GlobalsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *global section* of a module, starting
+impl<I: Input> GlobalsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *global section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Result<Self> {
+        Vector::parse(offset, input)
             .context("at start of global section")
             .map(Self::from)
     }
@@ -34,12 +34,12 @@ impl<B: Bytes> GlobalsComponent<B> {
     /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
     pub fn parse<T, F>(&mut self, f: F) -> Result<Option<T>>
     where
-        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> Result<T>,
     {
         self.globals
-            .advance(|offset, bytes| {
-                let global_type = crate::component::global_type(offset, bytes)?;
-                let mut expression = InstructionSequence::new(offset, bytes);
+            .advance(|offset, input| {
+                let global_type = crate::component::global_type(offset, input)?;
+                let mut expression = InstructionSequence::new(offset, input);
                 let result = f(global_type, &mut expression).context("global expression")?;
                 expression.finish().context("global expression")?;
                 Result::Ok(result)
@@ -54,21 +54,21 @@ impl<B: Bytes> GlobalsComponent<B> {
         self.globals.remaining_count()
     }
 
-    pub(crate) fn borrowed(&self) -> GlobalsComponent<&B> {
+    pub(crate) fn borrowed(&self) -> GlobalsComponent<&I> {
         self.globals.borrowed().into()
     }
 }
 
-impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
+impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut globals = self.borrowed();
 
-        struct Global<'a, B: Bytes> {
+        struct Global<'a, I: Input> {
             r#type: GlobalType,
-            init: InstructionSequence<u64, &'a B>,
+            init: InstructionSequence<u64, &'a I>,
         }
 
-        impl<B: Bytes> core::fmt::Debug for Global<'_, B> {
+        impl<I: Input> core::fmt::Debug for Global<'_, I> {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("Global")
                     .field("type", &self.r#type)

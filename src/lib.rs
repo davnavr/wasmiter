@@ -13,7 +13,6 @@ extern crate alloc;
 
 mod wat;
 
-pub mod bytes;
 pub mod component;
 pub mod custom;
 pub mod index;
@@ -27,12 +26,12 @@ use parser::{Error, Result, ResultExt};
 
 const PREAMBLE_LENGTH: u8 = 8;
 
-fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
+fn parse_module_preamble<I: input::Input>(input: &I) -> Result<()> {
     const MAGIC: [u8; 4] = *b"\0asm";
     const VERSION: [u8; 4] = u32::to_le_bytes(1);
 
     let mut preamble = [0u8; PREAMBLE_LENGTH as usize];
-    parser::bytes_exact(&mut 0, src, &mut preamble)
+    parser::bytes_exact(&mut 0, input, &mut preamble)
         .context("expected WebAssembly module preamble")?;
 
     if preamble[0..4] != MAGIC {
@@ -57,7 +56,7 @@ fn parse_module_preamble<B: bytes::Bytes>(src: &B) -> Result<()> {
 /// To interpret the contents of each section, use [`component::KnownSection::interpret`], or in
 /// the case of custom sections, [`custom::KnownCustomSection::interpret`].
 #[inline]
-pub fn parse_module_sections<B: bytes::Bytes>(binary: B) -> Result<sections::SectionSequence<B>> {
+pub fn parse_module_sections<I: input::Input>(binary: I) -> Result<sections::SectionSequence<I>> {
     parse_module_preamble(&binary)?;
     Ok(sections::SectionSequence::new(
         u64::from(PREAMBLE_LENGTH),

@@ -1,7 +1,7 @@
 use crate::{
-    bytes::Bytes,
     component,
     index::{self, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx},
+    input::Input,
     instruction_set::MemArg,
     parser::{Result, ResultExt},
     types::{self, BlockType},
@@ -48,12 +48,12 @@ macro_rules! instructions {
         /// Represents a
         /// [WebAssembly instruction](https://webassembly.github.io/spec/core/syntax/instructions.html).
         #[non_exhaustive]
-        pub enum Instruction<'a, B: Bytes> {$($(
+        pub enum Instruction<'a, I: Input> {$($(
             $(#[$meta])*
             $case $($arguments)?,
         )*)*}
 
-        impl<B: Bytes> Instruction<'_, B> {
+        impl<I: Input> Instruction<'_, I> {
             /// Gets a string containing the name of the [`Instruction`].
             pub const fn name(&self) -> &'static str {
                 match self {
@@ -72,7 +72,7 @@ macro_rules! instructions {
             )*
         }
 
-        impl<B: Bytes> core::fmt::Debug for Instruction<'_, B> {
+        impl<I: Input> core::fmt::Debug for Instruction<'_, I> {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 $($(
                     instruction_debug_impl!(f, self, $case $($arguments)?);
@@ -141,7 +141,7 @@ instructions! {
         ///
         /// The table of labels is encoded as a vector containing **at least one** [`LabelIdx`],
         /// with the last label specifies the default target.
-        BrTable[(component::IndexVector<LabelIdx, &'a mut u64, B>)] = "br_table",
+        BrTable[(component::IndexVector<LabelIdx, &'a mut u64, I>)] = "br_table",
         /// The
         /// [**return**](https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-instr-control)
         /// instruction transfers control flow back to the calling function.
@@ -178,7 +178,7 @@ instructions! {
         ///
         /// The types specify the type of the operand selected. Future versions of WebAssembly may
         /// allow selecting more than one value at a time, requiring more than one type.
-        Select[(component::ResultType<&'a mut u64, B>)] = "select",
+        Select[(component::ResultType<&'a mut u64, I>)] = "select",
 
         // Variable Instructions
 
@@ -1442,7 +1442,7 @@ instructions! {
     }
 }
 
-impl<B: Bytes> Instruction<'_, B> {
+impl<I: Input> Instruction<'_, I> {
     /// Completely parses the [`Instruction`] and any of its required arguments.
     pub fn finish(self) -> Result<()> {
         match self {

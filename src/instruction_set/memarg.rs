@@ -218,7 +218,7 @@ macro_rules! match_instruction_memarg {
     };
 }
 
-impl<B: crate::bytes::Bytes> crate::instruction_set::Instruction<'_, B> {
+impl<B: crate::input::Input> crate::instruction_set::Instruction<'_, B> {
     /// Returns `true` if the instruction references memory other than the default memory (index
     /// `0`), which requires the
     /// [multiple memory proposal](https://github.com/WebAssembly/multi-memory).

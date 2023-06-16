@@ -1,6 +1,6 @@
 use crate::wat;
 
-impl<B: crate::bytes::Bytes> wat::Wat for crate::component::GlobalsComponent<B> {
+impl<B: crate::input::Input> wat::Wat for crate::component::GlobalsComponent<B> {
     fn write(mut self, mut w: &mut wat::Writer) -> wat::Parsed<()> {
         loop {
             let result = self.parse(move |global_type, init| {

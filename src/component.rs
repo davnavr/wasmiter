@@ -45,12 +45,12 @@ pub use types_component::TypesComponent;
 
 /// Parses a
 /// [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
-pub fn index<N: crate::index::Index, B: crate::bytes::Bytes>(
+pub fn index<N: crate::index::Index, I: crate::input::Input>(
     offset: &mut u64,
-    bytes: B,
+    input: I,
 ) -> crate::parser::Result<N> {
     use crate::parser::{leb128, ResultExt as _};
 
-    let index = leb128::u32(offset, bytes).context(N::NAME)?;
+    let index = leb128::u32(offset, input).context(N::NAME)?;
     Ok(N::try_from(index)?)
 }

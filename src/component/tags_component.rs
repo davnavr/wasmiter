@@ -1,5 +1,5 @@
 use crate::{
-    bytes::Bytes,
+    input::Input,
     parser::{self, Result, ResultExt as _, Vector},
 };
 
@@ -15,13 +15,13 @@ pub enum Tag {
     Exception(crate::index::TypeIdx),
 }
 
-/// Parses a [`Tag`].
-pub fn parse<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<Tag> {
-    let attribute = parser::one_byte_exact(offset, bytes)?;
+/// Parses a [`Tag`] at the given `offset` into the [`Input`].
+pub fn parse<I: Input>(offset: &mut u64, input: &I) -> Result<Tag> {
+    let attribute = parser::one_byte_exact(offset, input)?;
     if attribute != 0 {
         crate::parser_bad_format!("{attribute:#04X} is not a valid tag attribute");
     }
-    crate::component::index(offset, bytes).map(Tag::Exception)
+    crate::component::index(offset, input).map(Tag::Exception)
 }
 
 /// Represents the
@@ -29,22 +29,22 @@ pub fn parse<B: Bytes>(offset: &mut u64, bytes: &B) -> Result<Tag> {
 /// WebAssembly module, stored in and parsed from the
 /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
 #[derive(Clone, Copy)]
-pub struct TagsComponent<B: Bytes> {
-    tags: Vector<u64, B>,
+pub struct TagsComponent<I: Input> {
+    tags: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for TagsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for TagsComponent<I> {
     #[inline]
-    fn from(tags: Vector<u64, B>) -> Self {
+    fn from(tags: Vector<u64, I>) -> Self {
         Self { tags }
     }
 }
 
-impl<B: Bytes> TagsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *type section* of a module, starting
+impl<I: Input> TagsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *type section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> parser::Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> parser::Result<Self> {
+        Vector::parse(offset, input)
             .context("at start of tag section")
             .map(Self::from)
     }
@@ -55,14 +55,14 @@ impl<B: Bytes> TagsComponent<B> {
         self.tags.remaining_count()
     }
 
-    pub(crate) fn borrowed(&self) -> TagsComponent<&B> {
+    pub(crate) fn borrowed(&self) -> TagsComponent<&I> {
         TagsComponent {
             tags: self.tags.borrowed(),
         }
     }
 }
 
-impl<B: Bytes> Iterator for TagsComponent<B> {
+impl<I: Input> Iterator for TagsComponent<I> {
     type Item = Result<Tag>;
 
     #[inline]
@@ -77,9 +77,9 @@ impl<B: Bytes> Iterator for TagsComponent<B> {
     }
 }
 
-impl<B: Bytes> core::iter::FusedIterator for TagsComponent<B> {}
+impl<I: Input> core::iter::FusedIterator for TagsComponent<I> {}
 
-impl<B: Bytes> core::fmt::Debug for TagsComponent<B> {
+impl<I: Input> core::fmt::Debug for TagsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

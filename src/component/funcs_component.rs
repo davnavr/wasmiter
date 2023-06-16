@@ -1,18 +1,18 @@
-use crate::bytes::Bytes;
 use crate::component::{Code, CodeSection, FunctionSection};
 use crate::index::TypeIdx;
+use crate::input::Input;
 use crate::parser::Result;
 
 /// A WebAssembly function, defined in the
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
-pub struct Func<C: Bytes> {
+pub struct Func<C: Input> {
     r#type: TypeIdx,
     code: Code<C>,
 }
 
-impl<C: Bytes> Func<C> {
+impl<C: Input> Func<C> {
     /// Gets an index into the *type section* that specifies the type of this function.
     #[inline]
     pub fn signature(&self) -> TypeIdx {
@@ -32,7 +32,7 @@ impl<C: Bytes> Func<C> {
     }
 }
 
-impl<C: Bytes + Clone> Func<&C> {
+impl<C: Input + Clone> Func<&C> {
     /// Returns a version of the [`Func`] with the code contents cloned.
     #[inline]
     pub fn cloned(&self) -> Func<C> {
@@ -43,7 +43,7 @@ impl<C: Bytes + Clone> Func<&C> {
     }
 }
 
-impl<C: Bytes> core::fmt::Debug for Func<C> {
+impl<C: Input> core::fmt::Debug for Func<C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Func")
             .field("type", &self.r#type)
@@ -56,12 +56,12 @@ impl<C: Bytes> core::fmt::Debug for Func<C> {
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
-pub struct FuncsComponent<T: Bytes, C: Bytes> {
+pub struct FuncsComponent<T: Input, C: Input> {
     types: FunctionSection<T>,
     code: CodeSection<C>,
 }
 
-impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
+impl<T: Input, C: Input> FuncsComponent<T, C> {
     /// Creates a [`FuncsComponent`] from the given *function* and *code* sections.
     ///
     /// # Errors
@@ -100,7 +100,7 @@ impl<T: Bytes, C: Bytes> FuncsComponent<T, C> {
     }
 }
 
-impl<T: Clone + Bytes, C: Clone + Bytes> Iterator for FuncsComponent<T, C> {
+impl<T: Clone + Input, C: Clone + Input> Iterator for FuncsComponent<T, C> {
     type Item = Result<Func<C>>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -119,9 +119,9 @@ impl<T: Clone + Bytes, C: Clone + Bytes> Iterator for FuncsComponent<T, C> {
     }
 }
 
-impl<T: Clone + Bytes, C: Clone + Bytes> core::iter::FusedIterator for FuncsComponent<T, C> {}
+impl<T: Clone + Input, C: Clone + Input> core::iter::FusedIterator for FuncsComponent<T, C> {}
 
-impl<T: Bytes, C: Bytes> core::fmt::Debug for FuncsComponent<T, C> {
+impl<T: Input, C: Input> core::fmt::Debug for FuncsComponent<T, C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

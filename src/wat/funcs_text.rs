@@ -1,6 +1,6 @@
-use crate::{bytes::Bytes, wat};
+use crate::{input::Input, wat};
 
-impl<T: Clone + Bytes, C: Clone + Bytes> wat::Wat for crate::component::FuncsComponent<T, C> {
+impl<T: Clone + Input, C: Clone + Input> wat::Wat for crate::component::FuncsComponent<T, C> {
     fn write(self, mut w: &mut wat::Writer) -> wat::Parsed<()> {
         for result in self {
             let func = result?;

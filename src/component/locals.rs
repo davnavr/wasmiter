@@ -1,6 +1,6 @@
 use crate::{
-    bytes::Bytes,
     component,
+    input::Input,
     parser::{self, Offset, ResultExt as _},
     types::ValType,
 };
@@ -15,19 +15,19 @@ use core::{
 /// each function in the
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
-pub struct Locals<O: Offset, B: Bytes> {
+pub struct Locals<O: Offset, I: Input> {
     offset: O,
-    bytes: B,
+    input: I,
     count: u32,
     current: Option<(NonZeroU32, ValType)>,
 }
 
-impl<O: Offset, B: Bytes> Locals<O, B> {
-    pub(super) fn new(mut offset: O, bytes: B) -> parser::Result<Self> {
+impl<O: Offset, I: Input> Locals<O, I> {
+    pub(super) fn new(mut offset: O, input: I) -> parser::Result<Self> {
         Ok(Self {
-            count: parser::leb128::u32(offset.offset_mut(), &bytes)
+            count: parser::leb128::u32(offset.offset_mut(), &input)
                 .context("locals declaration count")?,
-            bytes,
+            input,
             offset,
             current: None,
         })
@@ -44,11 +44,11 @@ impl<O: Offset, B: Bytes> Locals<O, B> {
             loop {
                 self.count -= 1;
 
-                let count = parser::leb128::u32(self.offset.offset_mut(), &self.bytes)
+                let count = parser::leb128::u32(self.offset.offset_mut(), &self.input)
                     .context("local group count")?;
 
                 if let Some(variable_count) = NonZeroU32::new(count) {
-                    let variable_type = component::val_type(self.offset.offset_mut(), &self.bytes)
+                    let variable_type = component::val_type(self.offset.offset_mut(), &self.input)
                         .context("local group type")?;
 
                     return Ok(Some(*self.current.insert((variable_count, variable_type))));
@@ -86,7 +86,7 @@ impl<O: Offset, B: Bytes> Locals<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Iterator for Locals<O, B> {
+impl<O: Offset, I: Input> Iterator for Locals<O, I> {
     type Item = parser::Result<ValType>;
 
     #[inline]
@@ -105,11 +105,11 @@ impl<O: Offset, B: Bytes> Iterator for Locals<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for Locals<O, B> {
+impl<O: Offset, I: Input> Debug for Locals<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let borrowed = Locals {
             offset: self.offset.offset(),
-            bytes: &self.bytes,
+            input: &self.input,
             count: self.count,
             current: self.current,
         };

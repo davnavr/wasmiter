@@ -1,6 +1,6 @@
 use crate::{component::ExportKind, wat};
 
-impl<B: crate::bytes::Bytes> wat::Wat for crate::component::ExportsComponent<B> {
+impl<B: crate::input::Input> wat::Wat for crate::component::ExportsComponent<B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
         for result in self.borrowed() {
             w.open_paren();

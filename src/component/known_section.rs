@@ -1,32 +1,32 @@
-use crate::bytes::{Bytes, Window};
 use crate::component;
+use crate::input::{Input, Window};
 use crate::parser::{self, ResultExt as _};
 use crate::sections::{id as section_id, Section};
 
 /// Represents a well-known WebAssembly [`Section`].
 #[non_exhaustive]
-pub enum KnownSection<B: Bytes> {
+pub enum KnownSection<I: Input> {
     /// The
     /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
-    Type(component::TypesComponent<B>),
+    Type(component::TypesComponent<I>),
     /// The
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-    Import(component::ImportsComponent<B>),
+    Import(component::ImportsComponent<I>),
     /// The
     /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section).
-    Function(component::FunctionSection<B>),
+    Function(component::FunctionSection<I>),
     /// The
     /// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
-    Table(component::TablesComponent<B>),
+    Table(component::TablesComponent<I>),
     /// The
     /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
-    Memory(component::MemsComponent<B>),
+    Memory(component::MemsComponent<I>),
     /// The
     /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
-    Global(component::GlobalsComponent<B>),
+    Global(component::GlobalsComponent<I>),
     /// The
     /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
-    Export(component::ExportsComponent<B>),
+    Export(component::ExportsComponent<I>),
     /// Represents the
     /// [**start** component](https://webassembly.github.io/spec/core/syntax/modules.html#start-function)
     /// of a WebAssembly module, encoded in the
@@ -34,23 +34,23 @@ pub enum KnownSection<B: Bytes> {
     Start(crate::index::FuncIdx),
     /// The
     /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
-    Element(component::ElemsComponent<B>),
+    Element(component::ElemsComponent<I>),
     /// The
     /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
-    Code(component::CodeSection<B>),
+    Code(component::CodeSection<I>),
     /// The
     /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section).
-    Data(component::DatasComponent<B>),
+    Data(component::DatasComponent<I>),
     /// The
     /// [*data count section*](https://webassembly.github.io/spec/core/binary/modules.html#data-count-section)
     /// specifies the number of of entries in the [*data section*](KnownSection::Data).
     DataCount(u32),
     /// The
     /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
-    Tag(component::TagsComponent<B>),
+    Tag(component::TagsComponent<I>),
 }
 
-impl<B: Bytes> KnownSection<B> {
+impl<I: Input> KnownSection<I> {
     /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
     /// the section.
     pub const fn id(&self) -> u8 {
@@ -91,7 +91,7 @@ impl<B: Bytes> KnownSection<B> {
     }
 }
 
-impl<B: Bytes> KnownSection<Window<B>> {
+impl<I: Input> KnownSection<Window<I>> {
     /// Attempts to interpret the contents of the given WebAssembly [`Section`].
     ///
     /// Returns `Err(_)` if the section is a custom section, or if the section's
@@ -100,7 +100,7 @@ impl<B: Bytes> KnownSection<Window<B>> {
     ///
     /// Returns `Ok(Err(_))` if the section **was** recognized, but an attempt to parse a length field
     /// failed.
-    pub fn interpret(section: Section<B>) -> Result<parser::Result<Self>, Section<B>> {
+    pub fn interpret(section: Section<I>) -> Result<parser::Result<Self>, Section<I>> {
         Ok(match section.id() {
             section_id::TYPE => {
                 let contents = section.into_contents();
@@ -164,84 +164,84 @@ impl<B: Bytes> KnownSection<Window<B>> {
     }
 }
 
-impl<B: Bytes> From<component::TypesComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::TypesComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(types: component::TypesComponent<B>) -> Self {
+    fn from(types: component::TypesComponent<I>) -> Self {
         Self::Type(types)
     }
 }
 
-impl<B: Bytes> From<component::ImportsComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::ImportsComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(imports: component::ImportsComponent<B>) -> Self {
+    fn from(imports: component::ImportsComponent<I>) -> Self {
         Self::Import(imports)
     }
 }
 
-impl<B: Bytes> From<component::FunctionSection<B>> for KnownSection<B> {
+impl<I: Input> From<component::FunctionSection<I>> for KnownSection<I> {
     #[inline]
-    fn from(functions: component::FunctionSection<B>) -> Self {
+    fn from(functions: component::FunctionSection<I>) -> Self {
         Self::Function(functions)
     }
 }
 
-impl<B: Bytes> From<component::TablesComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::TablesComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(tables: component::TablesComponent<B>) -> Self {
+    fn from(tables: component::TablesComponent<I>) -> Self {
         Self::Table(tables)
     }
 }
 
-impl<B: Bytes> From<component::MemsComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::MemsComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(memories: component::MemsComponent<B>) -> Self {
+    fn from(memories: component::MemsComponent<I>) -> Self {
         Self::Memory(memories)
     }
 }
 
-impl<B: Bytes> From<component::GlobalsComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::GlobalsComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(globals: component::GlobalsComponent<B>) -> Self {
+    fn from(globals: component::GlobalsComponent<I>) -> Self {
         Self::Global(globals)
     }
 }
 
-impl<B: Bytes> From<component::ExportsComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::ExportsComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(exports: component::ExportsComponent<B>) -> Self {
+    fn from(exports: component::ExportsComponent<I>) -> Self {
         Self::Export(exports)
     }
 }
 
-impl<B: Bytes> From<component::ElemsComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::ElemsComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(elements: component::ElemsComponent<B>) -> Self {
+    fn from(elements: component::ElemsComponent<I>) -> Self {
         Self::Element(elements)
     }
 }
 
-impl<B: Bytes> From<component::CodeSection<B>> for KnownSection<B> {
+impl<I: Input> From<component::CodeSection<I>> for KnownSection<I> {
     #[inline]
-    fn from(code: component::CodeSection<B>) -> Self {
+    fn from(code: component::CodeSection<I>) -> Self {
         Self::Code(code)
     }
 }
 
-impl<B: Bytes> From<component::DatasComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::DatasComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(data: component::DatasComponent<B>) -> Self {
+    fn from(data: component::DatasComponent<I>) -> Self {
         Self::Data(data)
     }
 }
 
-impl<B: Bytes> From<component::TagsComponent<B>> for KnownSection<B> {
+impl<I: Input> From<component::TagsComponent<I>> for KnownSection<I> {
     #[inline]
-    fn from(tags: component::TagsComponent<B>) -> Self {
+    fn from(tags: component::TagsComponent<I>) -> Self {
         Self::Tag(tags)
     }
 }
 
-impl<B: Bytes> core::fmt::Debug for KnownSection<B> {
+impl<I: Input> core::fmt::Debug for KnownSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Type(types) => f.debug_tuple("Type").field(types).finish(),
@@ -261,7 +261,7 @@ impl<B: Bytes> core::fmt::Debug for KnownSection<B> {
     }
 }
 
-impl<B: Bytes + Clone> Clone for KnownSection<B> {
+impl<I: Input + Clone> Clone for KnownSection<I> {
     fn clone(&self) -> Self {
         match self {
             Self::Type(types) => Self::Type(types.clone()),
@@ -281,4 +281,4 @@ impl<B: Bytes + Clone> Clone for KnownSection<B> {
     }
 }
 
-impl<B: Bytes + Copy> Copy for KnownSection<B> {}
+impl<I: Input + Copy> Copy for KnownSection<I> {}

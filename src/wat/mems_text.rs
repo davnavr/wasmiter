@@ -1,6 +1,6 @@
 use crate::wat;
 
-impl<B: crate::bytes::Bytes> wat::Wat for crate::component::MemsComponent<B> {
+impl<B: crate::input::Input> wat::Wat for crate::component::MemsComponent<B> {
     fn write(self, w: &mut wat::Writer) -> crate::parser::Result<()> {
         for result in self {
             let mem = result?;

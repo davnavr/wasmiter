@@ -7,7 +7,7 @@
 //! [`name` custom section](crate::custom::name), and in the
 //! [`dylink.0` custom section described in the Dynamic Linking document](https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md).
 
-use crate::bytes::{Bytes, Window};
+use crate::input::{Input, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
 
@@ -29,16 +29,16 @@ pub use display_module::DisplayModule;
 /// case of a custom section,
 /// [`custom::KnownCustomSection::interpret`](crate::custom::KnownCustomSection::interpret).
 #[derive(Clone, Copy)]
-pub struct Section<B: Bytes> {
+pub struct Section<I: Input> {
     id: u8,
-    contents: Window<B>,
+    contents: Window<I>,
 }
 
-impl<B: Bytes> Section<B> {
+impl<I: Input> Section<I> {
     /// Creates a new [`Section`] with the given
     /// [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) and binary
     /// `contents`.
-    pub fn new(id: u8, contents: Window<B>) -> Self {
+    pub fn new(id: u8, contents: Window<I>) -> Self {
         Self { id, contents }
     }
 
@@ -57,8 +57,8 @@ impl<B: Bytes> Section<B> {
 
     /// Returns a [`Window`] into the contents of the section.
     #[inline]
-    pub fn contents(&self) -> Window<&B> {
-        self.contents.borrowed()
+    pub fn contents(&self) -> Window<&I> {
+        (&self.contents).into()
     }
 
     /// Consumes the section, returning its contents as a [`Window`].
@@ -66,37 +66,37 @@ impl<B: Bytes> Section<B> {
     /// The offset to the first byte of the section's content can be obtained by calling
     /// [`Window::base`].
     #[inline]
-    pub fn into_contents(self) -> Window<B> {
+    pub fn into_contents(self) -> Window<I> {
         self.contents
     }
 
     /// Returns a borrowed version of the [`Section`].
-    pub fn borrowed(&self) -> Section<&B> {
+    pub fn borrowed(&self) -> Section<&I> {
         Section {
             id: self.id,
-            contents: self.contents.borrowed(),
+            contents: self.contents(),
         }
     }
 
     /// Returns a [`Debug`] implementation that attempts to interpret the contents as a WebAssembly
     /// module section.
     #[inline]
-    pub fn debug_module(&self) -> DebugModuleSection<'_, B> {
+    pub fn debug_module(&self) -> DebugModuleSection<'_, I> {
         DebugModuleSection::new(self)
     }
 }
 
-impl<B: Bytes + Clone> Section<&B> {
+impl<I: Input + Clone> Section<&I> {
     /// Returns a version of the [`Section`] with the contents cloned.
-    pub fn cloned(&self) -> Section<B> {
+    pub fn cloned(&self) -> Section<I> {
         Section {
             id: self.id,
-            contents: self.contents.cloned(),
+            contents: (&self.contents).into(),
         }
     }
 }
 
-impl<B: Bytes> Debug for Section<B> {
+impl<I: Input> Debug for Section<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Section")
             .field("id", &self.id)
@@ -109,15 +109,15 @@ impl<B: Bytes> Debug for Section<B> {
 /// [sequence of sections in a WebAssembly module](https://webassembly.github.io/spec/core/binary/modules.html#binary-module).
 #[derive(Clone, Copy)]
 #[must_use]
-pub struct SectionSequence<B: Bytes> {
+pub struct SectionSequence<I: Input> {
     offset: u64,
-    bytes: B,
+    input: I,
 }
 
-impl<B: Bytes> SectionSequence<B> {
-    /// Uses the given [`Bytes`] to parse a sequence of sections starting at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Self {
-        Self { offset, bytes }
+impl<I: Input> SectionSequence<I> {
+    /// Uses the given [`Input`] to parse a sequence of sections starting at the specified `offset`.
+    pub fn new(offset: u64, input: I) -> Self {
+        Self { offset, input }
     }
 
     /// Parses the next section. If there are no more sections remaining, returns `Ok(None)`.
@@ -126,18 +126,18 @@ impl<B: Bytes> SectionSequence<B> {
     ///
     /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
     /// correctly.
-    pub fn parse(&mut self) -> Result<Option<Section<&B>>> {
-        let id = if let Some(value) = parser::one_byte(&mut self.offset, &self.bytes)? {
+    pub fn parse(&mut self) -> Result<Option<Section<&I>>> {
+        let id = if let Some(value) = parser::one_byte(&mut self.offset, &self.input)? {
             value
         } else {
             return Ok(None);
         };
 
         let content_length = u64::from(
-            parser::leb128::u32(&mut self.offset, &self.bytes).context("section content size")?,
+            parser::leb128::u32(&mut self.offset, &self.input).context("section content size")?,
         );
 
-        let contents = Window::new(&self.bytes, self.offset, content_length);
+        let contents = Window::with_offset_and_length(&self.input, self.offset, content_length);
 
         // TODO: Duplicate code w/ leb128, increment offset
         // self.parser
@@ -148,17 +148,17 @@ impl<B: Bytes> SectionSequence<B> {
         Ok(Some(Section { id, contents }))
     }
 
-    pub(crate) fn borrowed(&self) -> SectionSequence<&B> {
+    pub(crate) fn borrowed(&self) -> SectionSequence<&I> {
         SectionSequence {
             offset: self.offset,
-            bytes: &self.bytes,
+            input: &self.input,
         }
     }
 
     /// Returns a [`Debug`] implementation that attempts to interpret the sequence of sections as a
     /// WebAssembly module's sections.
     #[inline]
-    pub fn debug_module(&self) -> DebugModule<'_, B> {
+    pub fn debug_module(&self) -> DebugModule<'_, I> {
         DebugModule::new(self)
     }
 
@@ -166,13 +166,13 @@ impl<B: Bytes> SectionSequence<B> {
     /// sequence of sections as a WebAssembly module's sections, and writing the corresponding
     /// [WebAssembly text](https://webassembly.github.io/spec/core/text/index.html).
     #[inline]
-    pub fn display_module(&self) -> DisplayModule<'_, B> {
+    pub fn display_module(&self) -> DisplayModule<'_, I> {
         DisplayModule::new(self)
     }
 }
 
-impl<B: Clone + Bytes> Iterator for SectionSequence<B> {
-    type Item = Result<Section<B>>;
+impl<I: Clone + Input> Iterator for SectionSequence<I> {
+    type Item = Result<Section<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {
@@ -183,9 +183,9 @@ impl<B: Clone + Bytes> Iterator for SectionSequence<B> {
     }
 }
 
-impl<B: Clone + Bytes> core::iter::FusedIterator for SectionSequence<B> {}
+impl<I: Clone + Input> core::iter::FusedIterator for SectionSequence<I> {}
 
-impl<B: Bytes> Debug for SectionSequence<B> {
+impl<I: Input> Debug for SectionSequence<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

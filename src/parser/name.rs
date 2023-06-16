@@ -1,7 +1,7 @@
 //! Types and functions for parsing UTF-8 strings from [`Bytes`].
 
 use crate::{
-    bytes::{self, Bytes},
+    input::{self, Input},
     parser::{self, ResultExt as _},
 };
 
@@ -14,24 +14,24 @@ pub use error::{InvalidCodePoint, NameError};
 
 /// A UTF-8 string [name](https://webassembly.github.io/spec/core/binary/values.html#names).
 #[derive(Clone, Copy)]
-pub struct Name<B: Bytes> {
-    bytes: B,
+pub struct Name<I: Input> {
+    input: I,
     offset: u64,
     length: u32,
 }
 
-impl<B: Bytes> Name<B> {
-    /// Reads a length-prefixed UTF-8 string from the given [`Bytes`], starting at the given
+impl<I: Input> Name<I> {
+    /// Reads a length-prefixed UTF-8 string from the given [`Input`], starting at the given
     /// `offset`.
     ///
     /// # Error
     ///
     /// Returns an error if the length could not be parsed.
-    pub fn new(bytes: B, offset: &mut u64) -> parser::Result<Self> {
+    pub fn new(input: I, offset: &mut u64) -> parser::Result<Self> {
         Ok(Self {
-            length: parser::leb128::u32(offset, &bytes).context("string length")?,
+            length: parser::leb128::u32(offset, &input).context("string length")?,
             offset: *offset,
-            bytes,
+            input,
         })
     }
 
@@ -50,7 +50,7 @@ impl<B: Bytes> Name<B> {
     /// Returns an iterator over the [`char`]s of the [`Name`], returning a [`NameError`] for
     /// invalid code points or failures retrieving [`Bytes`].
     #[inline]
-    pub fn chars(self) -> Chars<B> {
+    pub fn chars(self) -> Chars<I> {
         Chars::new(self)
     }
 
@@ -58,14 +58,14 @@ impl<B: Bytes> Name<B> {
     /// [`char::REPLACEMENT_CHARACTER`] for each invalid code point or failure to retrieve
     /// [`Bytes`].
     #[inline]
-    pub fn chars_lossy(self) -> CharsLossy<B> {
+    pub fn chars_lossy(self) -> CharsLossy<I> {
         CharsLossy::new(Chars::new(self))
     }
 
     /// Borrows the underlying [`Bytes`] to create a copy of the [`Name`].
-    pub fn borrowed(&self) -> Name<&B> {
+    pub fn borrowed(&self) -> Name<&I> {
         Name {
-            bytes: &self.bytes,
+            input: &self.input,
             offset: self.offset,
             length: self.length,
         }
@@ -87,18 +87,18 @@ impl<B: Bytes> Name<B> {
 
         let destination: &'b mut [u8] = &mut buffer[0..length];
 
-        self.bytes
+        self.input
             .read_exact_at(self.offset, destination)
             .context("string contents")?;
 
         Ok(destination)
     }
 
-    /// Returns the contents of the [`Name`] as a [`Window`](bytes::Window).
-    pub fn into_bytes_window(self) -> bytes::Window<B> {
+    /// Returns the contents of the [`Name`] as a [`Window`](input::Window).
+    pub fn into_bytes_window(self) -> input::Window<I> {
         let offset = self.offset;
         let length = self.length();
-        bytes::Window::new(self.bytes, offset, length)
+        input::Window::with_offset_and_length(self.input, offset, length)
     }
 
     /// Attempts to compare this [`Name`] to a [`str`]ing, returning `true` if they are equal.
@@ -115,37 +115,37 @@ impl<B: Bytes> Name<B> {
     }
 }
 
-impl<B: Bytes + Clone> Name<&B> {
-    pub(crate) fn really_cloned(&self) -> Name<B> {
+impl<I: Input + Clone> Name<&I> {
+    pub(crate) fn really_cloned(&self) -> Name<I> {
         Name {
-            bytes: self.bytes.clone(),
+            input: self.input.clone(),
             offset: self.offset,
             length: self.length,
         }
     }
 }
 
-impl<B: Bytes> Name<bytes::Window<B>> {
-    pub(crate) fn flatten_windowed(self) -> Name<B> {
+impl<I: Input> Name<input::Window<I>> {
+    pub(crate) fn flatten_windowed(self) -> Name<I> {
         let mut length = core::cmp::min(
             self.length,
-            u32::try_from(self.bytes.length()).unwrap_or(u32::MAX),
+            u32::try_from(self.input.length()).unwrap_or(u32::MAX),
         );
 
-        if self.offset > self.bytes.base() + self.bytes.length() {
+        if self.offset > self.input.base() + self.input.length() {
             length = 0;
         }
 
         Name {
             offset: self.offset,
             length,
-            bytes: self.bytes.into_inner(),
+            input: self.input.into_inner(),
         }
     }
 }
 
 #[cfg(feature = "alloc")]
-impl<B: Bytes> Name<B> {
+impl<I: Input> Name<I> {
     /// Allocates a byte vector to contain the contents of the [`Name`].
     ///
     /// # Error
@@ -170,9 +170,9 @@ impl<B: Bytes> Name<B> {
 }
 
 /// Parses a UTF-8 string [`Name`].
-pub fn parse<B: Bytes>(offset: &mut u64, bytes: B) -> parser::Result<Name<B>> {
-    let name = Name::new(bytes, offset)?;
-    bytes::increment_offset(offset, name.length() as usize)?;
+pub fn parse<I: Input>(offset: &mut u64, input: I) -> parser::Result<Name<I>> {
+    let name = Name::new(input, offset)?;
+    input::increment_offset(offset, name.length() as usize)?;
     Ok(name)
 }
 
@@ -184,7 +184,7 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
         if let Ok(length) = u32::try_from(actual_length) {
             Ok(Self {
                 length,
-                bytes,
+                input: bytes,
                 offset: 0,
             })
         } else {
@@ -216,8 +216,8 @@ impl<'a> TryFrom<&'a str> for Name<&'a [u8]> {
     }
 }
 
-impl<B: Bytes> IntoIterator for Name<B> {
-    type IntoIter = Chars<B>;
+impl<I: Input> IntoIterator for Name<I> {
+    type IntoIter = Chars<I>;
     type Item = Result<char, NameError>;
 
     #[inline]

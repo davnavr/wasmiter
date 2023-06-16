@@ -1,10 +1,10 @@
 use crate::{
-    bytes::Bytes,
+    input::Input,
     parser::name::{self, CharsLossy},
 };
 use core::fmt::{Debug, Display, Formatter, Result, Write as _};
 
-impl<B: Bytes> CharsLossy<B> {
+impl<I: Input> CharsLossy<I> {
     fn fmt_debug(self, f: &mut Formatter<'_>) -> Result {
         f.write_char('"')?;
 
@@ -33,37 +33,37 @@ impl<B: Bytes> CharsLossy<B> {
     }
 }
 
-impl<B: Bytes> Debug for CharsLossy<B> {
+impl<I: Input> Debug for CharsLossy<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.borrowed().fmt_debug(f)
     }
 }
 
-impl<B: Bytes> Display for CharsLossy<B> {
+impl<I: Input> Display for CharsLossy<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.borrowed().fmt_display(f)
     }
 }
 
-impl<B: Bytes> Debug for name::Chars<B> {
+impl<I: Input> Debug for name::Chars<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         CharsLossy::new(self.borrowed()).fmt_debug(f)
     }
 }
 
-impl<B: Bytes> Display for name::Chars<B> {
+impl<I: Input> Display for name::Chars<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         CharsLossy::new(self.borrowed()).fmt_display(f)
     }
 }
 
-impl<B: Bytes> Debug for name::Name<B> {
+impl<I: Input> Debug for name::Name<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.borrowed().chars_lossy().fmt_debug(f)
     }
 }
 
-impl<B: Bytes> Display for name::Name<B> {
+impl<I: Input> Display for name::Name<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.borrowed().chars_lossy().fmt_display(f)
     }

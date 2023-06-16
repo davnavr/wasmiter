@@ -3,7 +3,7 @@ use crate::{
     wat::{self, Wat},
 };
 
-impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
+impl<B: crate::input::Input> Wat for crate::sections::DisplayModule<'_, B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
         w.open_paren();
         w.write_str("module");
@@ -54,13 +54,7 @@ impl<B: crate::bytes::Bytes> Wat for crate::sections::DisplayModule<'_, B> {
                         contents.base(),
                         contents.base() + contents.length() - 1,
                     );
-                    writeln!(
-                        w,
-                        "{:#?}",
-                        crate::bytes::DebugBytes::from(crate::bytes::BytesSlice::from_window(
-                            contents
-                        ))
-                    );
+                    writeln!(w, "{:#}", crate::input::HexDump::from(contents));
                     w.write_str(";)");
                     writeln!(w);
                 }

@@ -1,5 +1,5 @@
 use crate::{
-    bytes::Bytes,
+    input::Input,
     parser::{self, Offset, ResultExt as _},
 };
 
@@ -7,31 +7,31 @@ use crate::{
 /// WebAssembly format as a
 /// [`vec` or vector](https://webassembly.github.io/spec/core/binary/conventions.html#vectors).
 #[derive(Clone, Copy)]
-pub struct Vector<O: Offset, B: Bytes> {
+pub struct Vector<O: Offset, I: Input> {
     total: u32,
     remaining: u32,
     offset: O,
-    bytes: B,
+    input: I,
 }
 
-impl<O: Offset, B: Bytes> Vector<O, B> {
+impl<O: Offset, I: Input> Vector<O, I> {
     /// Constructs a new [`Vector`] with the given `count`, whose elements start at the given
-    /// `offset` into the `Bytes`.
-    pub fn new(count: u32, offset: O, bytes: B) -> Self {
+    /// `offset` into the [`Input`].
+    pub fn new(count: u32, offset: O, input: I) -> Self {
         Self {
             total: count,
             remaining: count,
             offset,
-            bytes,
+            input,
         }
     }
 
-    /// Parses the given [`Bytes`] to obtain the `u32` count of elements.
-    pub fn parse(mut offset: O, bytes: B) -> parser::Result<Self> {
+    /// Parses the given [`Input`] to obtain the `u32` count of elements.
+    pub fn parse(mut offset: O, input: I) -> parser::Result<Self> {
         let count =
-            parser::leb128::u32(offset.offset_mut(), &bytes).context("vector element count")?;
+            parser::leb128::u32(offset.offset_mut(), &input).context("vector element count")?;
 
-        Ok(Self::new(count, offset, bytes))
+        Ok(Self::new(count, offset, input))
     }
 
     /// Gets the expected remaining number of elements in the [`Vector`].
@@ -56,7 +56,7 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
     /// See [`Vector::advance`] for more information.
     pub fn advance_with_index<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
-        F: FnOnce(u32, &'a mut u64, &'a B) -> Result<T, E>,
+        F: FnOnce(u32, &'a mut u64, &'a I) -> Result<T, E>,
     {
         if self.remaining == 0 {
             return None;
@@ -65,7 +65,7 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
         let result = f(
             self.total - self.remaining,
             self.offset.offset_mut(),
-            &self.bytes,
+            &self.input,
         );
 
         if result.is_ok() {
@@ -86,24 +86,24 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
     #[inline]
     pub fn advance<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
-        F: FnOnce(&'a mut u64, &'a B) -> Result<T, E>,
+        F: FnOnce(&'a mut u64, &'a I) -> Result<T, E>,
     {
         self.advance_with_index(|_, offset, bytes| f(offset, bytes))
     }
 
-    /// Returns a clone of the [`Vector`] by borrowing the underlying [`Bytes`].
-    pub fn borrowed(&self) -> Vector<u64, &B> {
+    /// Returns a clone of the [`Vector`] by borrowing the underlying [`Input`].
+    pub fn borrowed(&self) -> Vector<u64, &I> {
         Vector {
             total: self.total,
             remaining: self.remaining,
             offset: self.offset.offset(),
-            bytes: &self.bytes,
+            input: &self.input,
         }
     }
 
     #[inline]
-    pub(crate) fn bytes(&self) -> &B {
-        &self.bytes
+    pub(crate) fn input(&self) -> &I {
+        &self.input
     }
 
     #[inline]
@@ -112,18 +112,18 @@ impl<O: Offset, B: Bytes> Vector<O, B> {
     }
 }
 
-impl<O: Offset, B: Clone + Bytes> Vector<O, &B> {
-    pub(crate) fn dereferenced(&self) -> Vector<u64, B> {
+impl<O: Offset, I: Clone + Input> Vector<O, &I> {
+    pub(crate) fn dereferenced(&self) -> Vector<u64, I> {
         Vector {
             total: self.total,
             remaining: self.remaining,
             offset: self.offset.offset(),
-            bytes: self.bytes.clone(),
+            input: self.input.clone(),
         }
     }
 }
 
-impl<O: Offset, B: Bytes> core::fmt::Debug for Vector<O, B> {
+impl<O: Offset, I: Input> core::fmt::Debug for Vector<O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Vector")
             .field("remaining", &self.remaining)

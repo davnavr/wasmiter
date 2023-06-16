@@ -1,6 +1,6 @@
 use crate::{
-    bytes::{Bytes, Window},
     component,
+    input::{Input, Window},
     instruction_set::InstructionSequence,
     parser::{self, ResultExt as _, Vector},
 };
@@ -18,12 +18,12 @@ use core::fmt::{Debug, Formatter};
 ///
 /// [*code section*]: https://webassembly.github.io/spec/core/binary/modules.html#code-section
 #[derive(Clone, Copy)]
-pub struct Code<B: Bytes> {
+pub struct Code<I: Input> {
     index: u32,
-    content: Window<B>,
+    content: Window<I>,
 }
 
-impl<B: Bytes> Code<B> {
+impl<I: Input> Code<I> {
     /// The index of this *code section* entry.
     #[inline]
     pub fn index(&self) -> u32 {
@@ -32,7 +32,7 @@ impl<B: Bytes> Code<B> {
 
     /// Gets the binary contents of this *code section* entry.
     #[inline]
-    pub fn content(&self) -> &Window<B> {
+    pub fn content(&self) -> &Window<I> {
         &self.content
     }
 
@@ -46,8 +46,8 @@ impl<B: Bytes> Code<B> {
     pub fn read<Y, Z, E, L, C>(&self, locals_f: L, code_f: C) -> Result<Z, E>
     where
         E: From<parser::Error>,
-        L: FnOnce(&mut component::Locals<&mut u64, &Window<B>>) -> Result<Y, E>,
-        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<B>>) -> Result<Z, E>,
+        L: FnOnce(&mut component::Locals<&mut u64, &Window<I>>) -> Result<Y, E>,
+        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<I>>) -> Result<Z, E>,
     {
         let mut offset = self.content.base();
         let mut locals = component::Locals::new(&mut offset, &self.content)?;
@@ -72,17 +72,17 @@ impl<B: Bytes> Code<B> {
     }
 }
 
-impl<B: Bytes + Clone> Code<&B> {
+impl<I: Input + Clone> Code<&I> {
     /// Clones the underlying [`Bytes`] of this *code section* entry.
-    pub fn cloned(&self) -> Code<B> {
+    pub fn cloned(&self) -> Code<I> {
         Code {
             index: self.index,
-            content: self.content.cloned(),
+            content: (&self.content).into(),
         }
     }
 }
 
-impl<B: Bytes> Debug for Code<B> {
+impl<I: Input> Debug for Code<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut s = f.debug_struct("Func");
         let result = self.read(
@@ -109,23 +109,23 @@ impl<B: Bytes> Debug for Code<B> {
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
-pub struct CodeSection<B: Bytes> {
-    entries: Vector<u64, B>,
+pub struct CodeSection<I: Input> {
+    entries: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for CodeSection<B> {
+impl<I: Input> From<Vector<u64, I>> for CodeSection<I> {
     #[inline]
-    fn from(entries: Vector<u64, B>) -> Self {
+    fn from(entries: Vector<u64, I>) -> Self {
         Self { entries }
     }
 }
 
-impl<B: Bytes> CodeSection<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *code section* of a module, which
+impl<I: Input> CodeSection<I> {
+    /// Uses the given [`Input`] to read the contents of the *code section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(offset: u64, bytes: B) -> parser::Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> parser::Result<Self> {
+        Vector::parse(offset, input)
             .context("at start of code section")
             .map(Self::from)
     }
@@ -138,15 +138,15 @@ impl<B: Bytes> CodeSection<B> {
     }
 
     /// Parses the next entry in the *code section*.
-    pub fn parse(&mut self) -> parser::Result<Option<Code<&B>>> {
+    pub fn parse(&mut self) -> parser::Result<Option<Code<&I>>> {
         self.entries
             .advance_with_index(|index, offset, bytes| {
                 let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
-                let content = Window::new(bytes, *offset, size);
+                let content = Window::with_offset_and_length(bytes, *offset, size);
 
                 *offset = offset.checked_add(size).ok_or_else(|| {
                     crate::parser_bad_input!(
-                        crate::bytes::offset_overflowed(),
+                        crate::input::offset_overflowed(*offset),
                         "unable to advance offset to read next code section entry"
                     )
                 })?;
@@ -158,13 +158,13 @@ impl<B: Bytes> CodeSection<B> {
     }
 
     #[inline]
-    pub(super) fn borrowed(&self) -> CodeSection<&B> {
+    pub(super) fn borrowed(&self) -> CodeSection<&I> {
         self.entries.borrowed().into()
     }
 }
 
-impl<B: Clone + Bytes> Iterator for CodeSection<B> {
-    type Item = parser::Result<Code<B>>;
+impl<I: Clone + Input> Iterator for CodeSection<I> {
+    type Item = parser::Result<Code<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {
@@ -180,9 +180,9 @@ impl<B: Clone + Bytes> Iterator for CodeSection<B> {
     }
 }
 
-impl<B: Clone + Bytes> core::iter::FusedIterator for CodeSection<B> {}
+impl<I: Clone + Input> core::iter::FusedIterator for CodeSection<I> {}
 
-impl<B: Bytes> Debug for CodeSection<B> {
+impl<I: Input> Debug for CodeSection<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self.borrowed()).finish()
     }

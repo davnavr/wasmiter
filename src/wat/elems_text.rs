@@ -1,6 +1,6 @@
-use crate::{bytes::Bytes, component::ElementInit, component::ElementMode, wat};
+use crate::{component::ElementInit, component::ElementMode, input::Input, wat};
 
-impl<B: Bytes> wat::Wat for crate::component::ElemsComponent<B> {
+impl<I: Input> wat::Wat for crate::component::ElemsComponent<I> {
     fn write(mut self, mut w: &mut wat::Writer) -> wat::Parsed<()> {
         for i in (0u32..).flat_map(crate::index::ElemIdx::try_from) {
             let result = self.parse(

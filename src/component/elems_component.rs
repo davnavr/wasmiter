@@ -1,7 +1,7 @@
 use crate::{
-    bytes::Bytes,
     component::{self, IndexVector},
     index::{self, TableIdx},
+    input::Input,
     instruction_set::InstructionSequence,
     parser::{self, Offset, Result, ResultExt as _, Vector},
 };
@@ -9,20 +9,20 @@ use core::fmt::{Debug, Formatter};
 
 /// Represents a vector of expressions that evaluate to references in an
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
-pub struct ElementExpressions<O: Offset, B: Bytes> {
-    expressions: Vector<O, B>,
+pub struct ElementExpressions<O: Offset, I: Input> {
+    expressions: Vector<O, I>,
 }
 
-impl<O: Offset, B: Bytes> From<Vector<O, B>> for ElementExpressions<O, B> {
+impl<O: Offset, I: Input> From<Vector<O, I>> for ElementExpressions<O, I> {
     #[inline]
-    fn from(expressions: Vector<O, B>) -> Self {
+    fn from(expressions: Vector<O, I>) -> Self {
         Self { expressions }
     }
 }
 
-impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
-    fn new(offset: O, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+impl<O: Offset, I: Input> ElementExpressions<O, I> {
+    fn new(offset: O, input: I) -> Result<Self> {
+        Vector::parse(offset, input)
             .context("at start of element segment expressions")
             .map(Self::from)
     }
@@ -30,12 +30,12 @@ impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
     /// Parses the next expression.
     pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
     where
-        F: FnOnce(&mut InstructionSequence<&mut u64, &B>) -> Result<T>,
+        F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> Result<T>,
     {
         self.expressions
-            .advance(|offset, bytes| {
+            .advance(|offset, input| {
                 let mut offset_cell = *offset;
-                let mut expression = InstructionSequence::new(&mut offset_cell, bytes);
+                let mut expression = InstructionSequence::new(&mut offset_cell, input);
                 let result = f(&mut expression)?;
                 let (_, final_offset) = expression.finish()?;
                 *offset = *final_offset;
@@ -50,12 +50,12 @@ impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
         Ok(())
     }
 
-    fn borrowed(&self) -> ElementExpressions<u64, &B> {
+    fn borrowed(&self) -> ElementExpressions<u64, &I> {
         self.expressions.borrowed().into()
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
+impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut borrowed = self.borrowed();
         let mut list = f.debug_list();
@@ -80,14 +80,14 @@ impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
 
 /// Represents the references within an
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
-pub enum ElementInit<O: Offset, B: Bytes> {
+pub enum ElementInit<O: Offset, I: Input> {
     /// A vector of functions to create `funcref` elements from.
-    Functions(IndexVector<index::FuncIdx, O, B>),
+    Functions(IndexVector<index::FuncIdx, O, I>),
     /// A vector of expressions that evaluate to references.
-    Expressions(crate::types::RefType, ElementExpressions<O, B>),
+    Expressions(crate::types::RefType, ElementExpressions<O, I>),
 }
 
-impl<O: Offset, B: Bytes> ElementInit<O, B> {
+impl<O: Offset, I: Input> ElementInit<O, I> {
     fn finish(self) -> Result<()> {
         match self {
             Self::Functions(functions) => {
@@ -99,7 +99,7 @@ impl<O: Offset, B: Bytes> ElementInit<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
+impl<O: Offset, I: Input> Debug for ElementInit<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Functions(functions) => f.debug_tuple("Functions").field(functions).finish(),
@@ -113,7 +113,7 @@ impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
 }
 
 /// Specifies a kind of [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
-pub enum ElementMode<O: Offset, B: Bytes> {
+pub enum ElementMode<O: Offset, I: Input> {
     /// A **passive** element segment's elements are copied to a table using the
     /// [`table.init`](crate::instruction_set::Instruction::TableInit) instruction.
     Passive,
@@ -121,13 +121,13 @@ pub enum ElementMode<O: Offset, B: Bytes> {
     /// expressed offset specified by an expression, during
     /// [instantiation](https://webassembly.github.io/spec/core/exec/modules.html#exec-instantiation)
     /// of the module.
-    Active(TableIdx, InstructionSequence<O, B>),
+    Active(TableIdx, InstructionSequence<O, I>),
     /// A **declarative** data segment cannot be used at runtime. It can be used as a hint to
     /// indicate that references to the given elements will be used in code later in the module.
     Declarative,
 }
 
-impl<O: Offset, B: Bytes> ElementMode<O, B> {
+impl<O: Offset, I: Input> ElementMode<O, I> {
     fn finish(self) -> Result<()> {
         match self {
             Self::Passive | Self::Declarative => (),
@@ -139,7 +139,7 @@ impl<O: Offset, B: Bytes> ElementMode<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
+impl<O: Offset, I: Input> Debug for ElementMode<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Passive => f.debug_tuple("Passive").finish(),
@@ -158,19 +158,19 @@ impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
 /// WebAssembly module, stored in and parsed from the
 /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
 #[derive(Clone, Copy)]
-pub struct ElemsComponent<B: Bytes> {
-    elements: Vector<u64, B>,
+pub struct ElemsComponent<I: Input> {
+    elements: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for ElemsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for ElemsComponent<I> {
     #[inline]
-    fn from(elements: Vector<u64, B>) -> Self {
+    fn from(elements: Vector<u64, I>) -> Self {
         Self { elements }
     }
 }
 
-fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
-    match parser::one_byte_exact(offset, bytes).context("elemkind")? {
+fn elem_kind<I: Input>(offset: &mut u64, input: I) -> Result<()> {
+    match parser::one_byte_exact(offset, input).context("elemkind")? {
         0 => Ok(()),
         bad => Err(crate::parser_bad_format!(
             "{bad:#04X} is not a valid elemkind"
@@ -178,20 +178,20 @@ fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
     }
 }
 
-impl<B: Bytes> ElemsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *element section* of a module, starting
+impl<I: Input> ElemsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *element section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Result<Self> {
+        Vector::parse(offset, input)
             .context("at start of element section")
             .map(Self::from)
     }
 
     /// Parses the next element segment in the section.
-    pub fn parse<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Option<Z>>
+    pub fn parse<Y, Z, M, E>(&mut self, mode_f: M, init_f: E) -> Result<Option<Z>>
     where
-        M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
-        I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
+        M: FnOnce(&mut ElementMode<&mut u64, &I>) -> Result<Y>,
+        E: FnOnce(Y, &mut ElementInit<&mut u64, &I>) -> Result<Z>,
     {
         self.elements
             .advance(|offset, bytes| {
@@ -335,23 +335,23 @@ impl<B: Bytes> ElemsComponent<B> {
     }
 
     #[inline]
-    pub(crate) fn borrowed(&self) -> ElemsComponent<&B> {
+    pub(crate) fn borrowed(&self) -> ElemsComponent<&I> {
         self.elements.borrowed().into()
     }
 }
 
-impl<B: Bytes> Debug for ElemsComponent<B> {
+impl<I: Input> Debug for ElemsComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut elems = self.borrowed();
 
         let mut list = f.debug_list();
 
-        struct Elem<'a, 'b, 'c, 'd, 'e, B: Bytes> {
-            mode: ElementMode<u64, &'a B>,
-            elements: &'b mut ElementInit<&'c mut u64, &'d &'e B>,
+        struct Elem<'a, 'b, 'c, 'd, 'e, I: Input> {
+            mode: ElementMode<u64, &'a I>,
+            elements: &'b mut ElementInit<&'c mut u64, &'d &'e I>,
         }
 
-        impl<B: Bytes> Debug for Elem<'_, '_, '_, '_, '_, B> {
+        impl<I: Input> Debug for Elem<'_, '_, '_, '_, '_, I> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("ElementSegment")
                     .field("mode", &self.mode)

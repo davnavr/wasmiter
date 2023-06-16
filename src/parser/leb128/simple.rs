@@ -4,7 +4,7 @@
 //! This API is **an implementation detail and is not stable**, it is only made public for use in
 //! benchmarks.
 
-use crate::{bytes::Bytes, parser::Result};
+use crate::{input::Input, parser::Result};
 
 #[inline]
 fn increment_offset(offset: &mut u64) -> Result<()> {
@@ -12,7 +12,7 @@ fn increment_offset(offset: &mut u64) -> Result<()> {
         *offset = incremented;
         Ok(())
     } else {
-        Err(crate::bytes::offset_overflowed().into())
+        Err(crate::input::offset_overflowed(*offset).into())
     }
 }
 
@@ -30,12 +30,12 @@ fn next_byte<'a>(
 
 macro_rules! unsigned {
     ($(fn $name:ident => $ty:ty;)*) => {$(
-        pub fn $name<B: Bytes>(offset: &mut u64, bytes: B) -> Result<$ty> {
+        pub fn $name<I: Input>(offset: &mut u64, input: I) -> Result<$ty> {
             const BITS: u8 = <$ty>::BITS as u8;
             const MAX_BYTE_WIDTH: u8 = (BITS / 7) + 1;
 
             let mut buffer = [0u8; MAX_BYTE_WIDTH as usize];
-            let input = bytes.read_at(*offset, &mut buffer)?;
+            let input = input.read_at(*offset, &mut buffer)?;
 
             let mut remaining = input.iter().copied();
             let mut value: $ty = 0;
@@ -68,7 +68,7 @@ unsigned! {
 }
 
 #[doc(hidden)]
-pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
+pub fn s32<I: Input>(offset: &mut u64, bytes: I) -> Result<i32> {
     let mut destination = 0u32;
     let mut buffer = [0u8; 5];
     let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
@@ -104,7 +104,7 @@ pub fn s32<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i32> {
 }
 
 #[doc(hidden)]
-pub fn s64<B: Bytes>(offset: &mut u64, bytes: B) -> Result<i64> {
+pub fn s64<I: Input>(offset: &mut u64, bytes: I) -> Result<i64> {
     let mut destination = 0u64;
     let mut buffer = [0u8; 10];
     let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
