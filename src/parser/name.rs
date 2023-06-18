@@ -1,7 +1,7 @@
 //! Types and functions for parsing UTF-8 strings from [`Bytes`].
 
 use crate::{
-    input::{self, Input},
+    input::{self, BorrowInput, Input, Window},
     parser::{self, Error, ResultExt as _},
 };
 
@@ -62,15 +62,6 @@ impl<I: Input> Name<I> {
         CharsLossy::new(Chars::new(self))
     }
 
-    /// Borrows the underlying [`Bytes`] to create a copy of the [`Name`].
-    pub fn borrowed(&self) -> Name<&I> {
-        Name {
-            input: &self.input,
-            offset: self.offset,
-            length: self.length,
-        }
-    }
-
     /// Copies the contents of the [`Name`] into the specified `buffer`.
     ///
     /// If the length of the `buffer` is less than the length, in bytes, of the [`Name`], then only
@@ -108,15 +99,38 @@ impl<I: Input> Name<I> {
     /// Returns an error if the name bytes could not be feteched from the [`Input`].
     #[inline]
     pub fn try_eq_str(&self, s: &str) -> parser::Result<bool> {
-        self.borrowed()
+        self.borrow_input()
             .into_bytes_window()
             .try_eq_at(self.offset, s.as_bytes())
             .map_err(Into::into)
     }
 }
 
-impl<I: Input + Clone> Name<&I> {
-    pub(crate) fn really_cloned(&self) -> Name<I> {
+impl<I: Input> input::HasInput<I> for Name<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        &self.input
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Name<I> {
+    type Borrowed = Name<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Name<&'a I> {
+        Name {
+            input: &self.input,
+            offset: self.offset,
+            length: self.length,
+        }
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> input::CloneInput<'a, I> for Name<&'a I> {
+    type Cloned = Name<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Name<I> {
         Name {
             input: self.input.clone(),
             offset: self.offset,
@@ -125,21 +139,29 @@ impl<I: Input + Clone> Name<&I> {
     }
 }
 
-impl<I: Input> Name<input::Window<I>> {
-    pub(crate) fn flatten_windowed(self) -> Name<I> {
+impl<I: Input> From<Name<I>> for Window<I> {
+    /// Converts a [`Name`] into a [`Window`] by calling [`Name::into_bytes_window`].
+    #[inline]
+    fn from(name: Name<I>) -> Self {
+        name.into_bytes_window()
+    }
+}
+
+impl<I: Input> From<Name<input::Window<I>>> for Name<I> {
+    fn from(name: Name<input::Window<I>>) -> Name<I> {
         let mut length = core::cmp::min(
-            self.length,
-            u32::try_from(self.input.length()).unwrap_or(u32::MAX),
+            name.length,
+            u32::try_from(name.input.length()).unwrap_or(u32::MAX),
         );
 
-        if self.offset > self.input.base() + self.input.length() {
+        if name.offset > name.input.base() + name.input.length() {
             length = 0;
         }
 
         Name {
-            offset: self.offset,
+            offset: name.offset,
             length,
-            input: self.input.into_inner(),
+            input: name.input.into_inner(),
         }
     }
 }

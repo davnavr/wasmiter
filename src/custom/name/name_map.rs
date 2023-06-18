@@ -1,7 +1,7 @@
 use crate::{
     custom::name::NameAssoc,
     index::Index,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
 };
 
@@ -52,13 +52,6 @@ impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
             .transpose()
     }
 
-    fn borrowed(&self) -> NameMap<N, u64, &I> {
-        NameMap {
-            order: self.order,
-            entries: self.entries.borrowed(),
-        }
-    }
-
     /// Parses all remaining entries in the [`NameMap`].
     pub fn finish(mut self) -> Result<O> {
         while self.parse()?.is_some() {}
@@ -66,14 +59,38 @@ impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
     }
 }
 
-impl<N: Index, O: Offset, I: Clone + Input> NameMap<N, O, &I> {
-    pub(super) fn dereferenced(&self) -> NameMap<N, u64, I> {
+impl<N: Index, O: Offset, I: Input> HasInput<I> for NameMap<N, O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.entries.input()
+    }
+}
+
+impl<'a, N: Index, O: Offset, I: Input + 'a> BorrowInput<'a, I> for NameMap<N, O, I> {
+    type Borrowed = NameMap<N, u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         NameMap {
             order: self.order,
-            entries: self.entries.dereferenced(),
+            entries: self.entries.borrow_input(),
         }
     }
 }
+
+impl<'a, N: Index, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for NameMap<N, O, &'a I> {
+    type Cloned = NameMap<N, u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        NameMap {
+            order: self.order,
+            entries: self.entries.clone_input(),
+        }
+    }
+}
+
+impl<N: Index, O: Offset, I: Clone + Input> NameMap<N, O, &I> {}
 
 impl<N: Index, O: Offset, I: Clone + Input> Iterator for NameMap<N, O, I> {
     type Item = Result<NameAssoc<N, I>>;
@@ -82,7 +99,7 @@ impl<N: Index, O: Offset, I: Clone + Input> Iterator for NameMap<N, O, I> {
         match self.parse() {
             Ok(None) => None,
             Err(e) => Some(Err(e)),
-            Ok(Some(name_assoc)) => Some(Ok(name_assoc.dereferenced())),
+            Ok(Some(name_assoc)) => Some(Ok(name_assoc.clone_input())),
         }
     }
 
@@ -96,6 +113,6 @@ impl<N: Index, O: Offset, I: Clone + Input> core::iter::FusedIterator for NameMa
 
 impl<N: Index, O: Offset, I: Input> core::fmt::Debug for NameMap<N, O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

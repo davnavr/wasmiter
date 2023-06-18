@@ -1,7 +1,7 @@
 use crate::{
     component::{Code, CodeSection, FunctionSection},
     index::TypeIdx,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input, Window},
     parser::{self, Result},
 };
 
@@ -34,13 +34,28 @@ impl<C: Input> Func<C> {
     }
 }
 
-impl<C: Input + Clone> Func<&C> {
-    /// Returns a version of the [`Func`] with the code contents cloned.
+impl<I: Input> HasInput<I> for Func<I> {
     #[inline]
-    pub fn cloned(&self) -> Func<C> {
+    fn input(&self) -> &I {
+        self.code.input()
+    }
+}
+
+impl<I: Input> HasInput<Window<I>> for Func<I> {
+    #[inline]
+    fn input(&self) -> &Window<I> {
+        self.code.input()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Func<&'a I> {
+    type Cloned = Func<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Func<I> {
         Func {
             r#type: self.r#type,
-            code: self.code.cloned(),
+            code: self.code.clone_input(),
         }
     }
 }
@@ -97,21 +112,34 @@ impl<T: Input, C: Input> FuncsComponent<T, C> {
             }
         }
     }
+}
 
-    pub(crate) fn borrowed(&self) -> FuncsComponent<&T, &C> {
+impl<T: Input, C: Input> HasInput<C> for FuncsComponent<T, C> {
+    /// Returns the [`Input`] corresponding to the **code section**.
+    #[inline]
+    fn input(&self) -> &C {
+        self.code.input()
+    }
+}
+
+impl<'a, T: Input + 'a, C: Input + 'a> BorrowInput<'a, C> for FuncsComponent<T, C> {
+    type Borrowed = FuncsComponent<&'a T, &'a C>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         FuncsComponent {
-            types: self.types.borrowed(),
-            code: self.code.borrowed(),
+            types: self.types.borrow_input(),
+            code: self.code.borrow_input(),
         }
     }
 }
 
-impl<T: Clone + Input, C: Clone + Input> Iterator for FuncsComponent<T, C> {
+impl<T: Input, C: Clone + Input> Iterator for FuncsComponent<T, C> {
     type Item = Result<Func<C>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.parse()
-            .map(|result| result.map(|i| i.cloned()))
+            .map(|result| result.map(|i| i.clone_input()))
             .transpose()
     }
 
@@ -125,10 +153,10 @@ impl<T: Clone + Input, C: Clone + Input> Iterator for FuncsComponent<T, C> {
     }
 }
 
-impl<T: Clone + Input, C: Clone + Input> core::iter::FusedIterator for FuncsComponent<T, C> {}
+impl<T: Input, C: Clone + Input> core::iter::FusedIterator for FuncsComponent<T, C> {}
 
 impl<T: Input, C: Input> core::fmt::Debug for FuncsComponent<T, C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     component, index,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{self, name::Name, Result, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
@@ -80,11 +80,20 @@ impl<'a, I: Input> Export<&'a I> {
     }
 }
 
-impl<I: Clone + Input> Export<&I> {
-    /// Clones the [`Export`] by cloning the underlying [`Bytes`].
-    pub fn cloned(&self) -> Export<I> {
+impl<I: Input> HasInput<I> for Export<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.name.input()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Export<&'a I> {
+    type Cloned = Export<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Export<I> {
         Export {
-            name: self.name.really_cloned(),
+            name: self.name.clone_input(),
             kind: self.kind,
         }
     }
@@ -132,15 +141,26 @@ impl<I: Input> ExportsComponent<I> {
             .context("within export section")
     }
 
-    #[inline]
-    pub(crate) fn borrowed(&self) -> ExportsComponent<&I> {
-        self.exports.borrowed().into()
-    }
-
     /// Gets the expected remaining number of entires in the *export section* that have yet to be parsed.
     #[inline]
     pub fn remaining_count(&self) -> u32 {
         self.exports.remaining_count()
+    }
+}
+
+impl<I: Input> HasInput<I> for ExportsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.exports.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for ExportsComponent<I> {
+    type Borrowed = ExportsComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.exports.borrow_input().into()
     }
 }
 
@@ -151,7 +171,7 @@ impl<I: Clone + Input> Iterator for ExportsComponent<I> {
         match self.parse() {
             Ok(None) => None,
             Err(e) => Some(Err(e)),
-            Ok(Some(export)) => Some(Ok(export.cloned())),
+            Ok(Some(export)) => Some(Ok(export.clone_input())),
         }
     }
 
@@ -165,6 +185,6 @@ impl<I: Clone + Input> core::iter::FusedIterator for ExportsComponent<I> {}
 
 impl<I: Input> core::fmt::Debug for ExportsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput as _, Input},
     instruction_set::{self, Instruction as Instr, InstructionSequence},
     parser::Offset,
     types::{self, BlockType},
@@ -92,7 +92,7 @@ fn instruction<I: Input>(
             w.write_char(' ');
             w.open_paren();
             w.write_str("result");
-            wat::write_types(types.borrowed(), w)?;
+            wat::write_types(types.borrow_input(), w)?;
             w.close_paren();
         }
         Instr::LocalGet(idx) | Instr::LocalSet(idx) | Instr::LocalTee(idx) => {

@@ -1,6 +1,6 @@
 use crate::{
     component, index,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::{
         self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
     },
@@ -1029,10 +1029,20 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
             Err(missing_end_instructions(self.blocks))
         }
     }
+}
 
-    /// Clones the [`InstructionSequence`], borrowing the underlying [`Bytes`].
+impl<O: Offset, I: Input> HasInput<I> for InstructionSequence<O, I> {
     #[inline]
-    pub fn borrowed(&self) -> InstructionSequence<u64, &I> {
+    fn input(&self) -> &I {
+        &self.input
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for InstructionSequence<O, I> {
+    type Borrowed = InstructionSequence<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         InstructionSequence {
             blocks: self.blocks,
             offset: self.offset.offset(),
@@ -1041,10 +1051,11 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
     }
 }
 
-impl<O: Offset, I: Clone + Input> InstructionSequence<O, &I> {
-    /// Clones the [`InstructionSequence`], calling [`Clone::clone`] on the underlying [`Bytes`].
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for InstructionSequence<O, &'a I> {
+    type Cloned = InstructionSequence<u64, I>;
+
     #[inline]
-    pub fn cloned(&self) -> InstructionSequence<u64, I> {
+    fn clone_input(&self) -> Self::Cloned {
         InstructionSequence {
             blocks: self.blocks,
             offset: self.offset.offset(),
@@ -1055,12 +1066,7 @@ impl<O: Offset, I: Clone + Input> InstructionSequence<O, &I> {
 
 impl<O: Offset, I: Input> core::fmt::Debug for InstructionSequence<O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut instructions = InstructionSequence {
-            blocks: self.blocks,
-            offset: self.offset.offset(),
-            input: &self.input,
-        };
-
+        let mut instructions = self.borrow_input();
         let mut list = f.debug_list();
         loop {
             let result = instructions.next(|i| {

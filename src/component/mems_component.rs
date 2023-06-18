@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::{Result, ResultExt, Vector},
     types::MemType,
 };
@@ -38,11 +38,21 @@ impl<I: Input> MemsComponent<I> {
     pub fn remaining_count(&self) -> u32 {
         self.types.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> MemsComponent<&I> {
-        MemsComponent {
-            types: self.types.borrowed(),
-        }
+impl<I: Input> HasInput<I> for MemsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.types.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for MemsComponent<I> {
+    type Borrowed = MemsComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     component,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{self, name::Name, Result, ResultExt as _, Vector},
     types,
 };
@@ -101,12 +101,21 @@ impl<'a, I: Input> Import<&'a I> {
     }
 }
 
-impl<I: Clone + Input> Import<&I> {
-    /// Clones the [`Import`] by cloning the underlying [`Bytes`].
-    pub fn cloned(&self) -> Import<I> {
+impl<I: Input> HasInput<I> for Import<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.name.input()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Import<&'a I> {
+    type Cloned = Import<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Import<I> {
         Import {
-            module: self.module.really_cloned(),
-            name: self.name.really_cloned(),
+            module: self.module.clone_input(),
+            name: self.name.clone_input(),
             kind: self.kind,
         }
     }
@@ -160,9 +169,21 @@ impl<I: Input> ImportsComponent<I> {
             .transpose()
             .context("within import section")
     }
+}
 
-    pub(crate) fn borrowed(&self) -> ImportsComponent<&I> {
-        self.imports.borrowed().into()
+impl<I: Input> HasInput<I> for ImportsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.imports.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for ImportsComponent<I> {
+    type Borrowed = ImportsComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.imports.borrow_input().into()
     }
 }
 
@@ -173,7 +194,7 @@ impl<I: Clone + Input> Iterator for ImportsComponent<I> {
         match self.parse() {
             Ok(None) => None,
             Err(e) => Some(Err(e)),
-            Ok(Some(import)) => Some(Ok(import.cloned())),
+            Ok(Some(import)) => Some(Ok(import.clone_input())),
         }
     }
 
@@ -187,6 +208,6 @@ impl<I: Clone + Input> core::iter::FusedIterator for ImportsComponent<I> {}
 
 impl<I: Input> Debug for ImportsComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

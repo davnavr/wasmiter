@@ -1,4 +1,4 @@
-use crate::input::{self, Input, Result};
+use crate::input::{self, BorrowInput, Input, Result};
 
 /// Adapts an [`Input`] implementation to limit the amount of bytes that can be read to a specific
 /// range.
@@ -126,31 +126,42 @@ impl<I: Input> Input for Window<I> {
     }
 }
 
-/// Borrows the underlying [`Input`].
-impl<'a, I: Input> From<&'a Window<I>> for Window<&'a I> {
-    fn from(borrow: &'a Window<I>) -> Self {
+impl<I: Input> input::HasInput<I> for Window<I> {
+    /// Calls [`Window::as_inner`] to obtain the underlying [`Input`].
+    #[inline]
+    fn input(&self) -> &I {
+        self.as_inner()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Window<I> {
+    type Borrowed = Window<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Window<&'a I> {
         Window {
-            base: borrow.base,
-            length: borrow.length,
-            inner: &borrow.inner,
+            base: self.base,
+            length: self.length,
+            inner: &self.inner,
         }
     }
 }
 
-/// Clones the underlying [`Input`].
-impl<I: Clone + Input> From<&Window<&I>> for Window<I> {
-    fn from(borrowed: &Window<&I>) -> Self {
+impl<'a, I: Clone + Input + 'a> input::CloneInput<'a, I> for Window<&'a I> {
+    type Cloned = Window<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Window<I> {
         Window {
-            base: borrowed.base,
-            length: borrowed.length,
-            inner: borrowed.inner.clone(),
+            base: self.base,
+            length: self.length,
+            inner: self.inner.clone(),
         }
     }
 }
 
 impl<I: Input> core::fmt::Debug for Window<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let borrow: Window<&I> = self.into();
-        core::fmt::Debug::fmt(&input::HexDump::from(borrow), f)
+        core::fmt::Debug::fmt(&input::HexDump::from(self.borrow_input()), f)
     }
 }

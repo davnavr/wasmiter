@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{self, Input},
     parser::{self, Offset, ResultExt as _},
 };
 
@@ -91,8 +91,24 @@ impl<O: Offset, I: Input> Vector<O, I> {
         self.advance_with_index(|_, offset, bytes| f(offset, bytes))
     }
 
-    /// Returns a clone of the [`Vector`] by borrowing the underlying [`Input`].
-    pub fn borrowed(&self) -> Vector<u64, &I> {
+    #[inline]
+    pub(crate) fn into_offset(self) -> O {
+        self.offset
+    }
+}
+
+impl<O: Offset, I: Input> input::HasInput<I> for Vector<O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        &self.input
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> input::BorrowInput<'a, I> for Vector<O, I> {
+    type Borrowed = Vector<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         Vector {
             total: self.total,
             remaining: self.remaining,
@@ -100,20 +116,13 @@ impl<O: Offset, I: Input> Vector<O, I> {
             input: &self.input,
         }
     }
-
-    #[inline]
-    pub(crate) fn input(&self) -> &I {
-        &self.input
-    }
-
-    #[inline]
-    pub(crate) fn into_offset(self) -> O {
-        self.offset
-    }
 }
 
-impl<O: Offset, I: Clone + Input> Vector<O, &I> {
-    pub(crate) fn dereferenced(&self) -> Vector<u64, I> {
+impl<'a, O: Offset, I: Clone + Input + 'a> input::CloneInput<'a, I> for Vector<O, &'a I> {
+    type Cloned = Vector<u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
         Vector {
             total: self.total,
             remaining: self.remaining,

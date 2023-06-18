@@ -1,6 +1,6 @@
 use crate::{
     component,
-    input::{Input, Window},
+    input::{BorrowInput, CloneInput, HasInput, Input, Window},
     instruction_set::InstructionSequence,
     parser::{self, ResultExt as _, Vector},
 };
@@ -80,12 +80,28 @@ impl<I: Input> Code<I> {
     }
 }
 
-impl<I: Input + Clone> Code<&I> {
-    /// Clones the underlying [`Bytes`] of this *code section* entry.
-    pub fn cloned(&self) -> Code<I> {
+impl<I: Input> HasInput<I> for Code<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.content.input()
+    }
+}
+
+impl<I: Input> HasInput<Window<I>> for Code<I> {
+    #[inline]
+    fn input(&self) -> &Window<I> {
+        self.content()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Code<&'a I> {
+    type Cloned = Code<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Code<I> {
         Code {
             index: self.index,
-            content: (&self.content).into(),
+            content: self.content.clone_input(),
         }
     }
 }
@@ -160,10 +176,21 @@ impl<I: Input> CodeSection<I> {
             .transpose()
             .context("within code section")
     }
+}
+
+impl<I: Input> HasInput<I> for CodeSection<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.entries.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for CodeSection<I> {
+    type Borrowed = CodeSection<&'a I>;
 
     #[inline]
-    pub(super) fn borrowed(&self) -> CodeSection<&I> {
-        self.entries.borrowed().into()
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.entries.borrow_input().into()
     }
 }
 
@@ -174,7 +201,7 @@ impl<I: Clone + Input> Iterator for CodeSection<I> {
         match self.parse() {
             Ok(None) => None,
             Err(e) => Some(Err(e)),
-            Ok(Some(code)) => Some(Ok(code.cloned())),
+            Ok(Some(code)) => Some(Ok(code.clone_input())),
         }
     }
 
@@ -188,6 +215,6 @@ impl<I: Clone + Input> core::iter::FusedIterator for CodeSection<I> {}
 
 impl<I: Input> Debug for CodeSection<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     component,
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::{self, Offset, ResultExt as _},
     types::ValType,
 };
@@ -96,24 +96,43 @@ impl<O: Offset, I: Input> Iterator for Locals<O, I> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
+        let min = self
+            .current
+            .and_then(|(count, _)| usize::try_from(count.get()).ok())
+            .unwrap_or(0);
+
         (
-            self.current
-                .and_then(|(count, _)| usize::try_from(count.get()).ok())
-                .unwrap_or(0),
-            None,
+            min,
+            usize::try_from(self.count)
+                .ok()
+                .and_then(|count| min.checked_add(count)),
         )
+    }
+}
+
+impl<O: Offset, I: Input> HasInput<I> for Locals<O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        &self.input
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for Locals<O, I> {
+    type Borrowed = Locals<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        Locals {
+            offset: self.offset.offset(),
+            input: &self.input,
+            count: self.count,
+            current: self.current,
+        }
     }
 }
 
 impl<O: Offset, I: Input> Debug for Locals<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let borrowed = Locals {
-            offset: self.offset.offset(),
-            input: &self.input,
-            count: self.count,
-            current: self.current,
-        };
-
-        f.debug_list().entries(borrowed).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

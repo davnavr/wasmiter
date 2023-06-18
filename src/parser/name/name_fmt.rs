@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, Input},
     parser::name::{self, CharsLossy},
 };
 use core::fmt::{Debug, Display, Formatter, Result, Write as _};
@@ -35,36 +35,36 @@ impl<I: Input> CharsLossy<I> {
 
 impl<I: Input> Debug for CharsLossy<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.borrowed().fmt_debug(f)
+        self.borrow_input().fmt_debug(f)
     }
 }
 
 impl<I: Input> Display for CharsLossy<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.borrowed().fmt_display(f)
+        self.borrow_input().fmt_display(f)
     }
 }
 
 impl<I: Input> Debug for name::Chars<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        CharsLossy::new(self.borrowed()).fmt_debug(f)
+        CharsLossy::new(self.borrow_input()).fmt_debug(f)
     }
 }
 
 impl<I: Input> Display for name::Chars<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        CharsLossy::new(self.borrowed()).fmt_display(f)
+        CharsLossy::new(self.borrow_input()).fmt_display(f)
     }
 }
 
 impl<I: Input> Debug for name::Name<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.borrowed().chars_lossy().fmt_debug(f)
+        self.borrow_input().chars_lossy().fmt_debug(f)
     }
 }
 
 impl<I: Input> Display for name::Name<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.borrowed().chars_lossy().fmt_display(f)
+        self.borrow_input().chars_lossy().fmt_display(f)
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     component,
     index::Index,
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::{Offset, Result, Vector},
 };
 
@@ -32,12 +32,6 @@ impl<N: Index, O: Offset, I: Input> IndexVector<N, O, I> {
         self.indices.remaining_count()
     }
 
-    /// Returns a clone of the [`IndexVector`], borrowing the underlying [`Bytes`].
-    #[inline]
-    pub fn borrowed(&self) -> IndexVector<N, u64, &I> {
-        self.indices.borrowed().into()
-    }
-
     /// Parses the remaining indices.
     pub fn finish(mut self) -> Result<O> {
         for result in &mut self {
@@ -45,6 +39,22 @@ impl<N: Index, O: Offset, I: Input> IndexVector<N, O, I> {
         }
 
         Ok(self.indices.into_offset())
+    }
+}
+
+impl<N: Index, O: Offset, I: Input> HasInput<I> for IndexVector<N, O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.indices.input()
+    }
+}
+
+impl<'a, N: Index, O: Offset, I: Input + 'a> BorrowInput<'a, I> for IndexVector<N, O, I> {
+    type Borrowed = IndexVector<N, u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.indices.borrow_input().into()
     }
 }
 
@@ -76,6 +86,6 @@ impl<N: Index, O: Offset, I: Input> core::iter::FusedIterator for IndexVector<N,
 
 impl<N: Index, O: Offset, I: Input> core::fmt::Debug for IndexVector<N, O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

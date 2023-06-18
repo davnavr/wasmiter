@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
     parser::{Result, ResultExt as _, Vector},
     types::GlobalType,
@@ -53,15 +53,27 @@ impl<I: Input> GlobalsComponent<I> {
     pub fn remaining_count(&self) -> u32 {
         self.globals.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> GlobalsComponent<&I> {
-        self.globals.borrowed().into()
+impl<I: Input> HasInput<I> for GlobalsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.globals.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for GlobalsComponent<I> {
+    type Borrowed = GlobalsComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.globals.borrow_input().into()
     }
 }
 
 impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut globals = self.borrowed();
+        let mut globals = self.borrow_input();
 
         struct Global<'a, I: Input> {
             r#type: GlobalType,
@@ -79,7 +91,7 @@ impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
 
         let mut list = f.debug_list();
         loop {
-            let result = globals.parse(|ty, init| Ok((ty, init.cloned())));
+            let result = globals.parse(|ty, init| Ok((ty, init.clone_input())));
 
             list.entry(&match result {
                 Ok(None) => break,

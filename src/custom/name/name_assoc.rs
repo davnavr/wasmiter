@@ -1,6 +1,6 @@
 use crate::{
     index::Index,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{self, name::Name, ResultExt as _},
 };
 
@@ -34,11 +34,33 @@ impl<N: Index, I: Input> NameAssoc<N, I> {
     }
 }
 
-impl<N: Index, I: Clone + Input> NameAssoc<N, &I> {
-    pub(super) fn dereferenced(&self) -> NameAssoc<N, I> {
+impl<N: Index, I: Input> HasInput<I> for NameAssoc<N, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.name.input()
+    }
+}
+
+impl<'a, N: Index, I: Input + 'a> BorrowInput<'a, I> for NameAssoc<N, I> {
+    type Borrowed = NameAssoc<N, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         NameAssoc {
             index: self.index,
-            name: self.name.really_cloned(),
+            name: self.name.borrow_input(),
+        }
+    }
+}
+
+impl<'a, N: Index, I: Clone + Input + 'a> CloneInput<'a, I> for NameAssoc<N, &'a I> {
+    type Cloned = NameAssoc<N, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        NameAssoc {
+            index: self.index,
+            name: self.name.clone_input(),
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::{Result, ResultExt, Vector},
     types::TableType,
 };
@@ -7,7 +7,7 @@ use crate::{
 /// Represents the
 /// [**tables** component](https://webassembly.github.io/spec/core/syntax/modules.html#tables) of a
 /// WebAssembly module, stored in and parsed from the
-/// [*tables section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
+/// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
 #[derive(Clone, Copy)]
 pub struct TablesComponent<I: Input> {
     types: Vector<u64, I>,
@@ -35,11 +35,21 @@ impl<I: Input> TablesComponent<I> {
     pub fn remaining_count(&self) -> u32 {
         self.types.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> TablesComponent<&I> {
-        TablesComponent {
-            types: self.types.borrowed(),
-        }
+impl<I: Input> HasInput<I> for TablesComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.types.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for TablesComponent<I> {
+    type Borrowed = TablesComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
     }
 }
 

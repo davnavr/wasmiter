@@ -1,6 +1,6 @@
 use crate::{
     index::MemIdx,
-    input::{Input, Window},
+    input::{BorrowInput, CloneInput, HasInput, Input, Window},
     instruction_set::InstructionSequence,
     parser::{self, Offset, Result, ResultExt as _, Vector},
 };
@@ -126,16 +126,27 @@ impl<I: Input> DatasComponent<I> {
     pub fn remaining_count(&self) -> u32 {
         self.entries.remaining_count()
     }
+}
+
+impl<I: Input> HasInput<I> for DatasComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.entries.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for DatasComponent<I> {
+    type Borrowed = DatasComponent<&'a I>;
 
     #[inline]
-    pub(crate) fn borrowed(&self) -> DatasComponent<&I> {
-        self.entries.borrowed().into()
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.entries.borrow_input().into()
     }
 }
 
 impl<I: Input> Debug for DatasComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut datas = self.borrowed();
+        let mut datas = self.borrow_input();
 
         struct DataSegment<'a, I: Input> {
             mode: DataMode<u64, I>,
@@ -158,7 +169,7 @@ impl<I: Input> Debug for DatasComponent<I> {
                     Ok(match mode {
                         DataMode::Passive => DataMode::Passive,
                         DataMode::Active(memory, offset) => {
-                            DataMode::Active(*memory, offset.cloned())
+                            DataMode::Active(*memory, offset.clone_input())
                         }
                     })
                 },

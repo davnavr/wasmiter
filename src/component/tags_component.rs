@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::{self, Result, ResultExt as _, Vector},
 };
 
@@ -61,11 +61,21 @@ impl<I: Input> TagsComponent<I> {
     pub fn remaining_count(&self) -> u32 {
         self.tags.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> TagsComponent<&I> {
-        TagsComponent {
-            tags: self.tags.borrowed(),
-        }
+impl<I: Input> HasInput<I> for TagsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.tags.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for TagsComponent<I> {
+    type Borrowed = TagsComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.tags.borrow_input().into()
     }
 }
 
@@ -88,6 +98,6 @@ impl<I: Input> core::iter::FusedIterator for TagsComponent<I> {}
 
 impl<I: Input> core::fmt::Debug for TagsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

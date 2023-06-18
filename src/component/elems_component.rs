@@ -1,7 +1,7 @@
 use crate::{
     component::{self, IndexVector},
     index::{self, TableIdx},
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
     parser::{self, Offset, Result, ResultExt as _, Vector},
 };
@@ -49,15 +49,27 @@ impl<O: Offset, I: Input> ElementExpressions<O, I> {
         while self.next(|_| Result::Ok(()))?.is_some() {}
         Ok(())
     }
+}
 
-    fn borrowed(&self) -> ElementExpressions<u64, &I> {
-        self.expressions.borrowed().into()
+impl<O: Offset, I: Input> HasInput<I> for ElementExpressions<O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.expressions.input()
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for ElementExpressions<O, I> {
+    type Borrowed = ElementExpressions<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.expressions.borrow_input().into()
     }
 }
 
 impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut borrowed = self.borrowed();
+        let mut borrowed = self.borrow_input();
         let mut list = f.debug_list();
         loop {
             let result = borrowed.next(|instructions| {
@@ -341,17 +353,27 @@ impl<I: Input> ElemsComponent<I> {
     pub fn remaining_count(&self) -> u32 {
         self.elements.remaining_count()
     }
+}
+
+impl<I: Input> HasInput<I> for ElemsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.elements.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for ElemsComponent<I> {
+    type Borrowed = ElemsComponent<&'a I>;
 
     #[inline]
-    pub(crate) fn borrowed(&self) -> ElemsComponent<&I> {
-        self.elements.borrowed().into()
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.elements.borrow_input().into()
     }
 }
 
 impl<I: Input> Debug for ElemsComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut elems = self.borrowed();
-
+        let mut elems = self.borrow_input();
         let mut list = f.debug_list();
 
         struct Elem<'a, 'b, 'c, 'd, 'e, I: Input> {
@@ -375,7 +397,7 @@ impl<I: Input> Debug for ElemsComponent<I> {
                         ElementMode::Passive => ElementMode::Passive,
                         ElementMode::Declarative => ElementMode::Declarative,
                         ElementMode::Active(table, offset) => {
-                            ElementMode::Active(*table, offset.cloned())
+                            ElementMode::Active(*table, offset.clone_input())
                         }
                     })
                 },

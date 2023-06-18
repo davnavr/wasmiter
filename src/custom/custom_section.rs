@@ -1,5 +1,5 @@
 use crate::{
-    input::{Input, Window},
+    input::{BorrowInput, CloneInput, HasInput, Input, Window},
     parser::{self, name::Name},
     sections::{self, Section},
 };
@@ -33,7 +33,7 @@ impl<I: Clone + Input> CustomSection<I> {
 
         Ok(match parser::name::parse(&mut new_base, &contents) {
             Ok(name) => Ok(Self {
-                name: name.really_cloned().flatten_windowed(),
+                name: name.clone_input().into(),
                 contents: Window::with_offset_and_length(
                     contents.into_inner(),
                     new_base,
@@ -58,33 +58,53 @@ impl<I: Input> CustomSection<I> {
         &self.contents
     }
 
-    /// Borrows the underlying contents of the custom section.
-    pub fn borrowed(&self) -> CustomSection<&I> {
-        CustomSection {
-            name: self.name.borrowed(),
-            contents: (&self.contents).into(),
-        }
-    }
-
     /// Consumes the [`CustomSection`], returning its contents.
     pub fn into_contents(self) -> Window<I> {
         self.contents
     }
 }
 
-impl<I: Clone + Input> CustomSection<&I> {
-    /// Clones the underlying contents of the custom section.
-    pub fn cloned(&self) -> CustomSection<I> {
+impl<I: Input> HasInput<I> for CustomSection<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.contents.input()
+    }
+}
+
+impl<I: Input> HasInput<Window<I>> for CustomSection<I> {
+    #[inline]
+    fn input(&self) -> &Window<I> {
+        &self.contents
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for CustomSection<I> {
+    type Borrowed = CustomSection<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         CustomSection {
-            name: self.name.really_cloned(),
-            contents: (&self.contents).into(),
+            name: self.name.borrow_input(),
+            contents: self.contents.borrow_input(),
+        }
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for CustomSection<&'a I> {
+    type Cloned = CustomSection<I>;
+
+    #[inline]
+    fn clone_input(&self) -> CustomSection<I> {
+        CustomSection {
+            name: self.name.clone_input(),
+            contents: self.contents.clone_input(),
         }
     }
 }
 
 impl<I: Input> Debug for CustomSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match crate::custom::KnownCustomSection::interpret(self.borrowed()) {
+        match crate::custom::KnownCustomSection::interpret(self.borrow_input()) {
             Ok(known) => Debug::fmt(&known, f),
             Err(_) => f
                 .debug_struct("CustomSection")

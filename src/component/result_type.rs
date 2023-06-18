@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{Offset, Result, Vector},
     types::ValType,
 };
@@ -29,12 +29,6 @@ impl<O: Offset, I: Input> ResultType<O, I> {
         Vector::parse(offset, input).map(Self::from)
     }
 
-    /// Returns a clone of the [`ResultType`], borrowing the underlying [`Bytes`].
-    #[inline]
-    pub fn borrowed(&self) -> ResultType<u64, &I> {
-        self.types.borrowed().into()
-    }
-
     /// Gets the remaining number of types.
     #[inline]
     pub fn remaining_count(&self) -> u32 {
@@ -51,10 +45,28 @@ impl<O: Offset, I: Input> ResultType<O, I> {
     }
 }
 
-impl<O: Offset, I: Clone + Input> ResultType<O, &I> {
+impl<O: Offset, I: Input> HasInput<I> for ResultType<O, I> {
     #[inline]
-    pub(crate) fn dereferenced(&self) -> ResultType<u64, I> {
-        self.types.dereferenced().into()
+    fn input(&self) -> &I {
+        self.types.input()
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for ResultType<O, I> {
+    type Borrowed = ResultType<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
+    }
+}
+
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for ResultType<O, &'a I> {
+    type Cloned = ResultType<u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
     }
 }
 
@@ -74,6 +86,6 @@ impl<O: Offset, I: Input> Iterator for ResultType<O, I> {
 
 impl<O: Offset, I: Input> core::fmt::Debug for ResultType<O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

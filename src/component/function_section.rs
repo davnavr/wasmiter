@@ -1,7 +1,7 @@
 use crate::{
     component::IndexVector,
     index::TypeIdx,
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::{Result, ResultExt},
 };
 
@@ -40,11 +40,21 @@ impl<I: Input> FunctionSection<I> {
     pub fn remaining_count(&self) -> u32 {
         self.indices.remaining_count()
     }
+}
 
-    pub(super) fn borrowed(&self) -> FunctionSection<&I> {
-        FunctionSection {
-            indices: self.indices.borrowed(),
-        }
+impl<I: Input> HasInput<I> for FunctionSection<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.indices.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for FunctionSection<I> {
+    type Borrowed = FunctionSection<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.indices.borrow_input().into()
     }
 }
 

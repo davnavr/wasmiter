@@ -1,4 +1,4 @@
-use crate::input::{Input, Result, Window};
+use crate::input::{BorrowInput, CloneInput, HasInput, Input, Result, Window};
 use core::{
     fmt::{Debug, Display, Formatter, LowerHex, UpperHex, Write as _},
     num::NonZeroU8,
@@ -189,21 +189,35 @@ impl<'a> From<&'a [u8]> for HexDump<&'a [u8]> {
     }
 }
 
-/// Borrows the underlying [`Input`].
-impl<'a, I: Input> From<&'a HexDump<I>> for HexDump<&'a I> {
-    fn from(borrowed: &'a HexDump<I>) -> Self {
-        HexDump {
-            window: (&borrowed.window).into(),
-        }
+impl<I: Input> HasInput<I> for HexDump<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.window.input()
     }
 }
 
-/// Clones the underlying [`Input`].
-impl<I: Clone + Input> From<&HexDump<&I>> for HexDump<I> {
-    fn from(borrowed: &HexDump<&I>) -> Self {
-        HexDump {
-            window: (&borrowed.window).into(),
-        }
+impl<I: Input> HasInput<Window<I>> for HexDump<I> {
+    #[inline]
+    fn input(&self) -> &Window<I> {
+        &self.window
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for HexDump<I> {
+    type Borrowed = HexDump<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.window.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for HexDump<&'a I> {
+    type Cloned = HexDump<I>;
+
+    #[inline]
+    fn clone_input(&self) -> HexDump<I> {
+        self.window.clone_input().into()
     }
 }
 
@@ -268,8 +282,7 @@ impl<I: Input> Display for HexDump<I> {
             writeln!(f, " 0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F")?;
         }
 
-        let hex_dump: HexDump<&I> = self.into();
-        for row in hex_dump.filter_map(Result::ok) {
+        for row in self.borrow_input().filter_map(Result::ok) {
             row.fmt_display(f, offset_width)?;
             writeln!(f)?;
         }
@@ -280,7 +293,6 @@ impl<I: Input> Display for HexDump<I> {
 
 impl<I: Input> Debug for HexDump<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let hex_dump: HexDump<&I> = self.into();
-        f.debug_list().entries(hex_dump).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

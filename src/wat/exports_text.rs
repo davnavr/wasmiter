@@ -1,8 +1,8 @@
-use crate::{component::ExportKind, wat};
+use crate::{component::ExportKind, input::BorrowInput as _, wat};
 
 impl<B: crate::input::Input> wat::Wat for crate::component::ExportsComponent<B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
-        for result in self.borrowed() {
+        for result in self.borrow_input() {
             w.open_paren();
             w.write_str("export ");
             let export = result?;

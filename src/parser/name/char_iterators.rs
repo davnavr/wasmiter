@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, HasInput, Input},
     parser::name::{InvalidCodePoint, Name, NameError},
 };
 
@@ -156,13 +156,6 @@ impl<I: Input> Chars<I> {
         }
     }
 
-    pub(super) fn borrowed(&self) -> Chars<&I> {
-        Chars {
-            name: self.name.borrowed(),
-            buffer: self.buffer,
-        }
-    }
-
     fn next_inner(&mut self) -> Result<Option<char>, NameError> {
         if self.name.length == 0 && self.buffer.saved_len() == 0 {
             return Ok(None);
@@ -175,6 +168,25 @@ impl<I: Input> Chars<I> {
         )?;
 
         self.buffer.take_char()
+    }
+}
+
+impl<I: Input> HasInput<I> for Chars<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.name.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Chars<I> {
+    type Borrowed = Chars<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Chars<&'a I> {
+        Chars {
+            name: self.name.borrow_input(),
+            buffer: self.buffer,
+        }
     }
 }
 
@@ -208,10 +220,21 @@ impl<I: Input> CharsLossy<I> {
     pub(super) fn new(inner: Chars<I>) -> CharsLossy<I> {
         Self { inner }
     }
+}
+
+impl<I: Input> HasInput<I> for CharsLossy<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.inner.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for CharsLossy<I> {
+    type Borrowed = CharsLossy<&'a I>;
 
     #[inline]
-    pub(super) fn borrowed(&self) -> CharsLossy<&I> {
-        CharsLossy::new(self.inner.borrowed())
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        CharsLossy::new(self.inner.borrow_input())
     }
 }
 

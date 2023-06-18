@@ -1,5 +1,6 @@
 use crate::{
     component::KnownSection,
+    input::BorrowInput,
     wat::{self, Wat},
 };
 
@@ -10,7 +11,7 @@ impl<B: crate::input::Input> Wat for crate::sections::DisplayModule<'_, B> {
 
         let mut function_types = None;
 
-        for result in self.as_sections().borrowed() {
+        for result in self.as_sections().borrow_input() {
             writeln!(w);
             match KnownSection::interpret(result?) {
                 Ok(known) => match known? {

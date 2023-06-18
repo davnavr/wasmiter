@@ -4,7 +4,7 @@
 
 use crate::{
     index,
-    input::{Input, Window},
+    input::{BorrowInput, CloneInput, Input, Window},
     parser::{self, AscendingOrder, ResultExt as _},
     sections::{Section, SectionSequence},
 };
@@ -169,6 +169,7 @@ impl<I: Input> NameSection<I> {
     /// # Errors
     ///
     /// `Some(Ok(Err(_)))` is returned for any parser errors or if section IDs are not in **ascending order**.
+    #[inline]
     pub fn parse(&mut self) -> Option<InterpretedNameSubsection<&I>> {
         self.parse_inner(core::convert::identity)
     }
@@ -177,15 +178,16 @@ impl<I: Input> NameSection<I> {
 impl<I: Clone + Input> Iterator for NameSection<I> {
     type Item = InterpretedNameSubsection<I>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.parse_inner(|subsec| subsec.cloned())
+        self.parse_inner(|s| s.clone_input())
     }
 }
 
 impl<I: Input> Debug for NameSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
-        for subsec in self.sections.borrowed() {
+        for subsec in self.sections.borrow_input() {
             let err;
             let unknown_subsection;
             let known_subsection;

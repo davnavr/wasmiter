@@ -1,7 +1,7 @@
 use crate::{
     custom::name::NameMap,
     index::Index,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
 };
 
@@ -63,10 +63,24 @@ impl<K: Index, V: Index, O: Offset, I: Input> IndirectNameMap<K, V, O, I> {
             .transpose()
             .context("could not parse entry in indirect name map")
     }
+}
 
-    fn borrowed(&self) -> IndirectNameMap<K, V, u64, &I> {
+impl<K: Index, V: Index, O: Offset, I: Input> HasInput<I> for IndirectNameMap<K, V, O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.entries.input()
+    }
+}
+
+impl<'a, K: Index, V: Index, O: Offset, I: Input + 'a> BorrowInput<'a, I>
+    for IndirectNameMap<K, V, O, I>
+{
+    type Borrowed = IndirectNameMap<K, V, u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         IndirectNameMap {
-            entries: self.entries.borrowed(),
+            entries: self.entries.borrow_input(),
             order: self.order,
             _marker: core::marker::PhantomData,
         }
@@ -89,13 +103,13 @@ impl<K: Index, V: Index, O: Offset, I: Input> core::fmt::Debug for IndirectNameM
             }
         }
 
-        let mut entries = self.borrowed();
+        let mut entries = self.borrow_input();
         let mut list = f.debug_list();
         loop {
             let result = entries.parse(|key, names| {
                 list.entry(&Entry {
                     key,
-                    names: names.dereferenced(),
+                    names: names.clone_input(),
                 });
                 Result::Ok(())
             });

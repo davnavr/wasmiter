@@ -1,6 +1,6 @@
 use crate::{
     component::ResultType,
-    input::Input,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{Result, ResultExt, Vector},
 };
 
@@ -48,32 +48,42 @@ impl<I: Input> TypesComponent<I> {
             })
             .transpose()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> TypesComponent<&I> {
-        TypesComponent {
-            types: self.types.borrowed(),
-        }
+impl<I: Input> HasInput<I> for TypesComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.types.input()
     }
 }
 
-struct FuncType<'a, I: Input> {
-    parameters: ResultType<u64, &'a I>,
-    results: ResultType<u64, &'a I>,
-}
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for TypesComponent<I> {
+    type Borrowed = TypesComponent<&'a I>;
 
-impl<I: Input> core::fmt::Debug for FuncType<'_, I> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("FuncType")
-            .field("parameters", &self.parameters)
-            .field("results", &self.results)
-            .finish()
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
     }
 }
 
 impl<I: Input> core::fmt::Debug for TypesComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        struct FuncType<'a, I: Input> {
+            parameters: ResultType<u64, &'a I>,
+            results: ResultType<u64, &'a I>,
+        }
+
+        impl<I: Input> core::fmt::Debug for FuncType<'_, I> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct("FuncType")
+                    .field("parameters", &self.parameters)
+                    .field("results", &self.results)
+                    .finish()
+            }
+        }
+
         let mut list = f.debug_list();
-        let mut types = self.borrowed();
+        let mut types = self.borrow_input();
 
         let empty_types = ResultType::empty_with_offset(0, self.types.input());
         let mut last_parameters = empty_types;
@@ -82,11 +92,11 @@ impl<I: Input> core::fmt::Debug for TypesComponent<I> {
         loop {
             let result = types.parse(
                 |parameter_types| {
-                    last_parameters = parameter_types.dereferenced();
+                    last_parameters = parameter_types.clone_input();
                     Ok(())
                 },
                 |(), result_types| {
-                    last_results = result_types.dereferenced();
+                    last_results = result_types.clone_input();
                     Ok(())
                 },
             );

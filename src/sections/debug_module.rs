@@ -1,5 +1,5 @@
 use crate::{
-    input::Input,
+    input::{BorrowInput, Input},
     sections::{Section, SectionSequence},
 };
 use core::fmt::Debug;
@@ -19,7 +19,7 @@ impl<'a, I: Input> DebugModuleSection<'a, I> {
 
 impl<I: Input> Debug for DebugModuleSection<'_, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match crate::component::KnownSection::interpret(self.section.borrowed()) {
+        match crate::component::KnownSection::interpret(self.section.borrow_input()) {
             Ok(known) => Debug::fmt(&known, f),
             Err(unknown) => match crate::custom::CustomSection::try_from_section(unknown) {
                 Ok(Err(e)) => Debug::fmt(&crate::parser::Result::<()>::Err(e), f),
@@ -49,7 +49,7 @@ impl<'a, I: Input> DebugModule<'a, I> {
 impl<I: Input> Debug for DebugModule<'_, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
-        for result in self.sections.borrowed() {
+        for result in self.sections.borrow_input() {
             let section;
             let entry = match result {
                 Ok(sec) => {

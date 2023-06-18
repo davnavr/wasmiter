@@ -7,7 +7,7 @@
 //! [`name` custom section](crate::custom::name), and in the
 //! [`dylink.0` custom section described in the Dynamic Linking document](https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md).
 
-use crate::input::{Input, Window};
+use crate::input::{BorrowInput, CloneInput, HasInput, Input, Window};
 use crate::parser::{self, Result, ResultExt};
 use core::fmt::Debug;
 
@@ -57,8 +57,8 @@ impl<I: Input> Section<I> {
 
     /// Returns a [`Window`] into the contents of the section.
     #[inline]
-    pub fn contents(&self) -> Window<&I> {
-        (&self.contents).into()
+    pub fn contents(&self) -> &Window<I> {
+        &self.contents
     }
 
     /// Consumes the section, returning its contents as a [`Window`].
@@ -70,14 +70,6 @@ impl<I: Input> Section<I> {
         self.contents
     }
 
-    /// Returns a borrowed version of the [`Section`].
-    pub fn borrowed(&self) -> Section<&I> {
-        Section {
-            id: self.id,
-            contents: self.contents(),
-        }
-    }
-
     /// Returns a [`Debug`] implementation that attempts to interpret the contents as a WebAssembly
     /// module section.
     #[inline]
@@ -86,12 +78,40 @@ impl<I: Input> Section<I> {
     }
 }
 
-impl<I: Input + Clone> Section<&I> {
-    /// Returns a version of the [`Section`] with the contents cloned.
-    pub fn cloned(&self) -> Section<I> {
+impl<I: Input> HasInput<I> for Section<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.contents.input()
+    }
+}
+
+impl<I: Input> HasInput<Window<I>> for Section<I> {
+    #[inline]
+    fn input(&self) -> &Window<I> {
+        self.contents()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Section<I> {
+    type Borrowed = Section<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         Section {
             id: self.id,
-            contents: (&self.contents).into(),
+            contents: self.contents.borrow_input(),
+        }
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Section<&'a I> {
+    type Cloned = Section<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Section<I> {
+        Section {
+            id: self.id,
+            contents: self.contents.clone_input(),
         }
     }
 }
@@ -118,6 +138,12 @@ impl<I: Input> SectionSequence<I> {
     /// Uses the given [`Input`] to parse a sequence of sections starting at the specified `offset`.
     pub fn new(offset: u64, input: I) -> Self {
         Self { offset, input }
+    }
+
+    /// Gets the offset of the next section ID byte to be parsed.
+    #[inline]
+    pub fn offset(&self) -> u64 {
+        self.offset
     }
 
     /// Parses the next section. If there are no more sections remaining, returns `Ok(None)`.
@@ -148,13 +174,6 @@ impl<I: Input> SectionSequence<I> {
         Ok(Some(Section { id, contents }))
     }
 
-    pub(crate) fn borrowed(&self) -> SectionSequence<&I> {
-        SectionSequence {
-            offset: self.offset,
-            input: &self.input,
-        }
-    }
-
     /// Returns a [`Debug`] implementation that attempts to interpret the sequence of sections as a
     /// WebAssembly module's sections.
     #[inline]
@@ -171,12 +190,31 @@ impl<I: Input> SectionSequence<I> {
     }
 }
 
+impl<I: Input> HasInput<I> for SectionSequence<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        &self.input
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for SectionSequence<I> {
+    type Borrowed = SectionSequence<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        SectionSequence {
+            offset: self.offset,
+            input: &self.input,
+        }
+    }
+}
+
 impl<I: Clone + Input> Iterator for SectionSequence<I> {
     type Item = Result<Section<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {
-            Ok(Some(section)) => Some(Ok(section.cloned())),
+            Ok(Some(section)) => Some(Ok(section.clone_input())),
             Ok(None) => None,
             Err(e) => Some(Err(e)),
         }
@@ -187,6 +225,6 @@ impl<I: Clone + Input> core::iter::FusedIterator for SectionSequence<I> {}
 
 impl<I: Input> Debug for SectionSequence<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_list().entries(self.borrowed()).finish()
+        f.debug_list().entries(self.borrow_input()).finish()
     }
 }

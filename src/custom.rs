@@ -2,7 +2,7 @@
 //! [WebAssembly custom sections](https://webassembly.github.io/spec/core/appendix/custom.html).
 
 use crate::{
-    input::{Input, Window},
+    input::{BorrowInput, Input, Window},
     sections::{id as section_id, SectionSequence},
 };
 use core::fmt::Debug;
@@ -30,7 +30,8 @@ impl<I: Input> KnownCustomSection<Window<I>> {
     ///
     /// Returns `section` if it was not recognized.
     pub fn interpret(section: CustomSection<I>) -> Result<Self, CustomSection<I>> {
-        if let Some(static_name) = section_id::is_custom_name_recognized(section.name().borrowed())
+        if let Some(static_name) =
+            section_id::is_custom_name_recognized(section.name().borrow_input())
         {
             match static_name {
                 section_id::NAME => {
