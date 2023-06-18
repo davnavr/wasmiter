@@ -195,9 +195,9 @@ cfg_if::cfg_if! {
             }
         }
 
-        impl From<T> for Context {
+        impl From<&str> for Context {
             #[inline]
-            fn from(_: T) -> Self {
+            fn from(_: &str) -> Self {
                 Self
             }
         }
@@ -265,8 +265,8 @@ impl Error {
             if #[cfg(feature = "alloc")] {
                 self.inner.context.push(Context::from_closure(move |f| write!(f, "within the {description}, at offset {offset:#X}")));
             } else {
+                let _ = description;
                 let _ = offset;
-                let _ = location;
             }
         }
 
