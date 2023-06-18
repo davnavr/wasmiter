@@ -1,6 +1,6 @@
 ---
 source: tests/modules.rs
-expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_module()"
+expression: module.display_module()
 ---
 (module
 (type (; 0 ;) (func (param i32) (result i32)))
@@ -24,9 +24,10 @@ expression: "wasmiter::parse_module_sections(wasm.as_slice()).unwrap().display_m
 )
 
 (; UNRECOGNIZED (0) @ 0x4D to 0x63
-[
-    046E616D_65011001__000D646F_5F746865,
-    5F746869_6E6773,
-]
+offset   0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
+000040                                          04 6E 61  |..............na|
+000050  6D 65 01 10 01 00 0D 64  6F 5F 74 68 65 5F 74 68  |me.....do_the_th|
+000060  69 6E 67 73                                       |ings............|
+
 ;)
 )

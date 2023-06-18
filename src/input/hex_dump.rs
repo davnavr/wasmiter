@@ -100,7 +100,7 @@ impl HexDumpRow {
             f.write_str("  |")?;
 
             for _ in 0..skipped {
-                f.write_char(' ')?;
+                f.write_char('.')?;
             }
 
             for byte in self.contents().iter() {
