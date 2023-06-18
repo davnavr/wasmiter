@@ -50,6 +50,7 @@ impl<T, E: Into<Error>> ResultExt<T> for core::result::Result<T, E> {
 
                         Err(e.into().with_context(make_context_closure(f())))
                     } else {
+                        let _ = f;
                         Err(e.into())
                     }
                 }

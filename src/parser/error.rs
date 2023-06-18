@@ -243,34 +243,11 @@ impl Error {
         &self.inner.backtrace
     }
 
-    /// Attaches additional information to this [`Error`].
-    ///
-    /// If the `alloc` feature is not enabled, does nothing.
     #[inline]
-    pub(crate) fn with_context(mut self, context: Context) -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                self.inner.context.push(context);
-            } else {
-                let _ = context;
-            }
-        }
-
-        self
-    }
-
-    #[inline]
-    pub(crate) fn with_location_context(mut self, description: &'static str, offset: u64) -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                self.inner.context.push(Context::from_closure(move |f| write!(f, "within the {description}, at offset {offset:#X}")));
-            } else {
-                let _ = description;
-                let _ = offset;
-            }
-        }
-
-        self
+    pub(crate) fn with_location_context(self, description: &'static str, offset: u64) -> Self {
+        self.with_context(Context::from_closure(move |f| {
+            write!(f, "within the {description}, at offset {offset:#X}")
+        }))
     }
 }
 
@@ -320,11 +297,29 @@ impl From<crate::input::Error> for Error {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl From<alloc::string::FromUtf8Error> for Error {
-    #[inline]
-    fn from(error: alloc::string::FromUtf8Error) -> Self {
-        Self::new(ErrorKind::BadStringEncoding(error))
+cfg_if::cfg_if! {
+    if #[cfg(feature = "alloc")] {
+        impl Error {
+            #[inline]
+            pub(crate) fn with_context(mut self, context: Context) -> Self {
+                self.inner.context.push(context);
+                self
+            }
+        }
+
+        impl From<alloc::string::FromUtf8Error> for Error {
+            #[inline]
+            fn from(error: alloc::string::FromUtf8Error) -> Self {
+                Self::new(ErrorKind::BadStringEncoding(error))
+            }
+        }
+    } else {
+        impl Error {
+            #[inline]
+            pub(crate) fn with_context(self, _: Context) -> Self {
+                self
+            }
+        }
     }
 }
 
