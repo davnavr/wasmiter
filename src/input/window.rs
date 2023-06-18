@@ -90,7 +90,7 @@ impl<I: Input> Window<I> {
     #[inline]
     fn bounds_check(&self, offset: u64) -> Result<u64> {
         let (end, overflow) = self.base.overflowing_add(self.length);
-        if offset >= self.base && offset < end && !overflow {
+        if offset >= self.base && offset <= end && !overflow {
             Ok(self.length - (offset - self.base))
         } else {
             Err(input::Error::new(
