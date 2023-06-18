@@ -3,74 +3,102 @@ use crate::input::{Input, Window};
 use crate::parser::{self, ResultExt as _};
 use crate::sections::{id as section_id, Section};
 
-/// Represents a well-known WebAssembly [`Section`].
-#[non_exhaustive]
-pub enum KnownSection<I: Input> {
+macro_rules! known_section {
+    ($input:ident: $(
+        $(#[$meta:meta])*
+        $name:ident($component:ty $(=> $from:ident)?) = $id:ident,
+    )*) => {
+        /// Represents a well-known WebAssembly [`Section`].
+        #[non_exhaustive]
+        pub enum KnownSection<$input: Input> {$(
+            $(#[$meta])*
+            $name($component),
+        )*}
+
+        impl<$input: Input> KnownSection<$input> {
+            /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
+            /// the section.
+            pub fn id(&self) -> u8 {
+                match self {
+                    $(Self::$name(_) => section_id::$id,)*
+                }
+            }
+        }
+
+        $($(
+            impl<$input: Input> core::convert::$from<$component> for KnownSection<$input> {
+                #[inline]
+                fn from(component: $component) -> Self {
+                    Self::$name(component)
+                }
+            }
+        )?)*
+
+        impl<$input: Input> core::fmt::Debug for KnownSection<$input> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                match self {
+                    $(Self::$name(component) => f.debug_tuple(stringify!($name)).field(component).finish(),)*
+                }
+            }
+        }
+
+        impl<$input: Input + Clone> Clone for KnownSection<$input> {
+            fn clone(&self) -> Self {
+                match self {
+                    $(Self::$name(component) => Self::$name(Clone::clone(component)),)*
+                }
+            }
+        }
+    };
+}
+
+known_section! {
+    I:
     /// The
     /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
-    Type(component::TypesComponent<I>),
+    Type(component::TypesComponent<I> => From) = TYPE,
     /// The
     /// [*import section*](https://webassembly.github.io/spec/core/binary/modules.html#import-section).
-    Import(component::ImportsComponent<I>),
+    Import(component::ImportsComponent<I> => From) = IMPORT,
     /// The
     /// [*function section*](https://webassembly.github.io/spec/core/binary/modules.html#function-section).
-    Function(component::FunctionSection<I>),
+    Function(component::FunctionSection<I> => From) = FUNC,
     /// The
     /// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
-    Table(component::TablesComponent<I>),
+    Table(component::TablesComponent<I> => From) = TABLE,
     /// The
     /// [*memory section*](https://webassembly.github.io/spec/core/binary/modules.html#memory-section).
-    Memory(component::MemsComponent<I>),
+    Memory(component::MemsComponent<I> => From) = MEMORY,
     /// The
     /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
-    Global(component::GlobalsComponent<I>),
+    Global(component::GlobalsComponent<I> => From) = GLOBAL,
     /// The
     /// [*export section*](https://webassembly.github.io/spec/core/binary/modules.html#export-section).
-    Export(component::ExportsComponent<I>),
+    Export(component::ExportsComponent<I> => From) = EXPORT,
     /// Represents the
     /// [**start** component](https://webassembly.github.io/spec/core/syntax/modules.html#start-function)
     /// of a WebAssembly module, encoded in the
     /// [*start section*](https://webassembly.github.io/spec/core/binary/modules.html#start-section).
-    Start(crate::index::FuncIdx),
+    Start(crate::index::FuncIdx) = START,
     /// The
     /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
-    Element(component::ElemsComponent<I>),
+    Element(component::ElemsComponent<I> => From) = ELEMENT,
     /// The
     /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section).
-    Code(component::CodeSection<I>),
+    Code(component::CodeSection<I> => From) = CODE,
     /// The
     /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section).
-    Data(component::DatasComponent<I>),
+    Data(component::DatasComponent<I> => From) = DATA,
     /// The
     /// [*data count section*](https://webassembly.github.io/spec/core/binary/modules.html#data-count-section)
     /// specifies the number of of entries in the [*data section*](KnownSection::Data).
-    DataCount(u32),
+    DataCount(u32) = DATA_COUNT,
     /// The
     /// [*tag section*](https://webassembly.github.io/exception-handling/core/binary/modules.html#tag-section).
-    Tag(component::TagsComponent<I>),
+    Tag(component::TagsComponent<I> => From) = TAG,
 }
 
 impl<I: Input> KnownSection<I> {
-    /// Gets the [*id*](https://webassembly.github.io/spec/core/binary/modules.html#sections) for
-    /// the section.
-    pub const fn id(&self) -> u8 {
-        match self {
-            Self::Type(_) => section_id::TYPE,
-            Self::Import(_) => section_id::IMPORT,
-            Self::Function(_) => section_id::FUNC,
-            Self::Table(_) => section_id::TABLE,
-            Self::Memory(_) => section_id::MEMORY,
-            Self::Global(_) => section_id::GLOBAL,
-            Self::Export(_) => section_id::EXPORT,
-            Self::Start(_) => section_id::START,
-            Self::Element(_) => section_id::ELEMENT,
-            Self::Code(_) => section_id::CODE,
-            Self::Data(_) => section_id::DATA,
-            Self::DataCount(_) => section_id::DATA_COUNT,
-            Self::Tag(_) => section_id::TAG,
-        }
-    }
-
     /// Returns `true` if the section was introduced in WebAssembly 1.0 (the 2017 MVP).
     pub fn is_mvp_section(&self) -> bool {
         matches!(
@@ -161,123 +189,6 @@ impl<I: Input> KnownSection<Window<I>> {
             }
             _ => return Err(section),
         })
-    }
-}
-
-impl<I: Input> From<component::TypesComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(types: component::TypesComponent<I>) -> Self {
-        Self::Type(types)
-    }
-}
-
-impl<I: Input> From<component::ImportsComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(imports: component::ImportsComponent<I>) -> Self {
-        Self::Import(imports)
-    }
-}
-
-impl<I: Input> From<component::FunctionSection<I>> for KnownSection<I> {
-    #[inline]
-    fn from(functions: component::FunctionSection<I>) -> Self {
-        Self::Function(functions)
-    }
-}
-
-impl<I: Input> From<component::TablesComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(tables: component::TablesComponent<I>) -> Self {
-        Self::Table(tables)
-    }
-}
-
-impl<I: Input> From<component::MemsComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(memories: component::MemsComponent<I>) -> Self {
-        Self::Memory(memories)
-    }
-}
-
-impl<I: Input> From<component::GlobalsComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(globals: component::GlobalsComponent<I>) -> Self {
-        Self::Global(globals)
-    }
-}
-
-impl<I: Input> From<component::ExportsComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(exports: component::ExportsComponent<I>) -> Self {
-        Self::Export(exports)
-    }
-}
-
-impl<I: Input> From<component::ElemsComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(elements: component::ElemsComponent<I>) -> Self {
-        Self::Element(elements)
-    }
-}
-
-impl<I: Input> From<component::CodeSection<I>> for KnownSection<I> {
-    #[inline]
-    fn from(code: component::CodeSection<I>) -> Self {
-        Self::Code(code)
-    }
-}
-
-impl<I: Input> From<component::DatasComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(data: component::DatasComponent<I>) -> Self {
-        Self::Data(data)
-    }
-}
-
-impl<I: Input> From<component::TagsComponent<I>> for KnownSection<I> {
-    #[inline]
-    fn from(tags: component::TagsComponent<I>) -> Self {
-        Self::Tag(tags)
-    }
-}
-
-impl<I: Input> core::fmt::Debug for KnownSection<I> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Type(types) => f.debug_tuple("Type").field(types).finish(),
-            Self::Import(imports) => f.debug_tuple("Import").field(imports).finish(),
-            Self::Function(functions) => f.debug_tuple("Function").field(functions).finish(),
-            Self::Table(tables) => f.debug_tuple("Table").field(tables).finish(),
-            Self::Memory(memories) => f.debug_tuple("Memory").field(memories).finish(),
-            Self::Global(globals) => f.debug_tuple("Global").field(globals).finish(),
-            Self::Export(exports) => f.debug_tuple("Export").field(exports).finish(),
-            Self::Start(start) => f.debug_tuple("Start").field(start).finish(),
-            Self::Element(elements) => f.debug_tuple("Element").field(elements).finish(),
-            Self::Code(code) => f.debug_tuple("Code").field(code).finish(),
-            Self::Data(data) => f.debug_tuple("Data").field(data).finish(),
-            Self::DataCount(count) => f.debug_tuple("DataCount").field(count).finish(),
-            Self::Tag(tags) => f.debug_tuple("Tag").field(tags).finish(),
-        }
-    }
-}
-
-impl<I: Input + Clone> Clone for KnownSection<I> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Type(types) => Self::Type(types.clone()),
-            Self::Import(imports) => Self::Import(imports.clone()),
-            Self::Function(functions) => Self::Function(functions.clone()),
-            Self::Table(tables) => Self::Table(tables.clone()),
-            Self::Memory(memories) => Self::Memory(memories.clone()),
-            Self::Global(globals) => Self::Global(globals.clone()),
-            Self::Export(exports) => Self::Export(exports.clone()),
-            Self::Start(start) => Self::Start(*start),
-            Self::Element(elements) => Self::Element(elements.clone()),
-            Self::Code(code) => Self::Code(code.clone()),
-            Self::Data(data) => Self::Data(data.clone()),
-            Self::DataCount(count) => Self::DataCount(*count),
-            Self::Tag(tags) => Self::Tag(tags.clone()),
-        }
     }
 }
 
