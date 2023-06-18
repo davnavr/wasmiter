@@ -65,10 +65,14 @@ impl<'a, I: Input> Export<&'a I> {
             3 => ExportKind::Global(component::index(offset, input).context("global export")?),
             4 => ExportKind::Tag(component::index(offset, input).context("tag export")?),
             bad => {
-                return Err(crate::parser_bad_format_at_offset!(
-                    "input" @ kind_offset,
-                    "{bad:#04X} is not a known export kind"
-                ))
+                #[inline(never)]
+                #[cold]
+                fn bad_kind(offset: u64, kind: u8) -> parser::Error {
+                    parser::Error::new(parser::ErrorKind::BadExportKind(kind))
+                        .with_location_context("export section entry", offset)
+                }
+
+                return Err(bad_kind(kind_offset, bad));
             }
         };
 

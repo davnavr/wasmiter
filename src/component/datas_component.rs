@@ -93,10 +93,13 @@ impl<I: Input> DatasComponent<I> {
                     InstructionSequence::new(&mut copied_offset, input),
                 ),
                 _ => {
-                    return Err(crate::parser_bad_format_at_offset!(
-                        "file" @ mode_offset,
-                        "{mode_tag} is not a supported data segment mode"
-                    ))
+                    #[inline(never)]
+                    #[cold]
+                    fn unsupported_mode(offset: u64, mode: u32) -> parser::Error {
+                        parser::Error::new(parser::ErrorKind::BadDataSegmentMode(mode)).with_location_context("data segment", offset)
+                    }
+
+                    return Err(unsupported_mode(mode_offset, mode_tag));
                 }
             };
 
@@ -110,11 +113,8 @@ impl<I: Input> DatasComponent<I> {
             let data = Window::with_offset_and_length(input, *offset, data_length);
             let result = data_f(data_arg, data)?;
 
-            *offset = offset.checked_add(data_length).ok_or_else(|| {
-                crate::parser_bad_format_at_offset!(
-                    "file" @ offset,
-                    "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached"
-                )
+            crate::input::increment_offset(offset, data_length).with_context(|| move |f| {
+                write!(f, "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached")
             })?;
 
             Ok(result)

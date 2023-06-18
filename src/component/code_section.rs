@@ -59,16 +59,24 @@ impl<I: Input> Code<I> {
 
         let (_, final_offset) = code.finish()?;
         let final_length = *final_offset - self.content.base();
-        if final_length != self.content.length() {
-            return Err(crate::parser_bad_format_at_offset!(
-                "file" @ offset,
-                "expected code entry content to have a length of {} bytes, but got {final_length}",
-                self.content.length()
-            )
-            .into());
-        }
+        let expected_length = self.content.length();
+        if final_length != expected_length {
+            #[inline(never)]
+            #[cold]
+            fn unused_bytes(
+                offset: u64,
+                expected_length: u64,
+                actual_length: u64,
+            ) -> parser::Error {
+                parser::Error::new(parser::ErrorKind::InvalidFormat).with_context(parser::Context::from_closure(move |f| write!(f,
+                    "expected code entry content to have a length of {expected_length} bytes, but got {actual_length}",
+                ))).with_location_context("code section entry", offset)
+            }
 
-        Ok(result)
+            Err(unused_bytes(offset, expected_length, final_length).into())
+        } else {
+            Ok(result)
+        }
     }
 }
 
@@ -144,12 +152,8 @@ impl<I: Input> CodeSection<I> {
                 let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
                 let content = Window::with_offset_and_length(bytes, *offset, size);
 
-                *offset = offset.checked_add(size).ok_or_else(|| {
-                    crate::parser_bad_input!(
-                        crate::input::offset_overflowed(*offset),
-                        "unable to advance offset to read next code section entry"
-                    )
-                })?;
+                crate::input::increment_offset(offset, size)
+                    .context("unable to advance offset to read next code section entry")?;
 
                 parser::Result::Ok(Code { index, content })
             })

@@ -1,7 +1,9 @@
-use crate::component::{Code, CodeSection, FunctionSection};
-use crate::index::TypeIdx;
-use crate::input::Input;
-use crate::parser::Result;
+use crate::{
+    component::{Code, CodeSection, FunctionSection},
+    index::TypeIdx,
+    input::Input,
+    parser::{self, Result},
+};
 
 /// A WebAssembly function, defined in the
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
@@ -68,12 +70,16 @@ impl<T: Input, C: Input> FuncsComponent<T, C> {
     ///
     /// Returns an error if the length of both sections are not the same.
     pub fn new(types: FunctionSection<T>, code: CodeSection<C>) -> Result<Self> {
-        if types.remaining_count() != code.remaining_count() {
-            Err(crate::parser_bad_format!(
-                "function section has {} entries, but code section has {} entries",
-                types.remaining_count(),
-                code.remaining_count()
-            ))
+        let type_count = types.remaining_count();
+        let code_count = code.remaining_count();
+        if type_count != code_count {
+            #[cold]
+            #[inline(never)]
+            fn section_count_mismatch(type_count: u32, code_count: u32) -> parser::Error {
+                parser::Error::new(parser::ErrorKind::InvalidFormat).with_context(parser::Context::from_closure(move |f| write!(f, "function section has {type_count} entries, but code section has {code_count} entries")))
+            }
+
+            Err(section_count_mismatch(type_count, code_count))
         } else {
             Ok(Self { types, code })
         }

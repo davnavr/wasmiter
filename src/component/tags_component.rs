@@ -19,9 +19,16 @@ pub enum Tag {
 pub fn parse<I: Input>(offset: &mut u64, input: &I) -> Result<Tag> {
     let attribute = parser::one_byte_exact(offset, input)?;
     if attribute != 0 {
-        crate::parser_bad_format!("{attribute:#04X} is not a valid tag attribute");
+        #[cold]
+        #[inline(never)]
+        fn bad_attribute(flags: u8) -> parser::Error {
+            parser::Error::new(parser::ErrorKind::BadTagAttribute(flags))
+        }
+
+        Err(bad_attribute(attribute))
+    } else {
+        crate::component::index(offset, input).map(Tag::Exception)
     }
-    crate::component::index(offset, input).map(Tag::Exception)
 }
 
 /// Represents the

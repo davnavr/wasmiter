@@ -12,81 +12,15 @@ pub mod leb128;
 pub mod name;
 
 pub(crate) use ascending_order::AscendingOrder;
+pub(crate) use error::{Context, ErrorKind};
+pub(crate) use result_ext::ResultExt;
 
-pub use error::{Context, Error, ErrorKind};
+pub use error::Error;
 pub use offset::Offset;
-pub use result_ext::ResultExt;
 pub use vector::Vector;
 
 /// Result type used when parsing input.
 pub type Result<T> = core::result::Result<T, Error>;
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! parser_bad_format {
-    ($($arg:tt)*) => {{
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                let err = $crate::parser::Error::bad_format().with_context(alloc::format!($($arg)*));
-            } else {
-                // Disable warnings for unused variables
-                let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
-                let err = $crate::parser::Error::bad_format();
-            }
-        }
-
-        err
-    }};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! parser_bad_format_at_offset {
-    ($location:literal @ $offset:expr $(, $($arg:tt)*)?) => {{
-        let err = $crate::parser_bad_format!(concat!("at offset {:#X} in ", $location), $offset);
-
-        $(
-            cfg_if::cfg_if! {
-                if #[cfg(feature = "alloc")] {
-                    let err = err.with_context(alloc::format!($($arg)*));
-                } else {
-                    // Disable warnings for unused variables
-                    let _ = |f: &mut core::fmt::Formatter<'_>| core::write!(f, $($arg)*);
-                }
-            }
-        )?
-
-        err
-    }};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! parser_bad_input {
-    ($error:expr, $($arg:tt)*) => {{
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                let mut err;
-            } else {
-                let err;
-            }
-        }
-
-        err = <$crate::parser::Error as From<$crate::input::Error>>::from($error);
-
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "alloc")] {
-                err = err.with_context(alloc::format!($($arg)*));
-            } else {
-                // Disable warning for unused expression $error
-                let _ = $error;
-                let _ = |f: &mut core::fmt::Formatter| core::write!(f, $($arg)*);
-            }
-        }
-
-        err
-    }};
-}
 
 #[inline]
 pub(crate) fn bytes<'b, I: Input>(
@@ -97,14 +31,15 @@ pub(crate) fn bytes<'b, I: Input>(
     let length = buffer.len();
     input
         .read(offset, buffer)
-        .map_err(|e| parser_bad_input!(e, "could not read {} bytes", length))
+        .with_context(|| move |f| write!(f, "could not read {length} bytes"))
 }
 
 #[inline]
 pub(crate) fn bytes_exact<I: Input>(offset: &mut u64, input: I, buffer: &mut [u8]) -> Result<()> {
+    let length = buffer.len();
     input
         .read_exact(offset, buffer)
-        .map_err(|e| parser_bad_input!(e, "expected {} bytes", buffer.len()))
+        .with_context(|| move |f| write!(f, "expected {length} bytes"))
 }
 
 #[inline]

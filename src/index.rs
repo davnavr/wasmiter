@@ -16,8 +16,15 @@ impl std::error::Error for IndexConversionError {}
 
 impl From<IndexConversionError> for crate::parser::Error {
     #[inline]
-    fn from(err: IndexConversionError) -> Self {
-        crate::parser_bad_format!("{err}")
+    fn from(error: IndexConversionError) -> Self {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "alloc")] {
+                Self::new(crate::parser::ErrorKind::BadIndexConversion(error))
+            } else {
+                let _ = error;
+                Self::new(crate::parser::ErrorKind::InvalidFormat)
+            }
+        }
     }
 }
 

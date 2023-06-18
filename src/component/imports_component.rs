@@ -86,10 +86,14 @@ impl<'a, I: Input> Import<&'a I> {
             ),
             4 => ImportKind::Tag(component::tag(offset, input).context("tag import")?),
             bad => {
-                return Err(crate::parser_bad_format_at_offset!(
-                    "input" @ kind_offset,
-                    "{bad:#04X} is not a known import kind"
-                ))
+                #[inline(never)]
+                #[cold]
+                fn bad_kind(offset: u64, kind: u8) -> parser::Error {
+                    parser::Error::new(parser::ErrorKind::BadImportKind(kind))
+                        .with_location_context("import section entry", offset)
+                }
+
+                return Err(bad_kind(kind_offset, bad));
             }
         };
 

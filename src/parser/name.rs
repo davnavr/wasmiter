@@ -2,7 +2,7 @@
 
 use crate::{
     input::{self, Input},
-    parser::{self, ResultExt as _},
+    parser::{self, Error, ResultExt as _},
 };
 
 mod char_iterators;
@@ -164,8 +164,7 @@ impl<I: Input> Name<I> {
     /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
     /// the [`Name`] is not valid UTF-8.
     pub fn try_into_string(self) -> parser::Result<alloc::string::String> {
-        alloc::string::String::from_utf8(self.into_bytes()?)
-            .map_err(|e| crate::parser_bad_format!("{e}"))
+        alloc::string::String::from_utf8(self.into_bytes()?).map_err(Into::into)
     }
 }
 
@@ -177,7 +176,7 @@ pub fn parse<I: Input>(offset: &mut u64, input: I) -> parser::Result<Name<I>> {
 }
 
 impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
-    type Error = parser::Error;
+    type Error = Error;
 
     fn try_from(bytes: &'a [u8]) -> parser::Result<Self> {
         let actual_length = bytes.len();
@@ -188,9 +187,17 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
                 offset: 0,
             })
         } else {
-            Err(crate::parser_bad_format!(
-                "byte slice has a length of {actual_length}, which is too large"
-            ))
+            #[cold]
+            #[inline(never)]
+            fn slice_too_large(length: usize) -> Error {
+                Error::new(parser::ErrorKind::InvalidFormat).with_context(
+                    parser::Context::from_closure(move |f| {
+                        write!(f, "byte slice has a length of {length}, which is too large")
+                    }),
+                )
+            }
+
+            Err(slice_too_large(actual_length))
         }
     }
 }
@@ -209,7 +216,7 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
 /// # }
 /// ```
 impl<'a> TryFrom<&'a str> for Name<&'a [u8]> {
-    type Error = parser::Error;
+    type Error = Error;
 
     fn try_from(s: &'a str) -> parser::Result<Self> {
         Self::try_from(s.as_bytes())

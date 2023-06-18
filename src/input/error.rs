@@ -46,6 +46,9 @@ pub struct Error {
 }
 
 impl Error {
+    const _SIZE_CHECK: [(); 1] =
+        [(); (core::mem::size_of::<Option<Self>>() == core::mem::size_of::<usize>()) as usize];
+
     #[must_use]
     pub(super) fn new(kind: ErrorKind, offset: u64, length: Option<u64>) -> Self {
         cfg_if::cfg_if! {

@@ -2,7 +2,7 @@
 //! [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 
 use crate::input::Input;
-use crate::parser::{Error, Result, ResultExt as _};
+use crate::parser::{Context, Error, ErrorKind, Result, ResultExt as _};
 
 // Implementation modules, used in benchmarks
 
@@ -20,21 +20,26 @@ const SIGN: u8 = 0b0100_0000;
 #[cold]
 #[inline(never)]
 fn too_large<T>(signed: bool) -> Error {
-    let signedness = if signed { "signed" } else { "unsigned" };
-
-    crate::parser_bad_format!(
-        "decoded value cannot fit into a {}-bit {signedness} integer",
-        core::mem::size_of::<T>() / 8
-    )
+    Error::new(ErrorKind::VarLenIntTooLarge {
+        bits: (core::mem::size_of::<T>() * 8) as u8,
+        signed,
+    })
 }
 
 #[cold]
 #[inline(never)]
 fn bad_continuation(bytes: &[u8]) -> Error {
-    crate::parser_bad_format!(
-        "continuation flag was set in integer {:#?}, but no more bytes remain in the input",
-        crate::input::HexDump::from(bytes)
-    )
+    let length = bytes.len();
+    let mut buffer = [0u8; 16];
+    buffer[..length].copy_from_slice(bytes);
+
+    Error::new(ErrorKind::InvalidFormat).with_context(Context::from_closure(move |f| {
+        write!(
+            f,
+            "continuation flag was set in integer {:#?}, but no more bytes remain in the input",
+            crate::input::HexDump::from(&buffer[..length])
+        )
+    }))
 }
 
 /// Attempts to a parse an unsigned 32-bit integer encoded in
@@ -52,8 +57,18 @@ pub fn u32<I: Input>(offset: &mut u64, input: I) -> Result<u32> {
 ///
 /// See [`leb128::u32`](self::u32) for more information.
 pub fn usize<I: Input>(offset: &mut u64, input: I) -> Result<usize> {
+    #[inline(never)]
+    #[cold]
+    fn length_too_large(length: u32) -> Error {
+        Error::new(ErrorKind::InvalidFormat).with_context(Context::from_closure(move |f| write!(f, "parsed length ({length}) is too large, parsing WebAssembly in a 16-bit environment is not recommended")))
+    }
+
     let length = self::u32(offset, input).context("could not parse length")?;
-    usize::try_from(length).map_err(|_| crate::parser_bad_format!("length ({length}) is too large"))
+    if let Ok(parsed) = usize::try_from(length) {
+        Ok(parsed)
+    } else {
+        Err(length_too_large(length))
+    }
 }
 
 /// Attempts to a parse an unsigned 64-bit integer encoded in the

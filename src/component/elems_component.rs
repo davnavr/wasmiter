@@ -170,11 +170,15 @@ impl<I: Input> From<Vector<u64, I>> for ElemsComponent<I> {
 }
 
 fn elem_kind<I: Input>(offset: &mut u64, input: I) -> Result<()> {
+    #[inline(never)]
+    #[cold]
+    fn bad_kind(kind: u8) -> parser::Error {
+        parser::Error::new(parser::ErrorKind::BadElementKind(kind))
+    }
+
     match parser::one_byte_exact(offset, input).context("elemkind")? {
         0 => Ok(()),
-        bad => Err(crate::parser_bad_format!(
-            "{bad:#04X} is not a valid elemkind"
-        )),
+        bad => Err(bad_kind(bad)),
     }
 }
 
@@ -313,10 +317,14 @@ impl<I: Input> ElemsComponent<I> {
                         );
                     }
                     _ => {
-                        return Err(crate::parser_bad_format_at_offset!(
-                            "file" @ start,
-                            "{segment_kind} is not a supported element segment mode"
-                        ))
+                        #[inline(never)]
+                        #[cold]
+                        fn unsupported_mode(offset: u64, mode: u32) -> parser::Error {
+                            parser::Error::new(parser::ErrorKind::BadElementSegmentMode(mode))
+                                .with_location_context("element segment entry", offset)
+                        }
+
+                        return Err(unsupported_mode(start, segment_kind));
                     }
                 }
 

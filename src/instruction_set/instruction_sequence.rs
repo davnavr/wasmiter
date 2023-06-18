@@ -4,7 +4,7 @@ use crate::{
     instruction_set::{
         self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
     },
-    parser::{self, leb128, Offset, ResultExt},
+    parser::{self, leb128, Error, ErrorKind, Offset, ResultExt as _},
 };
 
 fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Result<instruction_set::MemArg> {
@@ -20,14 +20,17 @@ fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Result<instruction_s
         )
     };
 
-    let align = u8::try_from(a)
-        .ok()
-        .and_then(instruction_set::Align::new)
-        .ok_or_else(|| {
-            crate::parser_bad_format!("{a} is too large to be a valid alignment power")
-        })?;
+    if let Some(align) = u8::try_from(a).ok().and_then(instruction_set::Align::new) {
+        Ok(instruction_set::MemArg::new(o, align, memory))
+    } else {
+        #[inline(never)]
+        #[cold]
+        fn align_power_too_large(power: u32) -> Error {
+            Error::new(ErrorKind::BadMemArgAlignPower(power))
+        }
 
-    Ok(instruction_set::MemArg::new(o, align, memory))
+        Err(align_power_too_large(a))
+    }
 }
 
 /// Parses a WebAssembly [`Instruction`].
@@ -65,13 +68,17 @@ fn instruction<'a, 'b, I: Input>(
             let branch_count = parser::leb128::u32(offset.offset_mut(), input)
                 .context("could not parse branch table label count")?;
 
-            let total_count = branch_count.checked_add(1).ok_or_else(|| {
-                crate::parser_bad_format!(
-                    "branch table has a label count of {branch_count}, which is too large"
-                )
-            })?;
+            if let Some(total_count) = branch_count.checked_add(1) {
+                Instruction::BrTable(component::IndexVector::new(total_count, offset, input))
+            } else {
+                #[inline(never)]
+                #[cold]
+                fn branch_count_overflowed() -> Error {
+                    Error::new(ErrorKind::BranchTableCountOverflow)
+                }
 
-            Instruction::BrTable(component::IndexVector::new(total_count, offset, input))
+                return Err(branch_count_overflowed());
+            }
         }
         Opcode::Return => Instruction::Return,
         Opcode::Call => Instruction::Call(component::index(offset, input).context("call target")?),
@@ -897,9 +904,17 @@ where
 
     match instruction {
         Instruction::Block(_) | Instruction::Loop(_) | Instruction::If(_) | Instruction::Try(_) => {
-            *blocks = blocks
-                .checked_add(1)
-                .ok_or_else(|| crate::parser_bad_format!("block nesting counter overflowed"))?;
+            if let Some(entered) = blocks.checked_add(1) {
+                *blocks = entered
+            } else {
+                #[inline(never)]
+                #[cold]
+                fn block_nesting_counter_overflowed() -> Error {
+                    Error::new(ErrorKind::BlockNestingCounterOverflow)
+                }
+
+                return Err(block_nesting_counter_overflowed().into());
+            }
         }
         Instruction::End => {
             // Won't underflow, check for self.blocks == 0 ensures None is returned early
@@ -910,10 +925,13 @@ where
                 // Check above ensures a "delegate" won't erroneously mark the end of an expression
                 *blocks -= 1;
             } else {
-                return Err(crate::parser_bad_format!(
-                    "expected end instruction to mark end of expression, but got delegate"
-                )
-                .into());
+                #[inline(never)]
+                #[cold]
+                fn unexpected_delegate() -> Error {
+                    Error::new(ErrorKind::ExpectedEndInstructionButGotDelegate)
+                }
+
+                return Err(unexpected_delegate().into());
             }
         }
         _ => {}
@@ -989,24 +1007,26 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> crate::Result<(bool, O)> {
+    pub fn finish(mut self) -> parser::Result<(bool, O)> {
         let mut was_finished = true;
         loop {
-            match self.next(|_| crate::Result::Ok(())) {
+            match self.next(|_| parser::Result::Ok(())) {
                 Some(Ok(())) => was_finished = false,
                 Some(Err(e)) => return Err(e),
                 None => break,
             }
         }
 
-        match self.blocks {
-            0 => Ok((was_finished, self.offset)),
-            1 => Err(crate::parser_bad_format!(
-                "missing end instruction for expression, or blocks were not structured correctly"
-            )),
-            missing => Err(crate::parser_bad_format!(
-                "blocks are not structured correctly, {missing} end instructions were missing"
-            )),
+        if self.blocks == 0 {
+            Ok((was_finished, self.offset))
+        } else {
+            #[inline(never)]
+            #[cold]
+            fn missing_end_instructions(count: u32) -> Error {
+                Error::new(ErrorKind::MissingEndInstructions(count))
+            }
+
+            Err(missing_end_instructions(self.blocks))
         }
     }
 
@@ -1044,14 +1064,14 @@ impl<O: Offset, I: Input> core::fmt::Debug for InstructionSequence<O, I> {
         let mut list = f.debug_list();
         loop {
             let result = instructions.next(|i| {
-                list.entry(&crate::Result::Ok(i));
+                list.entry(&parser::Result::Ok(i));
                 Ok(())
             });
 
             match result {
                 None => break,
                 Some(Err(e)) => {
-                    list.entry(&crate::Result::<()>::Err(e));
+                    list.entry(&parser::Result::<()>::Err(e));
                     break;
                 }
                 Some(Ok(_)) => (),
