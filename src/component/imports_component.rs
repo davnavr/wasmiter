@@ -1,7 +1,7 @@
 use crate::{
     component,
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{self, name::Name, Result, ResultExt as _, Vector},
+    parser::{self, name::Name, Parsed, ResultExt as _, Vector},
     types,
 };
 use core::fmt::{Debug, Formatter};
@@ -66,7 +66,7 @@ impl<I: Input> Import<I> {
 }
 
 impl<'a, I: Input> Import<&'a I> {
-    fn parse(offset: &mut u64, input: &'a I) -> Result<Self> {
+    fn parse(offset: &mut u64, input: &'a I) -> Parsed<Self> {
         let module = parser::name::parse(offset, input).context("module name")?;
         let name = parser::name::parse(offset, input).context("import name")?;
 
@@ -150,7 +150,7 @@ impl<I: Input> From<Vector<u64, I>> for ImportsComponent<I> {
 impl<I: Input> ImportsComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *import section* of a
     /// module, starting at the given `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of import section")
             .map(Self::from)
@@ -163,7 +163,7 @@ impl<I: Input> ImportsComponent<I> {
     }
 
     /// Parses the next import in the section.
-    pub fn parse(&mut self) -> Result<Option<Import<&I>>> {
+    pub fn parse(&mut self) -> Parsed<Option<Import<&I>>> {
         self.imports
             .advance(Import::parse)
             .transpose()
@@ -188,7 +188,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for ImportsComponent<I> {
 }
 
 impl<I: Clone + Input> Iterator for ImportsComponent<I> {
-    type Item = Result<Import<I>>;
+    type Item = Parsed<Import<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {

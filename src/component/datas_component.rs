@@ -2,7 +2,7 @@ use crate::{
     index::MemIdx,
     input::{BorrowInput, CloneInput, HasInput, Input, Window},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Result, ResultExt as _, Vector},
+    parser::{self, Offset, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -21,7 +21,7 @@ pub enum DataMode<O: Offset, I: Input> {
 }
 
 impl<O: Offset, I: Input> DataMode<O, I> {
-    fn finish(self) -> Result<()> {
+    fn finish(self) -> Parsed<()> {
         match self {
             Self::Passive => (),
             Self::Active(_, offset) => {
@@ -64,17 +64,17 @@ impl<I: Input> From<Vector<u64, I>> for DatasComponent<I> {
 impl<I: Input> DatasComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *data section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of data section")
             .map(Self::from)
     }
 
     /// Parses the next data segment in the section.
-    pub fn parse<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Option<Z>>
+    pub fn parse<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Parsed<Option<Z>>
     where
-        M: FnOnce(&mut DataMode<&mut u64, &I>) -> Result<Y>,
-        D: FnOnce(Y, Window<&I>) -> Result<Z>,
+        M: FnOnce(&mut DataMode<&mut u64, &I>) -> Parsed<Y>,
+        D: FnOnce(Y, Window<&I>) -> Parsed<Z>,
     {
         self.entries.advance(|offset, input| {
             let mode_offset = *offset;
@@ -174,7 +174,7 @@ impl<I: Input> Debug for DatasComponent<I> {
                     })
                 },
                 |mode, data| {
-                    list.entry(&Result::Ok(DataSegment { mode, data }));
+                    list.entry(&Parsed::Ok(DataSegment { mode, data }));
                     Ok(())
                 },
             );
@@ -183,7 +183,7 @@ impl<I: Input> Debug for DatasComponent<I> {
                 Ok(Some(())) => (),
                 Ok(None) => break,
                 Err(e) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
             }

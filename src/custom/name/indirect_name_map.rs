@@ -2,7 +2,7 @@ use crate::{
     custom::name::NameMap,
     index::Index,
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
+    parser::{AscendingOrder, Offset, Parsed, ResultExt as _, Vector},
 };
 
 /// An
@@ -30,7 +30,7 @@ impl<K: Index, V: Index, O: Offset, I: Input> From<Vector<O, I>> for IndirectNam
 
 impl<K: Index, V: Index, O: Offset, I: Input> IndirectNameMap<K, V, O, I> {
     /// Parses a [`IndirectNameMap`] starting at the given `offset`.
-    pub fn new(offset: O, input: I) -> Result<Self> {
+    pub fn new(offset: O, input: I) -> Parsed<Self> {
         Vector::parse(offset, input).map(Self::from)
     }
 
@@ -40,9 +40,9 @@ impl<K: Index, V: Index, O: Offset, I: Input> IndirectNameMap<K, V, O, I> {
     }
 
     /// Parses the next primary index and [`NameMap`] pair.
-    pub fn parse<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn parse<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
-        F: FnOnce(K, &mut NameMap<V, &mut u64, &I>) -> Result<T>,
+        F: FnOnce(K, &mut NameMap<V, &mut u64, &I>) -> Parsed<T>,
     {
         self.entries
             .advance_with_index(|i, offset, input| {
@@ -58,7 +58,7 @@ impl<K: Index, V: Index, O: Offset, I: Input> IndirectNameMap<K, V, O, I> {
 
                 let result = f(primary_index, &mut name_map)?;
                 name_map.finish()?;
-                Result::Ok(result)
+                Parsed::Ok(result)
             })
             .transpose()
             .context("could not parse entry in indirect name map")
@@ -111,11 +111,11 @@ impl<K: Index, V: Index, O: Offset, I: Input> core::fmt::Debug for IndirectNameM
                     key,
                     names: names.clone_input(),
                 });
-                Result::Ok(())
+                Parsed::Ok(())
             });
 
             if let Err(e) = result.as_ref() {
-                list.entry(&core::result::Result::<(), _>::Err(e));
+                list.entry(&Result::<(), _>::Err(e));
             }
 
             if matches!(result, Ok(None) | Err(_)) {

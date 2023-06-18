@@ -3,7 +3,7 @@ use crate::{
     index::{self, FuncIdx, LabelIdx, LocalIdx, MemIdx, TableIdx},
     input::Input,
     instruction_set::MemArg,
-    parser::{Result, ResultExt},
+    parser::{Parsed, ResultExt},
     types::{self, BlockType},
 };
 
@@ -1444,7 +1444,7 @@ instructions! {
 
 impl<I: Input> Instruction<'_, I> {
     /// Completely parses the [`Instruction`] and any of its required arguments.
-    pub fn finish(self) -> Result<()> {
+    pub fn finish(self) -> Parsed<()> {
         match self {
             Self::BrTable(indices) => {
                 indices.finish().context("branch label table")?;

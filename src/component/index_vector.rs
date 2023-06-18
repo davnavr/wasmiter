@@ -2,7 +2,7 @@ use crate::{
     component,
     index::Index,
     input::{BorrowInput, HasInput, Input},
-    parser::{Offset, Result, Vector},
+    parser::{Offset, Parsed, Vector},
 };
 
 /// Represents a [`Vector`] of WebAssembly indices.
@@ -22,7 +22,7 @@ impl<N: Index, O: Offset, I: Input> IndexVector<N, O, I> {
 
     /// Creates a new [`IndexVector`] with a parsed `u32` count from the given [`Input`].
     #[inline]
-    pub fn parse(offset: O, input: I) -> Result<Self> {
+    pub fn parse(offset: O, input: I) -> Parsed<Self> {
         Vector::parse(offset, input).map(Self::from)
     }
 
@@ -33,7 +33,7 @@ impl<N: Index, O: Offset, I: Input> IndexVector<N, O, I> {
     }
 
     /// Parses the remaining indices.
-    pub fn finish(mut self) -> Result<O> {
+    pub fn finish(mut self) -> Parsed<O> {
         for result in &mut self {
             let _ = result?;
         }
@@ -69,7 +69,7 @@ impl<N: Index, O: Offset, I: Input> From<Vector<O, I>> for IndexVector<N, O, I> 
 }
 
 impl<N: Index, O: Offset, I: Input> Iterator for IndexVector<N, O, I> {
-    type Item = Result<N>;
+    type Item = Parsed<N>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

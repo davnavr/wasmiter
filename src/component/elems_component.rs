@@ -3,7 +3,7 @@ use crate::{
     index::{self, TableIdx},
     input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Result, ResultExt as _, Vector},
+    parser::{self, Offset, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -21,16 +21,16 @@ impl<O: Offset, I: Input> From<Vector<O, I>> for ElementExpressions<O, I> {
 }
 
 impl<O: Offset, I: Input> ElementExpressions<O, I> {
-    fn new(offset: O, input: I) -> Result<Self> {
+    fn new(offset: O, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of element segment expressions")
             .map(Self::from)
     }
 
     /// Parses the next expression.
-    pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn next<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
-        F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> Result<T>,
+        F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> Parsed<T>,
     {
         self.expressions
             .advance(|offset, input| {
@@ -39,14 +39,14 @@ impl<O: Offset, I: Input> ElementExpressions<O, I> {
                 let result = f(&mut expression)?;
                 let (_, final_offset) = expression.finish()?;
                 *offset = *final_offset;
-                Result::Ok(result)
+                Parsed::Ok(result)
             })
             .transpose()
             .context("could not parse element segment expression")
     }
 
-    fn finish(mut self) -> Result<()> {
-        while self.next(|_| Result::Ok(()))?.is_some() {}
+    fn finish(mut self) -> Parsed<()> {
+        while self.next(|_| Parsed::Ok(()))?.is_some() {}
         Ok(())
     }
 }
@@ -73,7 +73,7 @@ impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
         let mut list = f.debug_list();
         loop {
             let result = borrowed.next(|instructions| {
-                list.entry(&Result::Ok(instructions));
+                list.entry(&Parsed::Ok(instructions));
                 Ok(())
             });
 
@@ -81,7 +81,7 @@ impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
                 Ok(Some(())) => (),
                 Ok(None) => break,
                 Err(e) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
             }
@@ -100,7 +100,7 @@ pub enum ElementInit<O: Offset, I: Input> {
 }
 
 impl<O: Offset, I: Input> ElementInit<O, I> {
-    fn finish(self) -> Result<()> {
+    fn finish(self) -> Parsed<()> {
         match self {
             Self::Functions(functions) => {
                 functions.finish()?;
@@ -140,7 +140,7 @@ pub enum ElementMode<O: Offset, I: Input> {
 }
 
 impl<O: Offset, I: Input> ElementMode<O, I> {
-    fn finish(self) -> Result<()> {
+    fn finish(self) -> Parsed<()> {
         match self {
             Self::Passive | Self::Declarative => (),
             Self::Active(_, instructions) => {
@@ -181,7 +181,7 @@ impl<I: Input> From<Vector<u64, I>> for ElemsComponent<I> {
     }
 }
 
-fn elem_kind<I: Input>(offset: &mut u64, input: I) -> Result<()> {
+fn elem_kind<I: Input>(offset: &mut u64, input: I) -> Parsed<()> {
     #[inline(never)]
     #[cold]
     fn bad_kind(kind: u8) -> parser::Error {
@@ -197,17 +197,17 @@ fn elem_kind<I: Input>(offset: &mut u64, input: I) -> Result<()> {
 impl<I: Input> ElemsComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *element section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of element section")
             .map(Self::from)
     }
 
     /// Parses the next element segment in the section.
-    pub fn parse<Y, Z, M, E>(&mut self, mode_f: M, init_f: E) -> Result<Option<Z>>
+    pub fn parse<Y, Z, M, E>(&mut self, mode_f: M, init_f: E) -> Parsed<Option<Z>>
     where
-        M: FnOnce(&mut ElementMode<&mut u64, &I>) -> Result<Y>,
-        E: FnOnce(Y, &mut ElementInit<&mut u64, &I>) -> Result<Z>,
+        M: FnOnce(&mut ElementMode<&mut u64, &I>) -> Parsed<Y>,
+        E: FnOnce(Y, &mut ElementInit<&mut u64, &I>) -> Parsed<Z>,
     {
         self.elements
             .advance(|offset, bytes| {
@@ -404,12 +404,12 @@ impl<I: Input> Debug for ElemsComponent<I> {
                 |mode, elements| {
                     list.entry(&Elem { mode, elements });
 
-                    Result::Ok(())
+                    Parsed::Ok(())
                 },
             );
 
             if let Err(e) = result {
-                list.entry(&Result::<()>::Err(e));
+                list.entry(&Parsed::<()>::Err(e));
             }
         }
         list.finish()

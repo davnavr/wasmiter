@@ -2,7 +2,7 @@ use crate::{
     custom::name::NameAssoc,
     index::Index,
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
+    parser::{AscendingOrder, Offset, Parsed, ResultExt as _, Vector},
 };
 
 /// A [*name map*](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps) is a
@@ -26,7 +26,7 @@ impl<N: Index, O: Offset, I: Input> From<Vector<O, I>> for NameMap<N, O, I> {
 
 impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
     /// Parses a [`NameMap`] starting at the given `offset`.
-    pub fn new(offset: O, input: I) -> Result<Self> {
+    pub fn new(offset: O, input: I) -> Parsed<Self> {
         Vector::parse(offset, input).map(Self::from)
     }
 
@@ -37,7 +37,7 @@ impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
     }
 
     /// Parses the next entry in the [`NameMap`].
-    pub fn parse(&mut self) -> Result<Option<NameAssoc<N, &I>>> {
+    pub fn parse(&mut self) -> Parsed<Option<NameAssoc<N, &I>>> {
         self.entries
             .advance_with_index(|i, offset, bytes| {
                 let name_assoc =
@@ -53,7 +53,7 @@ impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
     }
 
     /// Parses all remaining entries in the [`NameMap`].
-    pub fn finish(mut self) -> Result<O> {
+    pub fn finish(mut self) -> Parsed<O> {
         while self.parse()?.is_some() {}
         Ok(self.entries.into_offset())
     }
@@ -93,7 +93,7 @@ impl<'a, N: Index, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for NameM
 impl<N: Index, O: Offset, I: Clone + Input> NameMap<N, O, &I> {}
 
 impl<N: Index, O: Offset, I: Clone + Input> Iterator for NameMap<N, O, I> {
-    type Item = Result<NameAssoc<N, I>>;
+    type Item = Parsed<NameAssoc<N, I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {

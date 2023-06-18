@@ -2,7 +2,7 @@
 //! [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 
 use crate::input::Input;
-use crate::parser::{Context, Error, ErrorKind, Result, ResultExt as _};
+use crate::parser::{Context, Error, ErrorKind, Parsed, ResultExt as _};
 
 // Implementation modules, used in benchmarks
 
@@ -44,7 +44,7 @@ fn bad_continuation(bytes: &[u8]) -> Error {
 
 /// Attempts to a parse an unsigned 32-bit integer encoded in
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
-pub fn u32<I: Input>(offset: &mut u64, input: I) -> Result<u32> {
+pub fn u32<I: Input>(offset: &mut u64, input: I) -> Parsed<u32> {
     implementation::u32(offset, input).context("could not parse unsigned 32-bit integer")
 }
 
@@ -56,7 +56,7 @@ pub fn u32<I: Input>(offset: &mut u64, input: I) -> Result<u32> {
 /// which the specification currently limits to a 32-bit amount.
 ///
 /// See [`leb128::u32`](self::u32) for more information.
-pub fn usize<I: Input>(offset: &mut u64, input: I) -> Result<usize> {
+pub fn usize<I: Input>(offset: &mut u64, input: I) -> Parsed<usize> {
     #[inline(never)]
     #[cold]
     fn length_too_large(length: u32) -> Error {
@@ -73,18 +73,18 @@ pub fn usize<I: Input>(offset: &mut u64, input: I) -> Result<usize> {
 
 /// Attempts to a parse an unsigned 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
-pub fn u64<I: Input>(offset: &mut u64, input: I) -> Result<u64> {
+pub fn u64<I: Input>(offset: &mut u64, input: I) -> Parsed<u64> {
     implementation::u64(offset, input).context("could not parse unsigned 64-bit integer")
 }
 
 /// Attempts to parse a signed 32-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
-pub fn s32<I: Input>(offset: &mut u64, input: I) -> Result<i32> {
+pub fn s32<I: Input>(offset: &mut u64, input: I) -> Parsed<i32> {
     implementation::s32(offset, input).context("could not parse signed 32-bit integer")
 }
 
 /// Attempts to parse a signed 64-bit integer encoded in the
 /// [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
-pub fn s64<I: Input>(offset: &mut u64, input: I) -> Result<i64> {
+pub fn s64<I: Input>(offset: &mut u64, input: I) -> Parsed<i64> {
     implementation::s64(offset, input).context("could not parse signed 64-bit integer")
 }

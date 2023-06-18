@@ -32,7 +32,7 @@ cfg_if::cfg_if! {
 
 const PREAMBLE_LENGTH: u8 = 8;
 
-fn parse_module_preamble<I: input::Input>(input: &I) -> parser::Result<()> {
+fn parse_module_preamble<I: input::Input>(input: &I) -> parser::Parsed<()> {
     use parser::ResultExt;
 
     const MAGIC: [u8; 4] = *b"\0asm";
@@ -75,7 +75,7 @@ fn parse_module_preamble<I: input::Input>(input: &I) -> parser::Result<()> {
 #[inline]
 pub fn parse_module_sections<I: input::Input>(
     binary: I,
-) -> parser::Result<sections::SectionSequence<I>> {
+) -> parser::Parsed<sections::SectionSequence<I>> {
     parse_module_preamble(&binary)?;
     Ok(sections::SectionSequence::new(
         u64::from(PREAMBLE_LENGTH),

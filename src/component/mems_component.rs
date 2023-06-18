@@ -1,6 +1,6 @@
 use crate::{
     input::{BorrowInput, HasInput, Input},
-    parser::{Result, ResultExt, Vector},
+    parser::{Parsed, ResultExt, Vector},
     types::MemType,
 };
 
@@ -26,7 +26,7 @@ impl<I: Input> From<Vector<u64, I>> for MemsComponent<I> {
 impl<I: Input> MemsComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *memory section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of memory section")
             .map(Self::from)
@@ -57,7 +57,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for MemsComponent<I> {
 }
 
 impl<I: Input> core::iter::Iterator for MemsComponent<I> {
-    type Item = Result<MemType>;
+    type Item = Parsed<MemType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

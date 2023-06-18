@@ -14,7 +14,7 @@ pub struct NameAssoc<N: Index, I: Input> {
 
 impl<N: Index, I: Input> NameAssoc<N, I> {
     /// Parses a [`NameAssoc`].
-    pub fn parse(offset: &mut u64, input: I) -> parser::Result<Self> {
+    pub fn parse(offset: &mut u64, input: I) -> parser::Parsed<Self> {
         Ok(Self {
             index: crate::component::index(offset, &input).context("index of nameassoc pair")?,
             name: parser::name::parse(offset, input).context("name of nameassoc pair")?,

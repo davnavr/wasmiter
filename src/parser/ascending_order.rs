@@ -18,7 +18,7 @@ impl<C: Copy + 'static, I: Copy + 'static> AscendingOrder<C, I> {
         }
     }
 
-    pub(crate) fn check(&mut self, next: I, first: bool) -> parser::Result<I>
+    pub(crate) fn check(&mut self, next: I, first: bool) -> parser::Parsed<I>
     where
         C: core::fmt::Display + Send + Sync + 'static,
         I: core::fmt::Debug + Into<C> + core::cmp::PartialOrd<C> + Send + Sync,

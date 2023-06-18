@@ -1,7 +1,7 @@
 use crate::{
     input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
-    parser::{Result, ResultExt as _, Vector},
+    parser::{Parsed, ResultExt as _, Vector},
     types::GlobalType,
 };
 
@@ -24,7 +24,7 @@ impl<I: Input> From<Vector<u64, I>> for GlobalsComponent<I> {
 impl<I: Input> GlobalsComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *global section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of global section")
             .map(Self::from)
@@ -32,9 +32,9 @@ impl<I: Input> GlobalsComponent<I> {
 
     /// Parses a
     /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
-    pub fn parse<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn parse<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
-        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> Result<T>,
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> Parsed<T>,
     {
         self.globals
             .advance(|offset, input| {
@@ -42,7 +42,7 @@ impl<I: Input> GlobalsComponent<I> {
                 let mut expression = InstructionSequence::new(offset, input);
                 let result = f(global_type, &mut expression).context("global expression")?;
                 expression.finish().context("global expression")?;
-                Result::Ok(result)
+                Parsed::Ok(result)
             })
             .transpose()
             .context("within global section")

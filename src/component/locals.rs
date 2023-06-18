@@ -23,7 +23,7 @@ pub struct Locals<O: Offset, I: Input> {
 }
 
 impl<O: Offset, I: Input> Locals<O, I> {
-    pub(super) fn new(mut offset: O, input: I) -> parser::Result<Self> {
+    pub(super) fn new(mut offset: O, input: I) -> parser::Parsed<Self> {
         Ok(Self {
             count: parser::leb128::u32(offset.offset_mut(), &input)
                 .context("locals declaration count")?,
@@ -33,7 +33,7 @@ impl<O: Offset, I: Input> Locals<O, I> {
         })
     }
 
-    fn load_next_group(&mut self) -> parser::Result<Option<(NonZeroU32, ValType)>> {
+    fn load_next_group(&mut self) -> parser::Parsed<Option<(NonZeroU32, ValType)>> {
         if self.count == 0 {
             return Ok(None);
         }
@@ -63,12 +63,12 @@ impl<O: Offset, I: Input> Locals<O, I> {
     /// locals of that type.
     ///
     /// To save on size, locals of the same type can be grouped together.
-    pub fn next_group(&mut self) -> parser::Result<Option<(NonZeroU32, ValType)>> {
+    pub fn next_group(&mut self) -> parser::Parsed<Option<(NonZeroU32, ValType)>> {
         self.load_next_group()?;
         Ok(self.current.take())
     }
 
-    fn next_inner(&mut self) -> parser::Result<Option<ValType>> {
+    fn next_inner(&mut self) -> parser::Parsed<Option<ValType>> {
         match self.load_next_group() {
             Ok(None) => Ok(None),
             Err(e) => Err(e),
@@ -80,14 +80,14 @@ impl<O: Offset, I: Input> Locals<O, I> {
     }
 
     /// Parses all local variable declarations.
-    pub fn finish(mut self) -> parser::Result<O> {
+    pub fn finish(mut self) -> parser::Parsed<O> {
         while self.next_group().transpose().is_some() {}
         Ok(self.offset)
     }
 }
 
 impl<O: Offset, I: Input> Iterator for Locals<O, I> {
-    type Item = parser::Result<ValType>;
+    type Item = parser::Parsed<ValType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

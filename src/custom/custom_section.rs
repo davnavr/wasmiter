@@ -21,7 +21,7 @@ impl<I: Clone + Input> CustomSection<I> {
     /// parsing the section name.
     ///
     /// Returns `Err(_)` if the section is **not** a custom section.
-    pub fn try_from_section(section: Section<I>) -> Result<parser::Result<Self>, Section<I>> {
+    pub fn try_from_section(section: Section<I>) -> Result<parser::Parsed<Self>, Section<I>> {
         if section.id() != sections::id::CUSTOM {
             return Err(section);
         }

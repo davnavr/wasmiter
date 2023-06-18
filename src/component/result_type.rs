@@ -1,6 +1,6 @@
 use crate::{
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{Offset, Result, Vector},
+    parser::{Offset, Parsed, Vector},
     types::ValType,
 };
 
@@ -25,7 +25,7 @@ impl<O: Offset, I: Input> ResultType<O, I> {
     }
 
     /// Parses the start of a [`ResultType`].
-    pub fn parse(offset: O, input: I) -> Result<Self> {
+    pub fn parse(offset: O, input: I) -> Parsed<Self> {
         Vector::parse(offset, input).map(Self::from)
     }
 
@@ -36,7 +36,7 @@ impl<O: Offset, I: Input> ResultType<O, I> {
     }
 
     /// Parses the remaining types.
-    pub fn finish(mut self) -> Result<O> {
+    pub fn finish(mut self) -> Parsed<O> {
         for result in &mut self {
             let _ = result?;
         }
@@ -71,7 +71,7 @@ impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for ResultType<O, &
 }
 
 impl<O: Offset, I: Input> Iterator for ResultType<O, I> {
-    type Item = Result<ValType>;
+    type Item = Parsed<ValType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

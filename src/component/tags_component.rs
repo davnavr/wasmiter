@@ -1,6 +1,6 @@
 use crate::{
     input::{BorrowInput, HasInput, Input},
-    parser::{self, Result, ResultExt as _, Vector},
+    parser::{self, Parsed, ResultExt as _, Vector},
 };
 
 /// Represents a
@@ -16,7 +16,7 @@ pub enum Tag {
 }
 
 /// Parses a [`Tag`] at the given `offset` into the [`Input`].
-pub fn parse<I: Input>(offset: &mut u64, input: &I) -> Result<Tag> {
+pub fn parse<I: Input>(offset: &mut u64, input: &I) -> Parsed<Tag> {
     let attribute = parser::one_byte_exact(offset, input)?;
     if attribute != 0 {
         #[cold]
@@ -50,7 +50,7 @@ impl<I: Input> From<Vector<u64, I>> for TagsComponent<I> {
 impl<I: Input> TagsComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *type section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> parser::Result<Self> {
+    pub fn new(offset: u64, input: I) -> parser::Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of tag section")
             .map(Self::from)
@@ -80,7 +80,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for TagsComponent<I> {
 }
 
 impl<I: Input> Iterator for TagsComponent<I> {
-    type Item = Result<Tag>;
+    type Item = Parsed<Tag>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

@@ -1,7 +1,7 @@
 use crate::{
     component, index,
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{self, name::Name, Result, ResultExt as _, Vector},
+    parser::{self, name::Name, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -54,7 +54,7 @@ impl<I: Input> Export<I> {
 }
 
 impl<'a, I: Input> Export<&'a I> {
-    fn parse(offset: &mut u64, input: &'a I) -> Result<Self> {
+    fn parse(offset: &mut u64, input: &'a I) -> Parsed<Self> {
         let name = parser::name::parse(offset, input).context("export name")?;
 
         let kind_offset = *offset;
@@ -127,14 +127,14 @@ impl<I: Input> From<Vector<u64, I>> for ExportsComponent<I> {
 impl<I: Input> ExportsComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *export section* of a module, starting
     /// at the given `offset`.
-    pub fn new(offset: u64, bytes: I) -> Result<Self> {
+    pub fn new(offset: u64, bytes: I) -> Parsed<Self> {
         Vector::parse(offset, bytes)
             .context("at start of export section")
             .map(Self::from)
     }
 
     /// Parses the next export in the section.
-    pub fn parse(&mut self) -> Result<Option<Export<&I>>> {
+    pub fn parse(&mut self) -> Parsed<Option<Export<&I>>> {
         self.exports
             .advance(Export::parse)
             .transpose()
@@ -165,7 +165,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for ExportsComponent<I> {
 }
 
 impl<I: Clone + Input> Iterator for ExportsComponent<I> {
-    type Item = Result<Export<I>>;
+    type Item = Parsed<Export<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {

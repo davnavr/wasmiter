@@ -2,7 +2,7 @@ use crate::{
     component::{Code, CodeSection, FunctionSection},
     index::TypeIdx,
     input::{BorrowInput, CloneInput, HasInput, Input, Window},
-    parser::{self, Result},
+    parser::{self, Parsed},
 };
 
 /// A WebAssembly function, defined in the
@@ -84,7 +84,7 @@ impl<T: Input, C: Input> FuncsComponent<T, C> {
     /// # Errors
     ///
     /// Returns an error if the length of both sections are not the same.
-    pub fn new(types: FunctionSection<T>, code: CodeSection<C>) -> Result<Self> {
+    pub fn new(types: FunctionSection<T>, code: CodeSection<C>) -> Parsed<Self> {
         let type_count = types.remaining_count();
         let code_count = code.remaining_count();
         if type_count != code_count {
@@ -101,7 +101,7 @@ impl<T: Input, C: Input> FuncsComponent<T, C> {
     }
 
     /// Parses the *function* and *code* sections to read the next function.
-    pub fn parse(&mut self) -> Result<Option<Func<&C>>> {
+    pub fn parse(&mut self) -> Parsed<Option<Func<&C>>> {
         // Constructor ensures both sections have the same count
         match self.types.next() {
             None => Ok(None),
@@ -135,7 +135,7 @@ impl<'a, T: Input + 'a, C: Input + 'a> BorrowInput<'a, C> for FuncsComponent<T, 
 }
 
 impl<T: Input, C: Clone + Input> Iterator for FuncsComponent<T, C> {
-    type Item = Result<Func<C>>;
+    type Item = Parsed<Func<C>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.parse()

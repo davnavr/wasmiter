@@ -310,7 +310,7 @@ impl<I: Input> wat::Wat for Instr<'_, I> {
 }
 
 impl<O: Offset, I: Input> wat::Wat for InstructionSequence<O, I> {
-    fn write(mut self, writer: &mut Writer) -> crate::parser::Result<()> {
+    fn write(mut self, writer: &mut Writer) -> crate::parser::Parsed<()> {
         expression_indented(&mut self, false, writer)
     }
 }

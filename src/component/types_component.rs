@@ -1,7 +1,7 @@
 use crate::{
     component::ResultType,
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{Result, ResultExt, Vector},
+    parser::{Parsed, ResultExt, Vector},
 };
 
 /// Represents the
@@ -23,7 +23,7 @@ impl<I: Input> From<Vector<u64, I>> for TypesComponent<I> {
 impl<I: Input> TypesComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *type section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of type section")
             .map(Self::from)
@@ -37,10 +37,10 @@ impl<I: Input> TypesComponent<I> {
 
     /// Parses the next function type in the section.
     #[inline]
-    pub fn parse<Y, Z, P, R>(&mut self, parameter_types: P, result_types: R) -> Result<Option<Z>>
+    pub fn parse<Y, Z, P, R>(&mut self, parameter_types: P, result_types: R) -> Parsed<Option<Z>>
     where
-        P: FnOnce(&mut ResultType<&mut u64, &I>) -> Result<Y>,
-        R: FnOnce(Y, &mut ResultType<&mut u64, &I>) -> Result<Z>,
+        P: FnOnce(&mut ResultType<&mut u64, &I>) -> Parsed<Y>,
+        R: FnOnce(Y, &mut ResultType<&mut u64, &I>) -> Parsed<Z>,
     {
         self.types
             .advance(|offset, bytes| {
@@ -112,7 +112,7 @@ impl<I: Input> core::fmt::Debug for TypesComponent<I> {
                 }
                 Ok(None) => break,
                 Err(e) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
             }

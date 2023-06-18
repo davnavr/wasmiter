@@ -1,4 +1,4 @@
-use crate::parser::{Context, Error, Result};
+use crate::parser::{Context, Error, Parsed};
 use core::fmt::Formatter;
 
 /// Provides helper methods to add additional context to [`Error`]s.
@@ -6,19 +6,19 @@ use core::fmt::Formatter;
 /// If the `std` and `alloc` features are not specified, then these methods do nothing.
 pub(crate) trait ResultExt<T> {
     /// Attaches the given [`Context`] to the [`Result<T>`], if it is an error.
-    fn context<C: Into<Context>>(self, context: C) -> Result<T>
+    fn context<C: Into<Context>>(self, context: C) -> Parsed<T>
     where
         Self: Sized;
 
-    fn with_context<F, C>(self, f: F) -> Result<T>
+    fn with_context<F, C>(self, f: F) -> Parsed<T>
     where
         F: FnOnce() -> C,
         C: Fn(&mut Formatter) -> core::fmt::Result + Send + Sync + 'static;
 }
 
-impl<T, E: Into<Error>> ResultExt<T> for core::result::Result<T, E> {
+impl<T, E: Into<Error>> ResultExt<T> for Result<T, E> {
     #[inline]
-    fn context<C: Into<Context>>(self, context: C) -> Result<T>
+    fn context<C: Into<Context>>(self, context: C) -> Parsed<T>
     where
         Self: Sized,
     {
@@ -29,7 +29,7 @@ impl<T, E: Into<Error>> ResultExt<T> for core::result::Result<T, E> {
     }
 
     #[inline]
-    fn with_context<F, C>(self, f: F) -> Result<T>
+    fn with_context<F, C>(self, f: F) -> Parsed<T>
     where
         F: FnOnce() -> C,
         C: Fn(&mut Formatter) -> core::fmt::Result + Send + Sync + 'static,

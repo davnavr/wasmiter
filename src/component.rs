@@ -48,7 +48,7 @@ pub use types_component::TypesComponent;
 pub fn index<N: crate::index::Index, I: crate::input::Input>(
     offset: &mut u64,
     input: I,
-) -> crate::parser::Result<N> {
+) -> crate::parser::Parsed<N> {
     use crate::parser::{leb128, ResultExt as _};
 
     let index = leb128::u32(offset, input).context(N::NAME)?;

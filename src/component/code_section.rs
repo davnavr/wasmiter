@@ -113,7 +113,7 @@ impl<I: Input> Debug for Code<I> {
             |locals| Ok(s.field("locals", locals)),
             |s, body| {
                 s.field("body", body);
-                parser::Result::Ok(())
+                parser::Parsed::Ok(())
             },
         );
 
@@ -148,7 +148,7 @@ impl<I: Input> CodeSection<I> {
     /// Uses the given [`Input`] to read the contents of the *code section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(offset: u64, input: I) -> parser::Result<Self> {
+    pub fn new(offset: u64, input: I) -> parser::Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of code section")
             .map(Self::from)
@@ -162,7 +162,7 @@ impl<I: Input> CodeSection<I> {
     }
 
     /// Parses the next entry in the *code section*.
-    pub fn parse(&mut self) -> parser::Result<Option<Code<&I>>> {
+    pub fn parse(&mut self) -> parser::Parsed<Option<Code<&I>>> {
         self.entries
             .advance_with_index(|index, offset, bytes| {
                 let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
@@ -171,7 +171,7 @@ impl<I: Input> CodeSection<I> {
                 crate::input::increment_offset(offset, size)
                     .context("unable to advance offset to read next code section entry")?;
 
-                parser::Result::Ok(Code { index, content })
+                parser::Parsed::Ok(Code { index, content })
             })
             .transpose()
             .context("within code section")
@@ -195,7 +195,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for CodeSection<I> {
 }
 
 impl<I: Clone + Input> Iterator for CodeSection<I> {
-    type Item = parser::Result<Code<I>>;
+    type Item = parser::Parsed<Code<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {

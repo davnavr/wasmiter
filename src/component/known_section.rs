@@ -100,7 +100,7 @@ impl<I: Input> KnownSection<Window<I>> {
     ///
     /// Returns `Ok(Err(_))` if the section **was** recognized, but an attempt to parse a length field
     /// failed.
-    pub fn interpret(section: Section<I>) -> Result<parser::Result<Self>, Section<I>> {
+    pub fn interpret(section: Section<I>) -> Result<parser::Parsed<Self>, Section<I>> {
         Ok(match section.id() {
             section_id::TYPE => {
                 let contents = section.into_contents();

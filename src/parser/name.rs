@@ -27,7 +27,7 @@ impl<I: Input> Name<I> {
     /// # Error
     ///
     /// Returns an error if the length could not be parsed.
-    pub fn new(input: I, offset: &mut u64) -> parser::Result<Self> {
+    pub fn new(input: I, offset: &mut u64) -> parser::Parsed<Self> {
         Ok(Self {
             length: parser::leb128::u32(offset, &input).context("string length")?,
             offset: *offset,
@@ -70,7 +70,7 @@ impl<I: Input> Name<I> {
     /// # Errors
     ///
     /// Returns an error if the name bytes could not be fetched from the [`Input`].
-    pub fn copy_to_slice<'b>(&self, buffer: &'b mut [u8]) -> parser::Result<&'b mut [u8]> {
+    pub fn copy_to_slice<'b>(&self, buffer: &'b mut [u8]) -> parser::Parsed<&'b mut [u8]> {
         let length = core::cmp::min(
             usize::try_from(self.length).ok().unwrap_or(usize::MAX),
             buffer.len(),
@@ -98,7 +98,7 @@ impl<I: Input> Name<I> {
     ///
     /// Returns an error if the name bytes could not be feteched from the [`Input`].
     #[inline]
-    pub fn try_eq_str(&self, s: &str) -> parser::Result<bool> {
+    pub fn try_eq_str(&self, s: &str) -> parser::Parsed<bool> {
         self.borrow_input()
             .into_bytes_window()
             .try_eq_at(self.offset, s.as_bytes())
@@ -173,7 +173,7 @@ impl<I: Input> Name<I> {
     /// # Error
     ///
     /// Returns an error if the operation to read the characters from the [`Input`] fails.
-    pub fn into_bytes(self) -> parser::Result<alloc::vec::Vec<u8>> {
+    pub fn into_bytes(self) -> parser::Parsed<alloc::vec::Vec<u8>> {
         let mut bytes = alloc::vec![0u8; self.length.try_into().unwrap_or(usize::MAX)];
         self.copy_to_slice(&mut bytes)?;
         Ok(bytes)
@@ -185,13 +185,13 @@ impl<I: Input> Name<I> {
     ///
     /// Returns an error if the operation to read the characters from the [`Input`] fails, or if
     /// the [`Name`] is not valid UTF-8.
-    pub fn try_into_string(self) -> parser::Result<alloc::string::String> {
+    pub fn try_into_string(self) -> parser::Parsed<alloc::string::String> {
         alloc::string::String::from_utf8(self.into_bytes()?).map_err(Into::into)
     }
 }
 
 /// Parses a UTF-8 string [`Name`].
-pub fn parse<I: Input>(offset: &mut u64, input: I) -> parser::Result<Name<I>> {
+pub fn parse<I: Input>(offset: &mut u64, input: I) -> parser::Parsed<Name<I>> {
     let name = Name::new(input, offset)?;
     input::increment_offset(offset, name.length() as usize)?;
     Ok(name)
@@ -200,7 +200,7 @@ pub fn parse<I: Input>(offset: &mut u64, input: I) -> parser::Result<Name<I>> {
 impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
     type Error = Error;
 
-    fn try_from(bytes: &'a [u8]) -> parser::Result<Self> {
+    fn try_from(bytes: &'a [u8]) -> parser::Parsed<Self> {
         let actual_length = bytes.len();
         if let Ok(length) = u32::try_from(actual_length) {
             Ok(Self {
@@ -240,7 +240,7 @@ impl<'a> TryFrom<&'a [u8]> for Name<&'a [u8]> {
 impl<'a> TryFrom<&'a str> for Name<&'a [u8]> {
     type Error = Error;
 
-    fn try_from(s: &'a str) -> parser::Result<Self> {
+    fn try_from(s: &'a str) -> parser::Parsed<Self> {
         Self::try_from(s.as_bytes())
     }
 }

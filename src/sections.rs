@@ -8,7 +8,7 @@
 //! [`dylink.0` custom section described in the Dynamic Linking document](https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md).
 
 use crate::input::{BorrowInput, CloneInput, HasInput, Input, Window};
-use crate::parser::{self, Result, ResultExt};
+use crate::parser::{self, Parsed, ResultExt};
 use core::fmt::Debug;
 
 mod debug_module;
@@ -152,7 +152,7 @@ impl<I: Input> SectionSequence<I> {
     ///
     /// Returns an error if the [`Input`] bytes could not be read, or if a structure was not
     /// formatted correctly.
-    pub fn parse(&mut self) -> Result<Option<Section<&I>>> {
+    pub fn parse(&mut self) -> Parsed<Option<Section<&I>>> {
         let id = if let Some(value) = parser::one_byte(&mut self.offset, &self.input)? {
             value
         } else {
@@ -210,7 +210,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for SectionSequence<I> {
 }
 
 impl<I: Clone + Input> Iterator for SectionSequence<I> {
-    type Item = Result<Section<I>>;
+    type Item = Parsed<Section<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {

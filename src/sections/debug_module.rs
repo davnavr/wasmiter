@@ -22,7 +22,7 @@ impl<I: Input> Debug for DebugModuleSection<'_, I> {
         match crate::component::KnownSection::interpret(self.section.borrow_input()) {
             Ok(known) => Debug::fmt(&known, f),
             Err(unknown) => match crate::custom::CustomSection::try_from_section(unknown) {
-                Ok(Err(e)) => Debug::fmt(&crate::parser::Result::<()>::Err(e), f),
+                Ok(Err(e)) => Debug::fmt(&crate::parser::Parsed::<()>::Err(e), f),
                 Ok(Ok(custom)) => match crate::custom::KnownCustomSection::interpret(custom) {
                     Ok(known) => Debug::fmt(&known, f),
                     Err(unknown_custom) => Debug::fmt(&unknown_custom, f),

@@ -1,6 +1,6 @@
 use crate::{
     input::{BorrowInput, HasInput, Input},
-    parser::{Result, ResultExt, Vector},
+    parser::{Parsed, ResultExt, Vector},
     types::TableType,
 };
 
@@ -23,7 +23,7 @@ impl<I: Input> From<Vector<u64, I>> for TablesComponent<I> {
 impl<I: Input> TablesComponent<I> {
     /// Uses the given [`Input`] to read the contents of the *table section* of a module, starting,
     /// at the specified `offset`.
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of table section")
             .map(Self::from)
@@ -54,7 +54,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for TablesComponent<I> {
 }
 
 impl<I: Input> core::iter::Iterator for TablesComponent<I> {
-    type Item = Result<TableType>;
+    type Item = Parsed<TableType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

@@ -1,12 +1,12 @@
 use crate::{
     component,
     input::Input,
-    parser::{self, leb128, Context, Error, ErrorKind, Result, ResultExt},
+    parser::{self, leb128, Context, Error, ErrorKind, Parsed, ResultExt},
     types::{self, BlockType, GlobalMutability, IdxType, Limits, TableType, ValType},
 };
 
 /// Parses a [`BlockType`].
-pub fn block_type<I: Input>(offset: &mut u64, input: I) -> Result<BlockType> {
+pub fn block_type<I: Input>(offset: &mut u64, input: I) -> Parsed<BlockType> {
     #[cold]
     #[inline(never)]
     fn not_a_valid_type(value: i64) -> Error {
@@ -33,7 +33,7 @@ pub fn block_type<I: Input>(offset: &mut u64, input: I) -> Result<BlockType> {
 /// Parses a [`ValType`].
 ///
 /// Returns an error if some other [`BlockType`] is parsed instead.
-pub fn val_type<I: Input>(offset: &mut u64, input: I) -> Result<ValType> {
+pub fn val_type<I: Input>(offset: &mut u64, input: I) -> Parsed<ValType> {
     #[inline(never)]
     #[cold]
     fn empty_block_type() -> Error {
@@ -56,7 +56,7 @@ pub fn val_type<I: Input>(offset: &mut u64, input: I) -> Result<ValType> {
 /// Parses a [`RefType`](types::RefType).
 ///
 /// Returns an error if some other [`ValType`] is parsed instead.
-pub fn ref_type<I: Input>(offset: &mut u64, input: I) -> Result<types::RefType> {
+pub fn ref_type<I: Input>(offset: &mut u64, input: I) -> Parsed<types::RefType> {
     #[inline(never)]
     #[cold]
     fn not_a_ref_type(actual: ValType) -> Error {
@@ -72,7 +72,7 @@ pub fn ref_type<I: Input>(offset: &mut u64, input: I) -> Result<types::RefType> 
 }
 
 /// Parses a [`TableType`].
-pub fn table_type<I: Input>(offset: &mut u64, input: &I) -> Result<TableType> {
+pub fn table_type<I: Input>(offset: &mut u64, input: &I) -> Parsed<TableType> {
     Ok(TableType::new(
         ref_type(offset, input).context("table element type")?,
         limits(offset, input).context("table limits")?,
@@ -80,7 +80,7 @@ pub fn table_type<I: Input>(offset: &mut u64, input: &I) -> Result<TableType> {
 }
 
 /// Parses a global [`mut`](https://webassembly.github.io/spec/core/binary/types.html#binary-mut) value.
-pub fn global_mutability<I: Input>(offset: &mut u64, input: I) -> Result<GlobalMutability> {
+pub fn global_mutability<I: Input>(offset: &mut u64, input: I) -> Parsed<GlobalMutability> {
     #[inline(never)]
     #[cold]
     fn bad_mutability_flag(flag: u8) -> Error {
@@ -95,7 +95,7 @@ pub fn global_mutability<I: Input>(offset: &mut u64, input: I) -> Result<GlobalM
 }
 
 /// Parses a [`GlobalType`](types::GlobalType)
-pub fn global_type<I: Input>(offset: &mut u64, input: &I) -> Result<types::GlobalType> {
+pub fn global_type<I: Input>(offset: &mut u64, input: &I) -> Parsed<types::GlobalType> {
     let value_type = val_type(offset, input).context("global type")?;
     let mutability = global_mutability(offset, input)?;
     Ok(types::GlobalType::new(mutability, value_type))
@@ -103,12 +103,12 @@ pub fn global_type<I: Input>(offset: &mut u64, input: &I) -> Result<types::Globa
 
 /// Parses a [`MemType`](types::MemType).
 #[inline]
-pub fn mem_type<I: Input>(offset: &mut u64, input: &I) -> Result<types::MemType> {
+pub fn mem_type<I: Input>(offset: &mut u64, input: &I) -> Parsed<types::MemType> {
     limits(offset, input)
 }
 
 /// Parses [`Limits`].
-pub fn limits<I: Input>(offset: &mut u64, input: &I) -> Result<Limits> {
+pub fn limits<I: Input>(offset: &mut u64, input: &I) -> Parsed<Limits> {
     let flag = parser::one_byte_exact(offset, input).context("parsing limit flag")?;
 
     if flag & (!0b111) != 0 {
@@ -183,11 +183,11 @@ pub fn func_type<Y, Z, I, P, R>(
     input: &I,
     parameter_types: P,
     result_types: R,
-) -> Result<Z>
+) -> Parsed<Z>
 where
     I: Input,
-    P: FnOnce(&mut component::ResultType<&mut u64, &I>) -> Result<Y>,
-    R: FnOnce(Y, &mut component::ResultType<&mut u64, &I>) -> Result<Z>,
+    P: FnOnce(&mut component::ResultType<&mut u64, &I>) -> Parsed<Y>,
+    R: FnOnce(Y, &mut component::ResultType<&mut u64, &I>) -> Parsed<Z>,
 {
     let tag = parser::one_byte_exact(offset, input).context("function type")?;
     if tag != 0x60 {

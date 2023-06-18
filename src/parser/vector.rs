@@ -27,7 +27,7 @@ impl<O: Offset, I: Input> Vector<O, I> {
     }
 
     /// Parses the given [`Input`] to obtain the `u32` count of elements.
-    pub fn parse(mut offset: O, input: I) -> parser::Result<Self> {
+    pub fn parse(mut offset: O, input: I) -> parser::Parsed<Self> {
         let count =
             parser::leb128::u32(offset.offset_mut(), &input).context("vector element count")?;
 

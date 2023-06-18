@@ -56,7 +56,7 @@ pub enum NameSubsection<I: Input> {
 
 /// Result type used when interpreting the contents of a [`NameSubsection`].
 pub type InterpretedNameSubsection<I> =
-    Result<parser::Result<NameSubsection<Window<I>>>, Section<I>>;
+    Result<parser::Parsed<NameSubsection<Window<I>>>, Section<I>>;
 
 impl<I: Input> NameSubsection<Window<I>> {
     /// Attempts to interpret the contents of the given name subsection.
@@ -195,20 +195,20 @@ impl<I: Input> Debug for NameSection<I> {
             list.entry(match subsec {
                 Ok(section) => match NameSubsection::interpret(section) {
                     Ok(Err(e)) => {
-                        err = parser::Result::<()>::Err(e);
+                        err = parser::Parsed::<()>::Err(e);
                         &err
                     }
                     Ok(Ok(known)) => {
-                        known_subsection = parser::Result::Ok(known);
+                        known_subsection = parser::Parsed::Ok(known);
                         &known_subsection
                     }
                     Err(unknown) => {
-                        unknown_subsection = parser::Result::Ok(unknown);
+                        unknown_subsection = parser::Parsed::Ok(unknown);
                         &unknown_subsection
                     }
                 },
                 Err(e) => {
-                    err = parser::Result::<()>::Err(e);
+                    err = parser::Parsed::<()>::Err(e);
                     &err
                 }
             });

@@ -2,7 +2,7 @@ use crate::{
     component::IndexVector,
     index::TypeIdx,
     input::{BorrowInput, HasInput, Input},
-    parser::{Result, ResultExt},
+    parser::{Parsed, ResultExt},
 };
 
 /// Represents the
@@ -28,7 +28,7 @@ impl<I: Input> FunctionSection<I> {
     /// Uses the given [`Input`] to read the contents of the *function section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(offset: u64, input: I) -> Result<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         IndexVector::parse(offset, input)
             .context("at start of function section")
             .map(Self::from)
@@ -59,7 +59,7 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for FunctionSection<I> {
 }
 
 impl<I: Input> Iterator for FunctionSection<I> {
-    type Item = Result<TypeIdx>;
+    type Item = Parsed<TypeIdx>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {

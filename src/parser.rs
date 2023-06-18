@@ -19,15 +19,15 @@ pub use error::Error;
 pub use offset::Offset;
 pub use vector::Vector;
 
-/// Result type used when parsing input.
-pub type Result<T> = core::result::Result<T, Error>;
+/// Result type used when parsing bytes from an [`Input`].
+pub type Parsed<T> = Result<T, Error>;
 
 #[inline]
 pub(crate) fn bytes<'b, I: Input>(
     offset: &mut u64,
     input: I,
     buffer: &'b mut [u8],
-) -> Result<&'b mut [u8]> {
+) -> Parsed<&'b mut [u8]> {
     let length = buffer.len();
     input
         .read(offset, buffer)
@@ -35,7 +35,7 @@ pub(crate) fn bytes<'b, I: Input>(
 }
 
 #[inline]
-pub(crate) fn bytes_exact<I: Input>(offset: &mut u64, input: I, buffer: &mut [u8]) -> Result<()> {
+pub(crate) fn bytes_exact<I: Input>(offset: &mut u64, input: I, buffer: &mut [u8]) -> Parsed<()> {
     let length = buffer.len();
     input
         .read_exact(offset, buffer)
@@ -43,14 +43,14 @@ pub(crate) fn bytes_exact<I: Input>(offset: &mut u64, input: I, buffer: &mut [u8
 }
 
 #[inline]
-pub(crate) fn byte_array<I: Input, const N: usize>(offset: &mut u64, input: I) -> Result<[u8; N]> {
+pub(crate) fn byte_array<I: Input, const N: usize>(offset: &mut u64, input: I) -> Parsed<[u8; N]> {
     let mut array = [0u8; N];
     bytes_exact(offset, input, array.as_mut_slice())?;
     Ok(array)
 }
 
 #[inline]
-pub(crate) fn one_byte<I: Input>(offset: &mut u64, input: I) -> Result<Option<u8>> {
+pub(crate) fn one_byte<I: Input>(offset: &mut u64, input: I) -> Parsed<Option<u8>> {
     Ok(if let [value] = self::bytes(offset, input, &mut [0u8])? {
         Some(*value)
     } else {
@@ -59,7 +59,7 @@ pub(crate) fn one_byte<I: Input>(offset: &mut u64, input: I) -> Result<Option<u8
 }
 
 #[inline]
-pub(crate) fn one_byte_exact<I: Input>(offset: &mut u64, input: I) -> Result<u8> {
+pub(crate) fn one_byte_exact<I: Input>(offset: &mut u64, input: I) -> Parsed<u8> {
     let mut value = 0u8;
     bytes_exact(offset, input, core::slice::from_mut(&mut value))?;
     Ok(value)

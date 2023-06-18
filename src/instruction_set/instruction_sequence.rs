@@ -7,7 +7,7 @@ use crate::{
     parser::{self, leb128, Error, ErrorKind, Offset, ResultExt as _},
 };
 
-fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Result<instruction_set::MemArg> {
+fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Parsed<instruction_set::MemArg> {
     let a = leb128::u32(offset, input).context("memory argument alignment")?;
     let o = leb128::u64(offset, input).context("memory argument offset")?;
 
@@ -40,7 +40,7 @@ fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Result<instruction_s
 fn instruction<'a, 'b, I: Input>(
     offset: &'a mut u64,
     input: &'b I,
-) -> parser::Result<Instruction<'a, &'b I>> {
+) -> parser::Parsed<Instruction<'a, &'b I>> {
     let opcode = Opcode::try_from(parser::one_byte_exact(offset, input).context("opcode byte")?)?;
     Ok(match opcode {
         Opcode::Unreachable => Instruction::Unreachable,
@@ -1007,10 +1007,10 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> parser::Result<(bool, O)> {
+    pub fn finish(mut self) -> parser::Parsed<(bool, O)> {
         let mut was_finished = true;
         loop {
-            match self.next(|_| parser::Result::Ok(())) {
+            match self.next(|_| parser::Parsed::Ok(())) {
                 Some(Ok(())) => was_finished = false,
                 Some(Err(e)) => return Err(e),
                 None => break,
@@ -1070,14 +1070,14 @@ impl<O: Offset, I: Input> core::fmt::Debug for InstructionSequence<O, I> {
         let mut list = f.debug_list();
         loop {
             let result = instructions.next(|i| {
-                list.entry(&parser::Result::Ok(i));
+                list.entry(&parser::Parsed::Ok(i));
                 Ok(())
             });
 
             match result {
                 None => break,
                 Some(Err(e)) => {
-                    list.entry(&parser::Result::<()>::Err(e));
+                    list.entry(&parser::Parsed::<()>::Err(e));
                     break;
                 }
                 Some(Ok(_)) => (),
