@@ -125,7 +125,7 @@ impl<I: Input> From<Vector<u64, I>> for ExportsComponent<I> {
 }
 
 impl<I: Input> ExportsComponent<I> {
-    /// Uses the given [`Bytes`] to read the contents of the *export section* of a module, starting
+    /// Uses the given [`Input`] to read the contents of the *export section* of a module, starting
     /// at the given `offset`.
     pub fn new(offset: u64, bytes: I) -> Result<Self> {
         Vector::parse(offset, bytes)

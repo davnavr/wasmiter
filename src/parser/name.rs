@@ -1,4 +1,4 @@
-//! Types and functions for parsing UTF-8 strings from [`Bytes`].
+//! Types and functions for parsing UTF-8 strings from [`Input`] bytes.
 
 use crate::{
     input::{self, BorrowInput, Input, Window},
@@ -48,7 +48,7 @@ impl<I: Input> Name<I> {
     }
 
     /// Returns an iterator over the [`char`]s of the [`Name`], returning a [`NameError`] for
-    /// invalid code points or failures retrieving [`Bytes`].
+    /// invalid code points or failures retrieving bytes from the [`Input`].
     #[inline]
     pub fn chars(self) -> Chars<I> {
         Chars::new(self)
@@ -56,7 +56,7 @@ impl<I: Input> Name<I> {
 
     /// Returns an iterator over the [`char`]s of the [`Name`], emitting a
     /// [`char::REPLACEMENT_CHARACTER`] for each invalid code point or failure to retrieve
-    /// [`Bytes`].
+    /// bytes from the [`Input`].
     #[inline]
     pub fn chars_lossy(self) -> CharsLossy<I> {
         CharsLossy::new(Chars::new(self))
@@ -69,7 +69,7 @@ impl<I: Input> Name<I> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the name [`Bytes`] could not be fetched.
+    /// Returns an error if the name bytes could not be fetched from the [`Input`].
     pub fn copy_to_slice<'b>(&self, buffer: &'b mut [u8]) -> parser::Result<&'b mut [u8]> {
         let length = core::cmp::min(
             usize::try_from(self.length).ok().unwrap_or(usize::MAX),
@@ -172,18 +172,18 @@ impl<I: Input> Name<I> {
     ///
     /// # Error
     ///
-    /// Returns an error if the operation to read the characters from the [`Bytes`] fails.
+    /// Returns an error if the operation to read the characters from the [`Input`] fails.
     pub fn into_bytes(self) -> parser::Result<alloc::vec::Vec<u8>> {
         let mut bytes = alloc::vec![0u8; self.length.try_into().unwrap_or(usize::MAX)];
         self.copy_to_slice(&mut bytes)?;
         Ok(bytes)
     }
 
-    /// Allocates a [`String`] containing the contents of the [`Name`].
+    /// Allocates a [`String`](alloc::string::String) containing the contents of the [`Name`].
     ///
     /// # Error
     ///
-    /// Returns an error if the operation to read the characters from the [`Bytes`] fails, or if
+    /// Returns an error if the operation to read the characters from the [`Input`] fails, or if
     /// the [`Name`] is not valid UTF-8.
     pub fn try_into_string(self) -> parser::Result<alloc::string::String> {
         alloc::string::String::from_utf8(self.into_bytes()?).map_err(Into::into)

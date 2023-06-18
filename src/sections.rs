@@ -150,8 +150,8 @@ impl<I: Input> SectionSequence<I> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the [`Bytes`] could not be read, or if a structure was not formatted
-    /// correctly.
+    /// Returns an error if the [`Input`] bytes could not be read, or if a structure was not
+    /// formatted correctly.
     pub fn parse(&mut self) -> Result<Option<Section<&I>>> {
         let id = if let Some(value) = parser::one_byte(&mut self.offset, &self.input)? {
             value
