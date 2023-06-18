@@ -60,7 +60,7 @@ impl HexDumpRow {
 
     fn fmt_display(&self, f: &mut Formatter<'_>, offset_width: usize) -> core::fmt::Result {
         if f.alternate() {
-            write!(f, "{:0offset_width$X}  ", self.offset)?;
+            write!(f, "{:0offset_width$X}  ", self.offset - (self.offset % 16))?;
         }
 
         // Padding
