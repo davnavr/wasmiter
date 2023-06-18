@@ -32,6 +32,18 @@ impl Input for [u8] {
             Err(input::out_of_bounds(offset, None))
         }
     }
+
+    #[inline]
+    fn try_eq_at(&self, offset: u64, bytes: &[u8]) -> Result<bool> {
+        if let Some(input) = usize::try_from(offset)
+            .ok()
+            .and_then(|start| self.get(start..))
+        {
+            Ok(&input[..input.len().min(bytes.len())] == bytes)
+        } else {
+            Err(input::out_of_bounds(offset, None))
+        }
+    }
 }
 
 /// Allows reading bytes from a memory map.

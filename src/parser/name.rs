@@ -105,12 +105,12 @@ impl<I: Input> Name<I> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the name [`Bytes`] could not be fetched.
+    /// Returns an error if the name bytes could not be feteched from the [`Input`].
     #[inline]
     pub fn try_eq_str(&self, s: &str) -> parser::Result<bool> {
         self.borrowed()
             .into_bytes_window()
-            .try_eq_slice(s.as_bytes())
+            .try_eq_at(self.offset, s.as_bytes())
             .map_err(Into::into)
     }
 }

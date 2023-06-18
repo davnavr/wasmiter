@@ -72,6 +72,26 @@ pub trait Input {
     /// The length could not be calculated for some reason, such as an I/O error.
     fn length_at(&self, offset: u64) -> Result<u64>;
 
+    /// Attempts to determine if the bytes at the given `offset` are equal to the bytes in the given slice.
+    ///
+    /// # Errors
+    ///
+    /// See the documentation for [`Input::read_at`] for more information.
+    fn try_eq_at(&self, mut offset: u64, bytes: &[u8]) -> Result<bool> {
+        const BUFFER_LEN: usize = 64;
+        let mut buffer = [0u8; BUFFER_LEN];
+
+        for chunk in bytes.chunks(BUFFER_LEN) {
+            let filled = self.read(&mut offset, &mut buffer)?;
+            let comparand = &filled[..filled.len().min(chunk.len())];
+            if comparand != chunk {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+
     /// Reads an exact number of bytes starting at the given `offset`, and copies them into the
     /// `buffer`.
     ///
