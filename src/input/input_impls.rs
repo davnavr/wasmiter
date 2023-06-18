@@ -63,6 +63,11 @@ impl Input for memmap2::Mmap {
     fn length_at(&self, offset: u64) -> Result<u64> {
         <[u8] as Input>::length_at(self, offset)
     }
+
+    #[inline]
+    fn try_eq_at(&self, offset: u64, bytes: &[u8]) -> Result<bool> {
+        <[u8] as Input>::try_eq_at(self, offset, bytes)
+    }
 }
 
 macro_rules! delegated_input_impl {
@@ -76,6 +81,11 @@ macro_rules! delegated_input_impl {
             #[inline]
             fn length_at(&self, offset: u64) -> Result<u64> {
                 <$b as Input>::length_at(self, offset)
+            }
+
+            #[inline]
+            fn try_eq_at(&self, offset: u64, bytes: &[u8]) -> Result<bool> {
+                <$b as Input>::try_eq_at(self, offset, bytes)
             }
 
             #[inline]
