@@ -18,6 +18,7 @@ use core::{
 pub struct Locals<O: Offset, I: Input> {
     offset: O,
     input: I,
+    /// The number number of groups that remain to be parsed.
     count: u32,
     current: Option<(NonZeroU32, ValType)>,
 }
@@ -34,14 +35,15 @@ impl<O: Offset, I: Input> Locals<O, I> {
     }
 
     fn load_next_group(&mut self) -> parser::Parsed<Option<(NonZeroU32, ValType)>> {
-        if self.count == 0 {
-            return Ok(None);
-        }
-
         if let Some(existing) = self.current {
             Ok(Some(existing))
         } else {
             loop {
+                if self.count == 0 {
+                    // No more groups remain
+                    return Ok(None);
+                }
+
                 self.count -= 1;
 
                 let count = parser::leb128::u32(self.offset.offset_mut(), &self.input)
@@ -52,8 +54,6 @@ impl<O: Offset, I: Input> Locals<O, I> {
                         .context("local group type")?;
 
                     return Ok(Some(*self.current.insert((variable_count, variable_type))));
-                } else {
-                    continue;
                 }
             }
         }
