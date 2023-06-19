@@ -161,5 +161,5 @@ benchmark_parsers! {
     };
 }
 
-criterion::criterion_group!(benchmarks, s32);
+criterion::criterion_group!(benchmarks, s32, u32);
 criterion::criterion_main!(benchmarks);
