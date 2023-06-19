@@ -144,6 +144,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for DatasComponent<I> {
     }
 }
 
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for DatasComponent<&'a I> {
+    type Cloned = DatasComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.entries.clone_input().into()
+    }
+}
+
 impl<I: Input> Debug for DatasComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut datas = self.borrow_input();

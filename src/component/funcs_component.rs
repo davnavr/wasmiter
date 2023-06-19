@@ -48,6 +48,18 @@ impl<I: Input> HasInput<Window<I>> for Func<I> {
     }
 }
 
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Func<I> {
+    type Borrowed = Func<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Func<&'a I> {
+        Func {
+            r#type: self.r#type,
+            code: self.code.borrow_input(),
+        }
+    }
+}
+
 impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Func<&'a I> {
     type Cloned = Func<I>;
 
@@ -130,6 +142,20 @@ impl<'a, T: Input + 'a, C: Input + 'a> BorrowInput<'a, C> for FuncsComponent<T, 
         FuncsComponent {
             types: self.types.borrow_input(),
             code: self.code.borrow_input(),
+        }
+    }
+}
+
+impl<'a, T: Clone + Input + 'a, C: Clone + Input + 'a> CloneInput<'a, C>
+    for FuncsComponent<&'a T, &'a C>
+{
+    type Cloned = FuncsComponent<T, C>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        FuncsComponent {
+            types: self.types.clone_input(),
+            code: self.code.clone_input(),
         }
     }
 }

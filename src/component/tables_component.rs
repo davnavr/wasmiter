@@ -1,5 +1,5 @@
 use crate::{
-    input::{BorrowInput, HasInput, Input},
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{Parsed, ResultExt, Vector},
     types::TableType,
 };
@@ -50,6 +50,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for TablesComponent<I> {
     #[inline]
     fn borrow_input(&'a self) -> Self::Borrowed {
         self.types.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for TablesComponent<&'a I> {
+    type Cloned = TablesComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
     }
 }
 

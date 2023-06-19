@@ -108,6 +108,19 @@ impl<I: Input> HasInput<I> for Import<I> {
     }
 }
 
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Import<I> {
+    type Borrowed = Import<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Import<&'a I> {
+        Import {
+            module: self.module.borrow_input(),
+            name: self.name.borrow_input(),
+            kind: self.kind,
+        }
+    }
+}
+
 impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Import<&'a I> {
     type Cloned = Import<I>;
 
@@ -184,6 +197,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for ImportsComponent<I> {
     #[inline]
     fn borrow_input(&'a self) -> Self::Borrowed {
         self.imports.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for ImportsComponent<&'a I> {
+    type Cloned = ImportsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> ImportsComponent<I> {
+        self.imports.clone_input().into()
     }
 }
 

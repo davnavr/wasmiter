@@ -87,6 +87,21 @@ impl<'a, K: Index, V: Index, O: Offset, I: Input + 'a> BorrowInput<'a, I>
     }
 }
 
+impl<'a, K: Index, V: Index, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I>
+    for IndirectNameMap<K, V, O, &'a I>
+{
+    type Cloned = IndirectNameMap<K, V, u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        IndirectNameMap {
+            entries: self.entries.clone_input(),
+            order: self.order,
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
 impl<K: Index, V: Index, O: Offset, I: Input> core::fmt::Debug for IndirectNameMap<K, V, O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         struct Entry<K: Index, V: Index, I: Input> {

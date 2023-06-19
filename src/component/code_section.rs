@@ -94,6 +94,18 @@ impl<I: Input> HasInput<Window<I>> for Code<I> {
     }
 }
 
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for Code<I> {
+    type Borrowed = Code<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Code<&'a I> {
+        Code {
+            index: self.index,
+            content: self.content.borrow_input(),
+        }
+    }
+}
+
 impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Code<&'a I> {
     type Cloned = Code<I>;
 
@@ -191,6 +203,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for CodeSection<I> {
     #[inline]
     fn borrow_input(&'a self) -> Self::Borrowed {
         self.entries.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for CodeSection<&'a I> {
+    type Cloned = CodeSection<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.entries.clone_input().into()
     }
 }
 

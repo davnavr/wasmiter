@@ -1,5 +1,5 @@
 use crate::{
-    input::{BorrowInput, HasInput, Input},
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{Parsed, ResultExt, Vector},
     types::MemType,
 };
@@ -53,6 +53,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for MemsComponent<I> {
     #[inline]
     fn borrow_input(&'a self) -> Self::Borrowed {
         self.types.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for MemsComponent<&'a I> {
+    type Cloned = MemsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
     }
 }
 

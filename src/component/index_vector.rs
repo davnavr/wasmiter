@@ -1,7 +1,7 @@
 use crate::{
     component,
     index::Index,
-    input::{BorrowInput, HasInput, Input},
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{Offset, Parsed, Vector},
 };
 
@@ -55,6 +55,17 @@ impl<'a, N: Index, O: Offset, I: Input + 'a> BorrowInput<'a, I> for IndexVector<
     #[inline]
     fn borrow_input(&'a self) -> Self::Borrowed {
         self.indices.borrow_input().into()
+    }
+}
+
+impl<'a, N: Index, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I>
+    for IndexVector<N, O, &'a I>
+{
+    type Cloned = IndexVector<N, u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.indices.clone_input().into()
     }
 }
 

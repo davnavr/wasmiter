@@ -67,6 +67,15 @@ impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for ElementExpressions<O, 
     }
 }
 
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for ElementExpressions<O, &'a I> {
+    type Cloned = ElementExpressions<u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.expressions.clone_input().into()
+    }
+}
+
 impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut borrowed = self.borrow_input();
@@ -108,6 +117,37 @@ impl<O: Offset, I: Input> ElementInit<O, I> {
             Self::Expressions(_, expressions) => expressions.finish()?,
         }
         Ok(())
+    }
+}
+
+impl<O: Offset, I: Input> HasInput<I> for ElementInit<O, I> {
+    fn input(&self) -> &I {
+        match self {
+            Self::Functions(funcs) => funcs.input(),
+            Self::Expressions(_, exprs) => exprs.input(),
+        }
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for ElementInit<O, I> {
+    type Borrowed = ElementInit<u64, &'a I>;
+
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        match self {
+            Self::Functions(funcs) => ElementInit::Functions(funcs.borrow_input()),
+            Self::Expressions(rt, exprs) => ElementInit::Expressions(*rt, exprs.borrow_input()),
+        }
+    }
+}
+
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for ElementInit<O, &'a I> {
+    type Cloned = ElementInit<u64, I>;
+
+    fn clone_input(&self) -> Self::Cloned {
+        match self {
+            Self::Functions(funcs) => ElementInit::Functions(funcs.clone_input()),
+            Self::Expressions(rt, exprs) => ElementInit::Expressions(*rt, exprs.clone_input()),
+        }
     }
 }
 
@@ -371,21 +411,30 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for ElemsComponent<I> {
     }
 }
 
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for ElemsComponent<&'a I> {
+    type Cloned = ElemsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.elements.clone_input().into()
+    }
+}
+
 impl<I: Input> Debug for ElemsComponent<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut elems = self.borrow_input();
         let mut list = f.debug_list();
 
-        struct Elem<'a, 'b, 'c, 'd, 'e, I: Input> {
+        struct Elem<'a, I: Input> {
             mode: ElementMode<u64, &'a I>,
-            elements: &'b mut ElementInit<&'c mut u64, &'d &'e I>,
+            elements: ElementInit<u64, &'a I>,
         }
 
-        impl<I: Input> Debug for Elem<'_, '_, '_, '_, '_, I> {
+        impl<I: Input> Debug for Elem<'_, I> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("ElementSegment")
                     .field("mode", &self.mode)
-                    .field("elements", self.elements)
+                    .field("elements", &self.elements)
                     .finish()
             }
         }
@@ -402,7 +451,10 @@ impl<I: Input> Debug for ElemsComponent<I> {
                     })
                 },
                 |mode, elements| {
-                    list.entry(&Elem { mode, elements });
+                    list.entry(&Elem {
+                        mode,
+                        elements: elements.clone_input(),
+                    });
 
                     Parsed::Ok(())
                 },

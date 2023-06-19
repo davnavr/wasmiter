@@ -1,5 +1,5 @@
 use crate::{
-    input::{BorrowInput, HasInput, Input},
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{self, Parsed, ResultExt as _, Vector},
 };
 
@@ -76,6 +76,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for TagsComponent<I> {
     #[inline]
     fn borrow_input(&'a self) -> Self::Borrowed {
         self.tags.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for TagsComponent<&'a I> {
+    type Cloned = TagsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.tags.clone_input().into()
     }
 }
 

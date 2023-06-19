@@ -71,6 +71,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for GlobalsComponent<I> {
     }
 }
 
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for GlobalsComponent<&'a I> {
+    type Cloned = GlobalsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.globals.clone_input().into()
+    }
+}
+
 impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut globals = self.borrow_input();

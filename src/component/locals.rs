@@ -1,6 +1,6 @@
 use crate::{
     component,
-    input::{BorrowInput, HasInput, Input},
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{self, Offset, ResultExt as _},
     types::ValType,
 };
@@ -125,6 +125,20 @@ impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for Locals<O, I> {
         Locals {
             offset: self.offset.offset(),
             input: &self.input,
+            count: self.count,
+            current: self.current,
+        }
+    }
+}
+
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for Locals<O, &'a I> {
+    type Cloned = Locals<u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        Locals {
+            offset: self.offset.offset(),
+            input: self.input.clone(),
             count: self.count,
             current: self.current,
         }

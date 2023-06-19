@@ -66,6 +66,15 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for TypesComponent<I> {
     }
 }
 
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for TypesComponent<&'a I> {
+    type Cloned = TypesComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
+    }
+}
+
 impl<I: Input> core::fmt::Debug for TypesComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         struct FuncType<'a, I: Input> {
@@ -85,7 +94,7 @@ impl<I: Input> core::fmt::Debug for TypesComponent<I> {
         let mut list = f.debug_list();
         let mut types = self.borrow_input();
 
-        let empty_types = ResultType::empty_with_offset(0, self.types.input());
+        let empty_types = ResultType::empty_with_offset(0, self.input());
         let mut last_parameters = empty_types;
         let mut last_results = empty_types;
 

@@ -209,6 +209,18 @@ impl<'a, I: Input + 'a> BorrowInput<'a, I> for SectionSequence<I> {
     }
 }
 
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for SectionSequence<&'a I> {
+    type Cloned = SectionSequence<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        SectionSequence {
+            offset: self.offset,
+            input: self.input.clone(),
+        }
+    }
+}
+
 impl<I: Clone + Input> Iterator for SectionSequence<I> {
     type Item = Parsed<Section<I>>;
 

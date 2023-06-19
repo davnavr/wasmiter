@@ -4,7 +4,7 @@
 
 use crate::{
     index,
-    input::{BorrowInput, CloneInput, Input, Window},
+    input::{BorrowInput, CloneInput, HasInput, Input, Window},
     parser::{self, AscendingOrder, ResultExt as _},
     sections::{Section, SectionSequence},
 };
@@ -172,6 +172,39 @@ impl<I: Input> NameSection<I> {
     #[inline]
     pub fn parse(&mut self) -> Option<InterpretedNameSubsection<&I>> {
         self.parse_inner(core::convert::identity)
+    }
+}
+
+impl<I: Input> HasInput<I> for NameSection<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.sections.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for NameSection<I> {
+    type Borrowed = NameSection<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        NameSection {
+            order: self.order,
+            first: self.first,
+            sections: self.sections.borrow_input(),
+        }
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for NameSection<&'a I> {
+    type Cloned = NameSection<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        NameSection {
+            order: self.order,
+            first: self.first,
+            sections: self.sections.clone_input(),
+        }
     }
 }
 
