@@ -11,7 +11,7 @@ pub fn print_reference_wat(wasm: &[u8]) -> String {
     }
 }
 
-pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
+pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Parsed<()> {
     use wasmiter::{component::KnownSection, custom::KnownCustomSection};
 
     for result in wasmiter::parse_module_sections(wasm)? {
@@ -78,7 +78,7 @@ pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Result<()> {
                 KnownSection::Code(code) => {
                     for result in code {
                         let entry = result?;
-                        entry.read(|_| wasmiter::parser::Result::Ok(()), |(), _| Ok(()))?;
+                        entry.read(|_| wasmiter::parser::Parsed::Ok(()), |(), _| Ok(()))?;
                     }
                 }
                 KnownSection::Data(mut data) => loop {

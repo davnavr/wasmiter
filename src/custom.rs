@@ -2,7 +2,7 @@
 //! [WebAssembly custom sections](https://webassembly.github.io/spec/core/appendix/custom.html).
 
 use crate::{
-    bytes::{Bytes, Window},
+    input::{BorrowInput, Input, Window},
     sections::{id as section_id, SectionSequence},
 };
 use core::fmt::Debug;
@@ -19,18 +19,19 @@ pub use custom_section::CustomSection;
 #[derive(Clone, Copy)]
 #[non_exhaustive]
 #[allow(missing_docs)]
-pub enum KnownCustomSection<B: Bytes> {
-    Name(name::NameSection<B>),
+pub enum KnownCustomSection<I: Input> {
+    Name(name::NameSection<I>),
 }
 
-impl<B: Bytes> KnownCustomSection<Window<B>> {
+impl<I: Input> KnownCustomSection<Window<I>> {
     /// Attempts to interpret the contents of the given [`CustomSection`].
     ///
     /// # Errors
     ///
     /// Returns `section` if it was not recognized.
-    pub fn interpret(section: CustomSection<B>) -> Result<Self, CustomSection<B>> {
-        if let Some(static_name) = section_id::is_custom_name_recognized(section.name().borrowed())
+    pub fn interpret(section: CustomSection<I>) -> Result<Self, CustomSection<I>> {
+        if let Some(static_name) =
+            section_id::is_custom_name_recognized(section.name().borrow_input())
         {
             match static_name {
                 section_id::NAME => {
@@ -53,7 +54,7 @@ impl<B: Bytes> KnownCustomSection<Window<B>> {
     }
 }
 
-impl<B: Bytes> Debug for KnownCustomSection<B> {
+impl<I: Input> Debug for KnownCustomSection<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Name(names) => Debug::fmt(names, f),

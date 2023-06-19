@@ -1,150 +1,157 @@
 use crate::{
-    bytes::Bytes,
     component, index,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::{
         self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
     },
-    parser::{self, leb128, Offset, ResultExt},
+    parser::{self, leb128, Error, ErrorKind, Offset, ResultExt as _},
 };
 
-fn memarg<B: Bytes>(offset: &mut u64, bytes: &B) -> parser::Result<instruction_set::MemArg> {
-    let a = leb128::u32(offset, bytes).context("memory argument alignment")?;
-    let o = leb128::u64(offset, bytes).context("memory argument offset")?;
+fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Parsed<instruction_set::MemArg> {
+    let a = leb128::u32(offset, input).context("memory argument alignment")?;
+    let o = leb128::u64(offset, input).context("memory argument offset")?;
 
     let (a, memory) = if a < 64 {
         (a, index::MemIdx::from(0u8))
     } else {
         (
             a - 64,
-            component::index(offset, bytes).context("memory argument target")?,
+            component::index(offset, input).context("memory argument target")?,
         )
     };
 
-    let align = u8::try_from(a)
-        .ok()
-        .and_then(instruction_set::Align::new)
-        .ok_or_else(|| {
-            crate::parser_bad_format!("{a} is too large to be a valid alignment power")
-        })?;
+    if let Some(align) = u8::try_from(a).ok().and_then(instruction_set::Align::new) {
+        Ok(instruction_set::MemArg::new(o, align, memory))
+    } else {
+        #[inline(never)]
+        #[cold]
+        fn align_power_too_large(power: u32) -> Error {
+            Error::new(ErrorKind::BadMemArgAlignPower(power))
+        }
 
-    Ok(instruction_set::MemArg::new(o, align, memory))
+        Err(align_power_too_large(a))
+    }
 }
 
 /// Parses a WebAssembly [`Instruction`].
 ///
 /// In order to ensure the instruction is completely parsed, callers should call
 /// [Instruction::finish].
-fn instruction<'a, 'b, B: Bytes>(
+fn instruction<'a, 'b, I: Input>(
     offset: &'a mut u64,
-    bytes: &'b B,
-) -> parser::Result<Instruction<'a, &'b B>> {
-    let opcode = Opcode::try_from(parser::one_byte_exact(offset, bytes).context("opcode byte")?)?;
+    input: &'b I,
+) -> parser::Parsed<Instruction<'a, &'b I>> {
+    let opcode = Opcode::try_from(parser::one_byte_exact(offset, input).context("opcode byte")?)?;
     Ok(match opcode {
         Opcode::Unreachable => Instruction::Unreachable,
         Opcode::Nop => Instruction::Nop,
-        Opcode::Block => Instruction::Block(component::block_type(offset, bytes)?),
+        Opcode::Block => Instruction::Block(component::block_type(offset, input)?),
         Opcode::Loop => {
-            Instruction::Loop(component::block_type(offset, bytes).context("loop block type")?)
+            Instruction::Loop(component::block_type(offset, input).context("loop block type")?)
         }
         Opcode::If => {
-            Instruction::If(component::block_type(offset, bytes).context("if block type")?)
+            Instruction::If(component::block_type(offset, input).context("if block type")?)
         }
         Opcode::Else => Instruction::Else,
         Opcode::Try => {
-            Instruction::Try(component::block_type(offset, bytes).context("try block type")?)
+            Instruction::Try(component::block_type(offset, input).context("try block type")?)
         }
-        Opcode::Catch => Instruction::Catch(component::index(offset, bytes).context("catch tag")?),
-        Opcode::Throw => Instruction::Throw(component::index(offset, bytes).context("throw tag")?),
+        Opcode::Catch => Instruction::Catch(component::index(offset, input).context("catch tag")?),
+        Opcode::Throw => Instruction::Throw(component::index(offset, input).context("throw tag")?),
         Opcode::Rethrow => {
-            Instruction::Rethrow(component::index(offset, bytes).context("rethrow label")?)
+            Instruction::Rethrow(component::index(offset, input).context("rethrow label")?)
         }
         Opcode::End => Instruction::End,
-        Opcode::Br => Instruction::Br(component::index(offset, bytes).context("br label")?),
-        Opcode::BrIf => Instruction::BrIf(component::index(offset, bytes).context("br_if label")?),
+        Opcode::Br => Instruction::Br(component::index(offset, input).context("br label")?),
+        Opcode::BrIf => Instruction::BrIf(component::index(offset, input).context("br_if label")?),
         Opcode::BrTable => {
-            let branch_count = parser::leb128::u32(offset.offset_mut(), bytes)
+            let branch_count = parser::leb128::u32(offset.offset_mut(), input)
                 .context("could not parse branch table label count")?;
 
-            let total_count = branch_count.checked_add(1).ok_or_else(|| {
-                crate::parser_bad_format!(
-                    "branch table has a label count of {branch_count}, which is too large"
-                )
-            })?;
+            if let Some(total_count) = branch_count.checked_add(1) {
+                Instruction::BrTable(component::IndexVector::new(total_count, offset, input))
+            } else {
+                #[inline(never)]
+                #[cold]
+                fn branch_count_overflowed() -> Error {
+                    Error::new(ErrorKind::BranchTableCountOverflow)
+                }
 
-            Instruction::BrTable(component::IndexVector::new(total_count, offset, bytes))
+                return Err(branch_count_overflowed());
+            }
         }
         Opcode::Return => Instruction::Return,
-        Opcode::Call => Instruction::Call(component::index(offset, bytes).context("call target")?),
+        Opcode::Call => Instruction::Call(component::index(offset, input).context("call target")?),
         Opcode::CallIndirect => Instruction::CallIndirect(
-            component::index(offset, bytes).context("indirect call signature")?,
-            component::index(offset, bytes).context("indirect call target")?,
+            component::index(offset, input).context("indirect call signature")?,
+            component::index(offset, input).context("indirect call target")?,
         ),
         Opcode::ReturnCall => {
-            Instruction::ReturnCall(component::index(offset, bytes).context("tail call target")?)
+            Instruction::ReturnCall(component::index(offset, input).context("tail call target")?)
         }
         Opcode::ReturnCallIndirect => Instruction::ReturnCallIndirect(
-            component::index(offset, bytes).context("indirect tail call signature")?,
-            component::index(offset, bytes).context("indirect tail call target")?,
+            component::index(offset, input).context("indirect tail call signature")?,
+            component::index(offset, input).context("indirect tail call target")?,
         ),
         Opcode::Delegate => {
-            Instruction::Delegate(component::index(offset, bytes).context("delegate label")?)
+            Instruction::Delegate(component::index(offset, input).context("delegate label")?)
         }
         Opcode::CatchAll => Instruction::CatchAll,
 
         Opcode::Drop => Instruction::Drop,
         Opcode::Select => {
-            Instruction::Select(component::ResultType::empty_with_offset(offset, bytes))
+            Instruction::Select(component::ResultType::empty_with_offset(offset, input))
         }
         Opcode::SelectMany => Instruction::Select(
-            component::ResultType::parse(offset, bytes).context("select types")?,
+            component::ResultType::parse(offset, input).context("select types")?,
         ),
 
-        Opcode::LocalGet => Instruction::LocalGet(component::index(offset, bytes)?),
-        Opcode::LocalSet => Instruction::LocalSet(component::index(offset, bytes)?),
-        Opcode::LocalTee => Instruction::LocalTee(component::index(offset, bytes)?),
-        Opcode::GlobalGet => Instruction::GlobalGet(component::index(offset, bytes)?),
-        Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, bytes)?),
+        Opcode::LocalGet => Instruction::LocalGet(component::index(offset, input)?),
+        Opcode::LocalSet => Instruction::LocalSet(component::index(offset, input)?),
+        Opcode::LocalTee => Instruction::LocalTee(component::index(offset, input)?),
+        Opcode::GlobalGet => Instruction::GlobalGet(component::index(offset, input)?),
+        Opcode::GlobalSet => Instruction::GlobalSet(component::index(offset, input)?),
 
-        Opcode::TableGet => Instruction::TableGet(component::index(offset, bytes)?),
-        Opcode::TableSet => Instruction::TableSet(component::index(offset, bytes)?),
+        Opcode::TableGet => Instruction::TableGet(component::index(offset, input)?),
+        Opcode::TableSet => Instruction::TableSet(component::index(offset, input)?),
 
-        Opcode::I32Load => Instruction::I32Load(memarg(offset, bytes)?),
-        Opcode::I64Load => Instruction::I64Load(memarg(offset, bytes)?),
-        Opcode::F32Load => Instruction::F32Load(memarg(offset, bytes)?),
-        Opcode::F64Load => Instruction::F64Load(memarg(offset, bytes)?),
+        Opcode::I32Load => Instruction::I32Load(memarg(offset, input)?),
+        Opcode::I64Load => Instruction::I64Load(memarg(offset, input)?),
+        Opcode::F32Load => Instruction::F32Load(memarg(offset, input)?),
+        Opcode::F64Load => Instruction::F64Load(memarg(offset, input)?),
 
-        Opcode::I32Load8S => Instruction::I32Load8S(memarg(offset, bytes)?),
-        Opcode::I32Load8U => Instruction::I32Load8U(memarg(offset, bytes)?),
-        Opcode::I32Load16S => Instruction::I32Load16S(memarg(offset, bytes)?),
-        Opcode::I32Load16U => Instruction::I32Load16U(memarg(offset, bytes)?),
-        Opcode::I64Load8S => Instruction::I64Load8S(memarg(offset, bytes)?),
-        Opcode::I64Load8U => Instruction::I64Load8U(memarg(offset, bytes)?),
-        Opcode::I64Load16S => Instruction::I64Load16S(memarg(offset, bytes)?),
-        Opcode::I64Load16U => Instruction::I64Load16U(memarg(offset, bytes)?),
-        Opcode::I64Load32S => Instruction::I64Load32S(memarg(offset, bytes)?),
-        Opcode::I64Load32U => Instruction::I64Load32U(memarg(offset, bytes)?),
+        Opcode::I32Load8S => Instruction::I32Load8S(memarg(offset, input)?),
+        Opcode::I32Load8U => Instruction::I32Load8U(memarg(offset, input)?),
+        Opcode::I32Load16S => Instruction::I32Load16S(memarg(offset, input)?),
+        Opcode::I32Load16U => Instruction::I32Load16U(memarg(offset, input)?),
+        Opcode::I64Load8S => Instruction::I64Load8S(memarg(offset, input)?),
+        Opcode::I64Load8U => Instruction::I64Load8U(memarg(offset, input)?),
+        Opcode::I64Load16S => Instruction::I64Load16S(memarg(offset, input)?),
+        Opcode::I64Load16U => Instruction::I64Load16U(memarg(offset, input)?),
+        Opcode::I64Load32S => Instruction::I64Load32S(memarg(offset, input)?),
+        Opcode::I64Load32U => Instruction::I64Load32U(memarg(offset, input)?),
 
-        Opcode::I32Store => Instruction::I32Store(memarg(offset, bytes)?),
-        Opcode::I64Store => Instruction::I64Store(memarg(offset, bytes)?),
-        Opcode::F32Store => Instruction::F32Store(memarg(offset, bytes)?),
-        Opcode::F64Store => Instruction::F64Store(memarg(offset, bytes)?),
+        Opcode::I32Store => Instruction::I32Store(memarg(offset, input)?),
+        Opcode::I64Store => Instruction::I64Store(memarg(offset, input)?),
+        Opcode::F32Store => Instruction::F32Store(memarg(offset, input)?),
+        Opcode::F64Store => Instruction::F64Store(memarg(offset, input)?),
 
-        Opcode::I32Store8 => Instruction::I32Store8(memarg(offset, bytes)?),
-        Opcode::I32Store16 => Instruction::I32Store16(memarg(offset, bytes)?),
-        Opcode::I64Store8 => Instruction::I64Store8(memarg(offset, bytes)?),
-        Opcode::I64Store16 => Instruction::I64Store16(memarg(offset, bytes)?),
-        Opcode::I64Store32 => Instruction::I64Store32(memarg(offset, bytes)?),
+        Opcode::I32Store8 => Instruction::I32Store8(memarg(offset, input)?),
+        Opcode::I32Store16 => Instruction::I32Store16(memarg(offset, input)?),
+        Opcode::I64Store8 => Instruction::I64Store8(memarg(offset, input)?),
+        Opcode::I64Store16 => Instruction::I64Store16(memarg(offset, input)?),
+        Opcode::I64Store32 => Instruction::I64Store32(memarg(offset, input)?),
 
-        Opcode::MemorySize => Instruction::MemorySize(component::index(offset, bytes)?),
-        Opcode::MemoryGrow => Instruction::MemoryGrow(component::index(offset, bytes)?),
+        Opcode::MemorySize => Instruction::MemorySize(component::index(offset, input)?),
+        Opcode::MemoryGrow => Instruction::MemoryGrow(component::index(offset, input)?),
 
-        Opcode::I32Const => Instruction::I32Const(leb128::s32(offset, bytes)?),
-        Opcode::I64Const => Instruction::I64Const(leb128::s64(offset, bytes)?),
+        Opcode::I32Const => Instruction::I32Const(leb128::s32(offset, input)?),
+        Opcode::I64Const => Instruction::I64Const(leb128::s64(offset, input)?),
         Opcode::F32Const => Instruction::F32Const(f32::from_le_bytes(
-            parser::byte_array(offset, bytes).context("32-bit float constant")?,
+            parser::byte_array(offset, input).context("32-bit float constant")?,
         )),
         Opcode::F64Const => Instruction::F64Const(f64::from_le_bytes(
-            parser::byte_array(offset, bytes).context("64-bit float constant")?,
+            parser::byte_array(offset, input).context("64-bit float constant")?,
         )),
 
         Opcode::I32Eqz => Instruction::I32Eqz,
@@ -285,52 +292,52 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::I64Extend32S => Instruction::I64Extend32S,
 
         Opcode::RefNull => {
-            Instruction::RefNull(component::ref_type(offset, bytes).context("type for null")?)
+            Instruction::RefNull(component::ref_type(offset, input).context("type for null")?)
         }
         Opcode::RefIsNull => Instruction::RefIsNull,
         Opcode::RefFunc => Instruction::RefFunc(
-            component::index(offset, bytes).context("invalid reference to function")?,
+            component::index(offset, input).context("invalid reference to function")?,
         ),
 
         Opcode::PrefixFC => {
-            let actual_opcode = leb128::u32(offset, bytes)
+            let actual_opcode = leb128::u32(offset, input)
                 .context("actual opcode")?
                 .try_into()?;
 
             match actual_opcode {
                 FCPrefixedOpcode::MemoryInit => Instruction::MemoryInit(
-                    component::index(offset, bytes)?,
-                    component::index(offset, bytes)?,
+                    component::index(offset, input)?,
+                    component::index(offset, input)?,
                 ),
                 FCPrefixedOpcode::DataDrop => {
-                    Instruction::DataDrop(component::index(offset, bytes)?)
+                    Instruction::DataDrop(component::index(offset, input)?)
                 }
                 FCPrefixedOpcode::MemoryCopy => Instruction::MemoryCopy {
-                    destination: component::index(offset, bytes).context("destination memory")?,
-                    source: component::index(offset, bytes).context("source memory")?,
+                    destination: component::index(offset, input).context("destination memory")?,
+                    source: component::index(offset, input).context("source memory")?,
                 },
                 FCPrefixedOpcode::MemoryFill => {
-                    Instruction::MemoryFill(component::index(offset, bytes)?)
+                    Instruction::MemoryFill(component::index(offset, input)?)
                 }
                 FCPrefixedOpcode::TableInit => Instruction::TableInit(
-                    component::index(offset, bytes)?,
-                    component::index(offset, bytes)?,
+                    component::index(offset, input)?,
+                    component::index(offset, input)?,
                 ),
                 FCPrefixedOpcode::ElemDrop => {
-                    Instruction::ElemDrop(component::index(offset, bytes)?)
+                    Instruction::ElemDrop(component::index(offset, input)?)
                 }
                 FCPrefixedOpcode::TableCopy => Instruction::TableCopy {
-                    destination: component::index(offset, bytes).context("destination table")?,
-                    source: component::index(offset, bytes).context("source table")?,
+                    destination: component::index(offset, input).context("destination table")?,
+                    source: component::index(offset, input).context("source table")?,
                 },
                 FCPrefixedOpcode::TableGrow => {
-                    Instruction::TableGrow(component::index(offset, bytes)?)
+                    Instruction::TableGrow(component::index(offset, input)?)
                 }
                 FCPrefixedOpcode::TableSize => {
-                    Instruction::TableSize(component::index(offset, bytes)?)
+                    Instruction::TableSize(component::index(offset, input)?)
                 }
                 FCPrefixedOpcode::TableFill => {
-                    Instruction::TableFill(component::index(offset, bytes)?)
+                    Instruction::TableFill(component::index(offset, input)?)
                 }
                 FCPrefixedOpcode::I32TruncSatF32S => Instruction::I32TruncSatF32S,
                 FCPrefixedOpcode::I32TruncSatF32U => Instruction::I32TruncSatF32U,
@@ -343,117 +350,117 @@ fn instruction<'a, 'b, B: Bytes>(
             }
         }
         Opcode::PrefixV128 => {
-            let actual_opcode = leb128::u32(offset, bytes)
+            let actual_opcode = leb128::u32(offset, input)
                 .context("actual opcode")?
                 .try_into()?;
 
             match actual_opcode {
-                VectorOpcode::Load => Instruction::V128Load(memarg(offset, bytes)?),
+                VectorOpcode::Load => Instruction::V128Load(memarg(offset, input)?),
 
-                VectorOpcode::Load8x8S => Instruction::V128Load8x8S(memarg(offset, bytes)?),
-                VectorOpcode::Load8x8U => Instruction::V128Load8x8U(memarg(offset, bytes)?),
-                VectorOpcode::Load16x4S => Instruction::V128Load16x4S(memarg(offset, bytes)?),
-                VectorOpcode::Load16x4U => Instruction::V128Load16x4U(memarg(offset, bytes)?),
-                VectorOpcode::Load32x2S => Instruction::V128Load32x2S(memarg(offset, bytes)?),
-                VectorOpcode::Load32x2U => Instruction::V128Load32x2U(memarg(offset, bytes)?),
+                VectorOpcode::Load8x8S => Instruction::V128Load8x8S(memarg(offset, input)?),
+                VectorOpcode::Load8x8U => Instruction::V128Load8x8U(memarg(offset, input)?),
+                VectorOpcode::Load16x4S => Instruction::V128Load16x4S(memarg(offset, input)?),
+                VectorOpcode::Load16x4U => Instruction::V128Load16x4U(memarg(offset, input)?),
+                VectorOpcode::Load32x2S => Instruction::V128Load32x2S(memarg(offset, input)?),
+                VectorOpcode::Load32x2U => Instruction::V128Load32x2U(memarg(offset, input)?),
 
-                VectorOpcode::Load8Splat => Instruction::V128Load8Splat(memarg(offset, bytes)?),
-                VectorOpcode::Load16Splat => Instruction::V128Load16Splat(memarg(offset, bytes)?),
-                VectorOpcode::Load32Splat => Instruction::V128Load32Splat(memarg(offset, bytes)?),
-                VectorOpcode::Load64Splat => Instruction::V128Load64Splat(memarg(offset, bytes)?),
-                VectorOpcode::Load32Zero => Instruction::V128Load32Zero(memarg(offset, bytes)?),
-                VectorOpcode::Load64Zero => Instruction::V128Load64Zero(memarg(offset, bytes)?),
+                VectorOpcode::Load8Splat => Instruction::V128Load8Splat(memarg(offset, input)?),
+                VectorOpcode::Load16Splat => Instruction::V128Load16Splat(memarg(offset, input)?),
+                VectorOpcode::Load32Splat => Instruction::V128Load32Splat(memarg(offset, input)?),
+                VectorOpcode::Load64Splat => Instruction::V128Load64Splat(memarg(offset, input)?),
+                VectorOpcode::Load32Zero => Instruction::V128Load32Zero(memarg(offset, input)?),
+                VectorOpcode::Load64Zero => Instruction::V128Load64Zero(memarg(offset, input)?),
 
-                VectorOpcode::Store => Instruction::V128Store(memarg(offset, bytes)?),
+                VectorOpcode::Store => Instruction::V128Store(memarg(offset, input)?),
 
                 VectorOpcode::Load8Lane => Instruction::V128Load8Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
                 VectorOpcode::Load16Lane => Instruction::V128Load16Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
                 VectorOpcode::Load32Lane => Instruction::V128Load32Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
                 VectorOpcode::Load64Lane => Instruction::V128Load64Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
 
                 VectorOpcode::Store8Lane => Instruction::V128Store8Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
                 VectorOpcode::Store16Lane => Instruction::V128Store16Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
                 VectorOpcode::Store32Lane => Instruction::V128Store32Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
                 VectorOpcode::Store64Lane => Instruction::V128Store64Lane(
-                    memarg(offset, bytes)?,
-                    parser::one_byte_exact(offset, bytes)?,
+                    memarg(offset, input)?,
+                    parser::one_byte_exact(offset, input)?,
                 ),
 
                 VectorOpcode::Const => Instruction::V128Const(u128::from_le_bytes(
-                    parser::byte_array(offset, bytes).context("constant 128-bit vector")?,
+                    parser::byte_array(offset, input).context("constant 128-bit vector")?,
                 )),
 
                 VectorOpcode::I8x16Shuffle => Instruction::I8x16Shuffle(
-                    parser::byte_array(offset, bytes).context("shuffle lane indices")?,
+                    parser::byte_array(offset, input).context("shuffle lane indices")?,
                 ),
 
                 VectorOpcode::I8x16ExtractLaneS => Instruction::I8x16ExtractLaneS(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I8x16ExtractLaneU => Instruction::I8x16ExtractLaneU(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I8x16ReplaceLane => Instruction::I8x16ReplaceLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
 
                 VectorOpcode::I16x8ExtractLaneS => Instruction::I16x8ExtractLaneS(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I16x8ExtractLaneU => Instruction::I16x8ExtractLaneU(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I16x8ReplaceLane => Instruction::I16x8ReplaceLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
 
                 VectorOpcode::I32x4ExtractLane => Instruction::I32x4ExtractLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I32x4ReplaceLane => Instruction::I32x4ReplaceLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
 
                 VectorOpcode::I64x2ExtractLane => Instruction::I64x2ExtractLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I64x2ReplaceLane => Instruction::I64x2ReplaceLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
 
                 VectorOpcode::F32x4ExtractLane => Instruction::F32x4ExtractLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::F32x4ReplaceLane => Instruction::F32x4ReplaceLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
 
                 VectorOpcode::F64x2ExtractLane => Instruction::F64x2ExtractLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::F64x2ReplaceLane => Instruction::F64x2ReplaceLane(
-                    parser::one_byte_exact(offset, bytes).context("vector lane index")?,
+                    parser::one_byte_exact(offset, input).context("vector lane index")?,
                 ),
                 VectorOpcode::I8x16Swizzle => Instruction::I8x16Swizzle,
 
@@ -673,207 +680,207 @@ fn instruction<'a, 'b, B: Bytes>(
         Opcode::PrefixFE => {
             // This will eventually be a leb128::u32
             let actual_opcode =
-                u32::from(parser::one_byte_exact(offset, bytes).context("actual opcode")?)
+                u32::from(parser::one_byte_exact(offset, input).context("actual opcode")?)
                     .try_into()?;
 
             match actual_opcode {
                 FEPrefixedOpcode::MemoryAtomicNotify => {
-                    Instruction::MemoryAtomicNotify(memarg(offset, bytes)?)
+                    Instruction::MemoryAtomicNotify(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::MemoryAtomicWait32 => {
-                    Instruction::MemoryAtomicWait32(memarg(offset, bytes)?)
+                    Instruction::MemoryAtomicWait32(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::MemoryAtomicWait64 => {
-                    Instruction::MemoryAtomicWait64(memarg(offset, bytes)?)
+                    Instruction::MemoryAtomicWait64(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicLoad => {
-                    Instruction::I32AtomicLoad(memarg(offset, bytes)?)
+                    Instruction::I32AtomicLoad(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicLoad => {
-                    Instruction::I64AtomicLoad(memarg(offset, bytes)?)
+                    Instruction::I64AtomicLoad(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicLoad8U => {
-                    Instruction::I32AtomicLoad8U(memarg(offset, bytes)?)
+                    Instruction::I32AtomicLoad8U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicLoad16U => {
-                    Instruction::I32AtomicLoad16U(memarg(offset, bytes)?)
+                    Instruction::I32AtomicLoad16U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicLoad8U => {
-                    Instruction::I64AtomicLoad8U(memarg(offset, bytes)?)
+                    Instruction::I64AtomicLoad8U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicLoad16U => {
-                    Instruction::I64AtomicLoad16U(memarg(offset, bytes)?)
+                    Instruction::I64AtomicLoad16U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicLoad32U => {
-                    Instruction::I64AtomicLoad32U(memarg(offset, bytes)?)
+                    Instruction::I64AtomicLoad32U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicStore => {
-                    Instruction::I32AtomicStore(memarg(offset, bytes)?)
+                    Instruction::I32AtomicStore(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicStore => {
-                    Instruction::I64AtomicStore(memarg(offset, bytes)?)
+                    Instruction::I64AtomicStore(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicStore8U => {
-                    Instruction::I32AtomicStore8U(memarg(offset, bytes)?)
+                    Instruction::I32AtomicStore8U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicStore16U => {
-                    Instruction::I32AtomicStore16U(memarg(offset, bytes)?)
+                    Instruction::I32AtomicStore16U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicStore8U => {
-                    Instruction::I64AtomicStore8U(memarg(offset, bytes)?)
+                    Instruction::I64AtomicStore8U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicStore16U => {
-                    Instruction::I64AtomicStore16U(memarg(offset, bytes)?)
+                    Instruction::I64AtomicStore16U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicStore32U => {
-                    Instruction::I64AtomicStore32U(memarg(offset, bytes)?)
+                    Instruction::I64AtomicStore32U(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwAdd => {
-                    Instruction::I32AtomicRmwAdd(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwAdd(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwAdd => {
-                    Instruction::I64AtomicRmwAdd(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwAdd(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8AddU => {
-                    Instruction::I32AtomicRmw8AddU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8AddU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16AddU => {
-                    Instruction::I32AtomicRmw16AddU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16AddU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8AddU => {
-                    Instruction::I64AtomicRmw8AddU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8AddU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16AddU => {
-                    Instruction::I64AtomicRmw16AddU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16AddU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32AddU => {
-                    Instruction::I64AtomicRmw32AddU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32AddU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwSub => {
-                    Instruction::I32AtomicRmwSub(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwSub(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwSub => {
-                    Instruction::I64AtomicRmwSub(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwSub(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8SubU => {
-                    Instruction::I32AtomicRmw8SubU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8SubU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16SubU => {
-                    Instruction::I32AtomicRmw16SubU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16SubU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8SubU => {
-                    Instruction::I64AtomicRmw8SubU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8SubU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16SubU => {
-                    Instruction::I64AtomicRmw16SubU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16SubU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32SubU => {
-                    Instruction::I64AtomicRmw32SubU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32SubU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwAnd => {
-                    Instruction::I32AtomicRmwAnd(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwAnd(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwAnd => {
-                    Instruction::I64AtomicRmwAnd(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwAnd(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8AndU => {
-                    Instruction::I32AtomicRmw8AndU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8AndU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16AndU => {
-                    Instruction::I32AtomicRmw16AndU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16AndU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8AndU => {
-                    Instruction::I64AtomicRmw8AndU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8AndU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16AndU => {
-                    Instruction::I64AtomicRmw16AndU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16AndU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32AndU => {
-                    Instruction::I64AtomicRmw32AndU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32AndU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwOr => {
-                    Instruction::I32AtomicRmwOr(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwOr(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwOr => {
-                    Instruction::I64AtomicRmwOr(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwOr(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8OrU => {
-                    Instruction::I32AtomicRmw8OrU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8OrU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16OrU => {
-                    Instruction::I32AtomicRmw16OrU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16OrU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8OrU => {
-                    Instruction::I64AtomicRmw8OrU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8OrU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16OrU => {
-                    Instruction::I64AtomicRmw16OrU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16OrU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32OrU => {
-                    Instruction::I64AtomicRmw32OrU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32OrU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwXor => {
-                    Instruction::I32AtomicRmwXor(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwXor(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwXor => {
-                    Instruction::I64AtomicRmwXor(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwXor(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8XorU => {
-                    Instruction::I32AtomicRmw8XorU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8XorU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16XorU => {
-                    Instruction::I32AtomicRmw16XorU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16XorU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8XorU => {
-                    Instruction::I64AtomicRmw8XorU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8XorU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16XorU => {
-                    Instruction::I64AtomicRmw16XorU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16XorU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32XorU => {
-                    Instruction::I64AtomicRmw32XorU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32XorU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwXchg => {
-                    Instruction::I32AtomicRmwXchg(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwXchg(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwXchg => {
-                    Instruction::I64AtomicRmwXchg(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwXchg(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8XchgU => {
-                    Instruction::I32AtomicRmw8XchgU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8XchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16XchgU => {
-                    Instruction::I32AtomicRmw16XchgU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16XchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8XchgU => {
-                    Instruction::I64AtomicRmw8XchgU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8XchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16XchgU => {
-                    Instruction::I64AtomicRmw16XchgU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16XchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32XchgU => {
-                    Instruction::I64AtomicRmw32XchgU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32XchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmwCmpxchg => {
-                    Instruction::I32AtomicRmwCmpxchg(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmwCmpxchg(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmwCmpxchg => {
-                    Instruction::I64AtomicRmwCmpxchg(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmwCmpxchg(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw8CmpxchgU => {
-                    Instruction::I32AtomicRmw8CmpxchgU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw8CmpxchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I32AtomicRmw16CmpxchgU => {
-                    Instruction::I32AtomicRmw16CmpxchgU(memarg(offset, bytes)?)
+                    Instruction::I32AtomicRmw16CmpxchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw8CmpxchgU => {
-                    Instruction::I64AtomicRmw8CmpxchgU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw8CmpxchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw16CmpxchgU => {
-                    Instruction::I64AtomicRmw16CmpxchgU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw16CmpxchgU(memarg(offset, input)?)
                 }
                 FEPrefixedOpcode::I64AtomicRmw32CmpxchgU => {
-                    Instruction::I64AtomicRmw32CmpxchgU(memarg(offset, bytes)?)
+                    Instruction::I64AtomicRmw32CmpxchgU(memarg(offset, input)?)
                 }
             }
         }
@@ -881,25 +888,33 @@ fn instruction<'a, 'b, B: Bytes>(
 }
 
 #[inline]
-fn next_instruction<'a, T, E, B, F>(
+fn next_instruction<'a, T, E, I, F>(
     offset: &'a mut u64,
-    bytes: &'a B,
+    input: &'a I,
     blocks: &mut u32,
     f: F,
 ) -> Result<T, E>
 where
     E: From<parser::Error>,
-    B: Bytes,
-    F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
+    I: Input,
+    F: FnOnce(&mut Instruction<'a, &'a I>) -> Result<T, E>,
 {
-    let mut instruction = self::instruction(offset, bytes)?;
+    let mut instruction = self::instruction(offset, input)?;
     let result = f(&mut instruction)?;
 
     match instruction {
         Instruction::Block(_) | Instruction::Loop(_) | Instruction::If(_) | Instruction::Try(_) => {
-            *blocks = blocks
-                .checked_add(1)
-                .ok_or_else(|| crate::parser_bad_format!("block nesting counter overflowed"))?;
+            if let Some(entered) = blocks.checked_add(1) {
+                *blocks = entered
+            } else {
+                #[inline(never)]
+                #[cold]
+                fn block_nesting_counter_overflowed() -> Error {
+                    Error::new(ErrorKind::BlockNestingCounterOverflow)
+                }
+
+                return Err(block_nesting_counter_overflowed().into());
+            }
         }
         Instruction::End => {
             // Won't underflow, check for self.blocks == 0 ensures None is returned early
@@ -910,10 +925,13 @@ where
                 // Check above ensures a "delegate" won't erroneously mark the end of an expression
                 *blocks -= 1;
             } else {
-                return Err(crate::parser_bad_format!(
-                    "expected end instruction to mark end of expression, but got delegate"
-                )
-                .into());
+                #[inline(never)]
+                #[cold]
+                fn unexpected_delegate() -> Error {
+                    Error::new(ErrorKind::ExpectedEndInstructionButGotDelegate)
+                }
+
+                return Err(unexpected_delegate().into());
             }
         }
         _ => {}
@@ -927,20 +945,20 @@ where
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
 #[derive(Clone, Copy)]
-pub struct InstructionSequence<O: Offset, B: Bytes> {
+pub struct InstructionSequence<O: Offset, I: Input> {
     blocks: u32,
     offset: O,
-    bytes: B,
+    input: I,
 }
 
-impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
-    /// Uses the given [`Bytes`] to read a sequence of instructions, starting at the given
+impl<O: Offset, I: Input> InstructionSequence<O, I> {
+    /// Uses the given [`Input`] to read a sequence of instructions, starting at the given
     /// `offset`.
-    pub fn new(offset: O, bytes: B) -> Self {
+    pub fn new(offset: O, input: I) -> Self {
         Self {
             blocks: 1,
             offset,
-            bytes,
+            input,
         }
     }
 
@@ -967,13 +985,13 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     pub fn next<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
         E: From<parser::Error>,
-        F: FnOnce(&mut Instruction<'a, &'a B>) -> Result<T, E>,
+        F: FnOnce(&mut Instruction<'a, &'a I>) -> Result<T, E>,
     {
         if self.is_finished() {
             return None;
         }
 
-        let result = next_instruction(self.offset.offset_mut(), &self.bytes, &mut self.blocks, f);
+        let result = next_instruction(self.offset.offset_mut(), &self.input, &mut self.blocks, f);
 
         if result.is_err() {
             // If error is encountered, no more instructions should be returned
@@ -989,69 +1007,77 @@ impl<O: Offset, B: Bytes> InstructionSequence<O, B> {
     ///
     /// If the expression is not terminated by an [**end**](Instruction::End) instruction, then
     /// an error is returned.
-    pub fn finish(mut self) -> crate::Result<(bool, O)> {
+    pub fn finish(mut self) -> parser::Parsed<(bool, O)> {
         let mut was_finished = true;
         loop {
-            match self.next(|_| crate::Result::Ok(())) {
+            match self.next(|_| parser::Parsed::Ok(())) {
                 Some(Ok(())) => was_finished = false,
                 Some(Err(e)) => return Err(e),
                 None => break,
             }
         }
 
-        match self.blocks {
-            0 => Ok((was_finished, self.offset)),
-            1 => Err(crate::parser_bad_format!(
-                "missing end instruction for expression, or blocks were not structured correctly"
-            )),
-            missing => Err(crate::parser_bad_format!(
-                "blocks are not structured correctly, {missing} end instructions were missing"
-            )),
-        }
-    }
+        if self.blocks == 0 {
+            Ok((was_finished, self.offset))
+        } else {
+            #[inline(never)]
+            #[cold]
+            fn missing_end_instructions(count: u32) -> Error {
+                Error::new(ErrorKind::MissingEndInstructions(count))
+            }
 
-    /// Clones the [`InstructionSequence`], borrowing the underlying [`Bytes`].
-    #[inline]
-    pub fn borrowed(&self) -> InstructionSequence<u64, &B> {
-        InstructionSequence {
-            blocks: self.blocks,
-            offset: self.offset.offset(),
-            bytes: &self.bytes,
+            Err(missing_end_instructions(self.blocks))
         }
     }
 }
 
-impl<O: Offset, B: Clone + Bytes> InstructionSequence<O, &B> {
-    /// Clones the [`InstructionSequence`], calling [`Clone::clone`] on the underlying [`Bytes`].
+impl<O: Offset, I: Input> HasInput<I> for InstructionSequence<O, I> {
     #[inline]
-    pub fn cloned(&self) -> InstructionSequence<u64, B> {
+    fn input(&self) -> &I {
+        &self.input
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for InstructionSequence<O, I> {
+    type Borrowed = InstructionSequence<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         InstructionSequence {
             blocks: self.blocks,
             offset: self.offset.offset(),
-            bytes: self.bytes.clone(),
+            input: &self.input,
         }
     }
 }
 
-impl<O: Offset, B: Bytes> core::fmt::Debug for InstructionSequence<O, B> {
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for InstructionSequence<O, &'a I> {
+    type Cloned = InstructionSequence<u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        InstructionSequence {
+            blocks: self.blocks,
+            offset: self.offset.offset(),
+            input: self.input.clone(),
+        }
+    }
+}
+
+impl<O: Offset, I: Input> core::fmt::Debug for InstructionSequence<O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut instructions = InstructionSequence {
-            blocks: self.blocks,
-            offset: self.offset.offset(),
-            bytes: &self.bytes,
-        };
-
+        let mut instructions = self.borrow_input();
         let mut list = f.debug_list();
         loop {
             let result = instructions.next(|i| {
-                list.entry(&crate::Result::Ok(i));
+                list.entry(&parser::Parsed::Ok(i));
                 Ok(())
             });
 
             match result {
                 None => break,
                 Some(Err(e)) => {
-                    list.entry(&crate::Result::<()>::Err(e));
+                    list.entry(&parser::Parsed::<()>::Err(e));
                     break;
                 }
                 Some(Ok(_)) => (),

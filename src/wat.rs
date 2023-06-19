@@ -2,7 +2,7 @@
 //! [WebAssembly text format](https://webassembly.github.io/spec/core/text/index.html).
 
 use crate::{
-    parser::{self, Result as Parsed},
+    parser::{self, Parsed},
     types,
 };
 use core::fmt::Formatter;

@@ -1,7 +1,7 @@
 use crate::{
-    bytes::Bytes,
     component::ResultType,
-    parser::{Result, ResultExt, Vector},
+    input::{BorrowInput, CloneInput, HasInput, Input},
+    parser::{Parsed, ResultExt, Vector},
 };
 
 /// Represents the
@@ -9,22 +9,22 @@ use crate::{
 /// WebAssembly module, stored in and parsed from the
 /// [*type section*](https://webassembly.github.io/spec/core/binary/modules.html#type-section).
 #[derive(Clone, Copy)]
-pub struct TypesComponent<B: Bytes> {
-    types: Vector<u64, B>,
+pub struct TypesComponent<I: Input> {
+    types: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for TypesComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for TypesComponent<I> {
     #[inline]
-    fn from(types: Vector<u64, B>) -> Self {
+    fn from(types: Vector<u64, I>) -> Self {
         Self { types }
     }
 }
 
-impl<B: Bytes> TypesComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *type section* of a module, starting
+impl<I: Input> TypesComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *type section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of type section")
             .map(Self::from)
     }
@@ -37,10 +37,10 @@ impl<B: Bytes> TypesComponent<B> {
 
     /// Parses the next function type in the section.
     #[inline]
-    pub fn parse<Y, Z, P, R>(&mut self, parameter_types: P, result_types: R) -> Result<Option<Z>>
+    pub fn parse<Y, Z, P, R>(&mut self, parameter_types: P, result_types: R) -> Parsed<Option<Z>>
     where
-        P: FnOnce(&mut ResultType<&mut u64, &B>) -> Result<Y>,
-        R: FnOnce(Y, &mut ResultType<&mut u64, &B>) -> Result<Z>,
+        P: FnOnce(&mut ResultType<&mut u64, &I>) -> Parsed<Y>,
+        R: FnOnce(Y, &mut ResultType<&mut u64, &I>) -> Parsed<Z>,
     {
         self.types
             .advance(|offset, bytes| {
@@ -48,45 +48,64 @@ impl<B: Bytes> TypesComponent<B> {
             })
             .transpose()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> TypesComponent<&B> {
-        TypesComponent {
-            types: self.types.borrowed(),
+impl<I: Input> HasInput<I> for TypesComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.types.input()
+    }
+}
+
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for TypesComponent<I> {
+    type Borrowed = TypesComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for TypesComponent<&'a I> {
+    type Cloned = TypesComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
+    }
+}
+
+impl<I: Input> core::fmt::Debug for TypesComponent<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        struct FuncType<'a, I: Input> {
+            parameters: ResultType<u64, &'a I>,
+            results: ResultType<u64, &'a I>,
         }
-    }
-}
 
-struct FuncType<'a, B: Bytes> {
-    parameters: ResultType<u64, &'a B>,
-    results: ResultType<u64, &'a B>,
-}
+        impl<I: Input> core::fmt::Debug for FuncType<'_, I> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct("FuncType")
+                    .field("parameters", &self.parameters)
+                    .field("results", &self.results)
+                    .finish()
+            }
+        }
 
-impl<B: Bytes> core::fmt::Debug for FuncType<'_, B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("FuncType")
-            .field("parameters", &self.parameters)
-            .field("results", &self.results)
-            .finish()
-    }
-}
-
-impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut list = f.debug_list();
-        let mut types = self.borrowed();
+        let mut types = self.borrow_input();
 
-        let empty_types = ResultType::empty_with_offset(0, self.types.bytes());
+        let empty_types = ResultType::empty_with_offset(0, self.input());
         let mut last_parameters = empty_types;
         let mut last_results = empty_types;
 
         loop {
             let result = types.parse(
                 |parameter_types| {
-                    last_parameters = parameter_types.dereferenced();
+                    last_parameters = parameter_types.clone_input();
                     Ok(())
                 },
                 |(), result_types| {
-                    last_results = result_types.dereferenced();
+                    last_results = result_types.clone_input();
                     Ok(())
                 },
             );
@@ -102,7 +121,7 @@ impl<B: Bytes> core::fmt::Debug for TypesComponent<B> {
                 }
                 Ok(None) => break,
                 Err(e) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
             }

@@ -1,30 +1,30 @@
 use crate::{
-    bytes::Bytes,
-    parser::{Result, ResultExt, Vector},
+    input::{BorrowInput, CloneInput, HasInput, Input},
+    parser::{Parsed, ResultExt, Vector},
     types::TableType,
 };
 
 /// Represents the
 /// [**tables** component](https://webassembly.github.io/spec/core/syntax/modules.html#tables) of a
 /// WebAssembly module, stored in and parsed from the
-/// [*tables section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
+/// [*table section*](https://webassembly.github.io/spec/core/binary/modules.html#table-section).
 #[derive(Clone, Copy)]
-pub struct TablesComponent<B: Bytes> {
-    types: Vector<u64, B>,
+pub struct TablesComponent<I: Input> {
+    types: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for TablesComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for TablesComponent<I> {
     #[inline]
-    fn from(types: Vector<u64, B>) -> Self {
+    fn from(types: Vector<u64, I>) -> Self {
         Self { types }
     }
 }
 
-impl<B: Bytes> TablesComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *table section* of a module, starting,
+impl<I: Input> TablesComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *table section* of a module, starting,
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of table section")
             .map(Self::from)
     }
@@ -35,16 +35,35 @@ impl<B: Bytes> TablesComponent<B> {
     pub fn remaining_count(&self) -> u32 {
         self.types.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> TablesComponent<&B> {
-        TablesComponent {
-            types: self.types.borrowed(),
-        }
+impl<I: Input> HasInput<I> for TablesComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.types.input()
     }
 }
 
-impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {
-    type Item = Result<TableType>;
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for TablesComponent<I> {
+    type Borrowed = TablesComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for TablesComponent<&'a I> {
+    type Cloned = TablesComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
+    }
+}
+
+impl<I: Input> core::iter::Iterator for TablesComponent<I> {
+    type Item = Parsed<TableType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -59,9 +78,9 @@ impl<B: Bytes> core::iter::Iterator for TablesComponent<B> {
     }
 }
 
-impl<B: Clone + Bytes> core::iter::FusedIterator for TablesComponent<B> {}
+impl<I: Clone + Input> core::iter::FusedIterator for TablesComponent<I> {}
 
-impl<B: Bytes> core::fmt::Debug for TablesComponent<B> {
+impl<I: Input> core::fmt::Debug for TablesComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.types, f)
     }

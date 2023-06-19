@@ -49,6 +49,11 @@ lto = true
 inherits = "release"
 debug = 2
 
+[profile.disassembly]
+inherits = "release"
+codegen-units = 16
+lto = false
+
 [profile.dev.package.insta]
 opt-level = 3
 

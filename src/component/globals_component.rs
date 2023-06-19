@@ -1,7 +1,7 @@
 use crate::{
-    bytes::Bytes,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
-    parser::{Result, ResultExt as _, Vector},
+    parser::{Parsed, ResultExt as _, Vector},
     types::GlobalType,
 };
 
@@ -10,39 +10,39 @@ use crate::{
 /// a WebAssembly module, stored in and parsed from the
 /// [*global section*](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
 #[derive(Clone, Copy)]
-pub struct GlobalsComponent<B: Bytes> {
-    globals: Vector<u64, B>,
+pub struct GlobalsComponent<I: Input> {
+    globals: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for GlobalsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for GlobalsComponent<I> {
     #[inline]
-    fn from(globals: Vector<u64, B>) -> Self {
+    fn from(globals: Vector<u64, I>) -> Self {
         Self { globals }
     }
 }
 
-impl<B: Bytes> GlobalsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *global section* of a module, starting
+impl<I: Input> GlobalsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *global section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of global section")
             .map(Self::from)
     }
 
     /// Parses a
     /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
-    pub fn parse<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn parse<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
-        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &B>) -> Result<T>,
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> Parsed<T>,
     {
         self.globals
-            .advance(|offset, bytes| {
-                let global_type = crate::component::global_type(offset, bytes)?;
-                let mut expression = InstructionSequence::new(offset, bytes);
+            .advance(|offset, input| {
+                let global_type = crate::component::global_type(offset, input)?;
+                let mut expression = InstructionSequence::new(offset, input);
                 let result = f(global_type, &mut expression).context("global expression")?;
                 expression.finish().context("global expression")?;
-                Result::Ok(result)
+                Parsed::Ok(result)
             })
             .transpose()
             .context("within global section")
@@ -53,22 +53,43 @@ impl<B: Bytes> GlobalsComponent<B> {
     pub fn remaining_count(&self) -> u32 {
         self.globals.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> GlobalsComponent<&B> {
-        self.globals.borrowed().into()
+impl<I: Input> HasInput<I> for GlobalsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.globals.input()
     }
 }
 
-impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut globals = self.borrowed();
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for GlobalsComponent<I> {
+    type Borrowed = GlobalsComponent<&'a I>;
 
-        struct Global<'a, B: Bytes> {
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.globals.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for GlobalsComponent<&'a I> {
+    type Cloned = GlobalsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.globals.clone_input().into()
+    }
+}
+
+impl<I: Input> core::fmt::Debug for GlobalsComponent<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut globals = self.borrow_input();
+
+        struct Global<'a, I: Input> {
             r#type: GlobalType,
-            init: InstructionSequence<u64, &'a B>,
+            init: InstructionSequence<u64, &'a I>,
         }
 
-        impl<B: Bytes> core::fmt::Debug for Global<'_, B> {
+        impl<I: Input> core::fmt::Debug for Global<'_, I> {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("Global")
                     .field("type", &self.r#type)
@@ -79,7 +100,7 @@ impl<B: Bytes> core::fmt::Debug for GlobalsComponent<B> {
 
         let mut list = f.debug_list();
         loop {
-            let result = globals.parse(|ty, init| Ok((ty, init.cloned())));
+            let result = globals.parse(|ty, init| Ok((ty, init.clone_input())));
 
             list.entry(&match result {
                 Ok(None) => break,

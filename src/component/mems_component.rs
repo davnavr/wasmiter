@@ -1,6 +1,6 @@
 use crate::{
-    bytes::Bytes,
-    parser::{Result, ResultExt, Vector},
+    input::{BorrowInput, CloneInput, HasInput, Input},
+    parser::{Parsed, ResultExt, Vector},
     types::MemType,
 };
 
@@ -12,22 +12,22 @@ use crate::{
 /// Note that defining more than one memory requires the
 /// [multi-memory proposal](https://github.com/WebAssembly/multi-memory).
 #[derive(Clone, Copy)]
-pub struct MemsComponent<B: Bytes> {
-    types: Vector<u64, B>,
+pub struct MemsComponent<I: Input> {
+    types: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for MemsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for MemsComponent<I> {
     #[inline]
-    fn from(types: Vector<u64, B>) -> Self {
+    fn from(types: Vector<u64, I>) -> Self {
         Self { types }
     }
 }
 
-impl<B: Bytes> MemsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *memory section* of a module, starting
+impl<I: Input> MemsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *memory section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of memory section")
             .map(Self::from)
     }
@@ -38,16 +38,35 @@ impl<B: Bytes> MemsComponent<B> {
     pub fn remaining_count(&self) -> u32 {
         self.types.remaining_count()
     }
+}
 
-    pub(crate) fn borrowed(&self) -> MemsComponent<&B> {
-        MemsComponent {
-            types: self.types.borrowed(),
-        }
+impl<I: Input> HasInput<I> for MemsComponent<I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.types.input()
     }
 }
 
-impl<B: Bytes> core::iter::Iterator for MemsComponent<B> {
-    type Item = Result<MemType>;
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for MemsComponent<I> {
+    type Borrowed = MemsComponent<&'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.types.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for MemsComponent<&'a I> {
+    type Cloned = MemsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.types.clone_input().into()
+    }
+}
+
+impl<I: Input> core::iter::Iterator for MemsComponent<I> {
+    type Item = Parsed<MemType>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -62,9 +81,9 @@ impl<B: Bytes> core::iter::Iterator for MemsComponent<B> {
     }
 }
 
-impl<B: Clone + Bytes> core::iter::FusedIterator for MemsComponent<B> {}
+impl<I: Clone + Input> core::iter::FusedIterator for MemsComponent<I> {}
 
-impl<B: Bytes> core::fmt::Debug for MemsComponent<B> {
+impl<I: Input> core::fmt::Debug for MemsComponent<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.types, f)
     }

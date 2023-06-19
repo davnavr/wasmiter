@@ -1,49 +1,71 @@
 use crate::{
-    bytes::Bytes,
     index::Index,
+    input::{BorrowInput, CloneInput, HasInput, Input},
     parser::{self, name::Name, ResultExt as _},
 };
 
 /// A [**nameassoc**](https://webassembly.github.io/spec/core/appendix/custom.html#name-maps)
 /// associates an [`Index`] with a [`Name`].
 #[derive(Clone, Copy)]
-pub struct NameAssoc<I: Index, B: Bytes> {
-    index: I,
-    name: Name<B>,
+pub struct NameAssoc<N: Index, I: Input> {
+    index: N,
+    name: Name<I>,
 }
 
-impl<I: Index, B: Bytes> NameAssoc<I, B> {
+impl<N: Index, I: Input> NameAssoc<N, I> {
     /// Parses a [`NameAssoc`].
-    pub fn parse(offset: &mut u64, bytes: B) -> parser::Result<Self> {
+    pub fn parse(offset: &mut u64, input: I) -> parser::Parsed<Self> {
         Ok(Self {
-            index: crate::component::index(offset, &bytes).context("index of nameassoc pair")?,
-            name: parser::name::parse(offset, bytes).context("name of nameassoc pair")?,
+            index: crate::component::index(offset, &input).context("index of nameassoc pair")?,
+            name: parser::name::parse(offset, input).context("name of nameassoc pair")?,
         })
     }
 
     /// Gets the index.
     #[inline]
-    pub fn index(&self) -> I {
+    pub fn index(&self) -> N {
         self.index
     }
 
     /// Gets the name.
     #[inline]
-    pub fn name(&self) -> &Name<B> {
+    pub fn name(&self) -> &Name<I> {
         &self.name
     }
 }
 
-impl<I: Index, B: Clone + Bytes> NameAssoc<I, &B> {
-    pub(super) fn dereferenced(&self) -> NameAssoc<I, B> {
+impl<N: Index, I: Input> HasInput<I> for NameAssoc<N, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.name.input()
+    }
+}
+
+impl<'a, N: Index, I: Input + 'a> BorrowInput<'a, I> for NameAssoc<N, I> {
+    type Borrowed = NameAssoc<N, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         NameAssoc {
             index: self.index,
-            name: self.name.really_cloned(),
+            name: self.name.borrow_input(),
         }
     }
 }
 
-impl<I: Index, B: Bytes> core::fmt::Debug for NameAssoc<I, B> {
+impl<'a, N: Index, I: Clone + Input + 'a> CloneInput<'a, I> for NameAssoc<N, &'a I> {
+    type Cloned = NameAssoc<N, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        NameAssoc {
+            index: self.index,
+            name: self.name.clone_input(),
+        }
+    }
+}
+
+impl<N: Index, I: Input> core::fmt::Debug for NameAssoc<N, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("NameAssoc")
             .field("index", &self.index)

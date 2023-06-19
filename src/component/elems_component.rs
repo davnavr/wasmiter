@@ -1,67 +1,88 @@
 use crate::{
-    bytes::Bytes,
     component::{self, IndexVector},
     index::{self, TableIdx},
+    input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Result, ResultExt as _, Vector},
+    parser::{self, Offset, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
 /// Represents a vector of expressions that evaluate to references in an
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
-pub struct ElementExpressions<O: Offset, B: Bytes> {
-    expressions: Vector<O, B>,
+pub struct ElementExpressions<O: Offset, I: Input> {
+    expressions: Vector<O, I>,
 }
 
-impl<O: Offset, B: Bytes> From<Vector<O, B>> for ElementExpressions<O, B> {
+impl<O: Offset, I: Input> From<Vector<O, I>> for ElementExpressions<O, I> {
     #[inline]
-    fn from(expressions: Vector<O, B>) -> Self {
+    fn from(expressions: Vector<O, I>) -> Self {
         Self { expressions }
     }
 }
 
-impl<O: Offset, B: Bytes> ElementExpressions<O, B> {
-    fn new(offset: O, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+impl<O: Offset, I: Input> ElementExpressions<O, I> {
+    fn new(offset: O, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of element segment expressions")
             .map(Self::from)
     }
 
     /// Parses the next expression.
-    pub fn next<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn next<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
-        F: FnOnce(&mut InstructionSequence<&mut u64, &B>) -> Result<T>,
+        F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> Parsed<T>,
     {
         self.expressions
-            .advance(|offset, bytes| {
+            .advance(|offset, input| {
                 let mut offset_cell = *offset;
-                let mut expression = InstructionSequence::new(&mut offset_cell, bytes);
+                let mut expression = InstructionSequence::new(&mut offset_cell, input);
                 let result = f(&mut expression)?;
                 let (_, final_offset) = expression.finish()?;
                 *offset = *final_offset;
-                Result::Ok(result)
+                Parsed::Ok(result)
             })
             .transpose()
             .context("could not parse element segment expression")
     }
 
-    fn finish(mut self) -> Result<()> {
-        while self.next(|_| Result::Ok(()))?.is_some() {}
+    fn finish(mut self) -> Parsed<()> {
+        while self.next(|_| Parsed::Ok(()))?.is_some() {}
         Ok(())
-    }
-
-    fn borrowed(&self) -> ElementExpressions<u64, &B> {
-        self.expressions.borrowed().into()
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
+impl<O: Offset, I: Input> HasInput<I> for ElementExpressions<O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.expressions.input()
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for ElementExpressions<O, I> {
+    type Borrowed = ElementExpressions<u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.expressions.borrow_input().into()
+    }
+}
+
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for ElementExpressions<O, &'a I> {
+    type Cloned = ElementExpressions<u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.expressions.clone_input().into()
+    }
+}
+
+impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut borrowed = self.borrowed();
+        let mut borrowed = self.borrow_input();
         let mut list = f.debug_list();
         loop {
             let result = borrowed.next(|instructions| {
-                list.entry(&Result::Ok(instructions));
+                list.entry(&Parsed::Ok(instructions));
                 Ok(())
             });
 
@@ -69,7 +90,7 @@ impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
                 Ok(Some(())) => (),
                 Ok(None) => break,
                 Err(e) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
             }
@@ -80,15 +101,15 @@ impl<O: Offset, B: Bytes> Debug for ElementExpressions<O, B> {
 
 /// Represents the references within an
 /// [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
-pub enum ElementInit<O: Offset, B: Bytes> {
+pub enum ElementInit<O: Offset, I: Input> {
     /// A vector of functions to create `funcref` elements from.
-    Functions(IndexVector<index::FuncIdx, O, B>),
+    Functions(IndexVector<index::FuncIdx, O, I>),
     /// A vector of expressions that evaluate to references.
-    Expressions(crate::types::RefType, ElementExpressions<O, B>),
+    Expressions(crate::types::RefType, ElementExpressions<O, I>),
 }
 
-impl<O: Offset, B: Bytes> ElementInit<O, B> {
-    fn finish(self) -> Result<()> {
+impl<O: Offset, I: Input> ElementInit<O, I> {
+    fn finish(self) -> Parsed<()> {
         match self {
             Self::Functions(functions) => {
                 functions.finish()?;
@@ -99,7 +120,38 @@ impl<O: Offset, B: Bytes> ElementInit<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
+impl<O: Offset, I: Input> HasInput<I> for ElementInit<O, I> {
+    fn input(&self) -> &I {
+        match self {
+            Self::Functions(funcs) => funcs.input(),
+            Self::Expressions(_, exprs) => exprs.input(),
+        }
+    }
+}
+
+impl<'a, O: Offset, I: Input + 'a> BorrowInput<'a, I> for ElementInit<O, I> {
+    type Borrowed = ElementInit<u64, &'a I>;
+
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        match self {
+            Self::Functions(funcs) => ElementInit::Functions(funcs.borrow_input()),
+            Self::Expressions(rt, exprs) => ElementInit::Expressions(*rt, exprs.borrow_input()),
+        }
+    }
+}
+
+impl<'a, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I> for ElementInit<O, &'a I> {
+    type Cloned = ElementInit<u64, I>;
+
+    fn clone_input(&self) -> Self::Cloned {
+        match self {
+            Self::Functions(funcs) => ElementInit::Functions(funcs.clone_input()),
+            Self::Expressions(rt, exprs) => ElementInit::Expressions(*rt, exprs.clone_input()),
+        }
+    }
+}
+
+impl<O: Offset, I: Input> Debug for ElementInit<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Functions(functions) => f.debug_tuple("Functions").field(functions).finish(),
@@ -113,7 +165,7 @@ impl<O: Offset, B: Bytes> Debug for ElementInit<O, B> {
 }
 
 /// Specifies a kind of [element segment](https://webassembly.github.io/spec/core/syntax/modules.html#element-segments).
-pub enum ElementMode<O: Offset, B: Bytes> {
+pub enum ElementMode<O: Offset, I: Input> {
     /// A **passive** element segment's elements are copied to a table using the
     /// [`table.init`](crate::instruction_set::Instruction::TableInit) instruction.
     Passive,
@@ -121,14 +173,14 @@ pub enum ElementMode<O: Offset, B: Bytes> {
     /// expressed offset specified by an expression, during
     /// [instantiation](https://webassembly.github.io/spec/core/exec/modules.html#exec-instantiation)
     /// of the module.
-    Active(TableIdx, InstructionSequence<O, B>),
+    Active(TableIdx, InstructionSequence<O, I>),
     /// A **declarative** data segment cannot be used at runtime. It can be used as a hint to
     /// indicate that references to the given elements will be used in code later in the module.
     Declarative,
 }
 
-impl<O: Offset, B: Bytes> ElementMode<O, B> {
-    fn finish(self) -> Result<()> {
+impl<O: Offset, I: Input> ElementMode<O, I> {
+    fn finish(self) -> Parsed<()> {
         match self {
             Self::Passive | Self::Declarative => (),
             Self::Active(_, instructions) => {
@@ -139,7 +191,7 @@ impl<O: Offset, B: Bytes> ElementMode<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
+impl<O: Offset, I: Input> Debug for ElementMode<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Passive => f.debug_tuple("Passive").finish(),
@@ -158,40 +210,44 @@ impl<O: Offset, B: Bytes> Debug for ElementMode<O, B> {
 /// WebAssembly module, stored in and parsed from the
 /// [*element section*](https://webassembly.github.io/spec/core/binary/modules.html#element-section).
 #[derive(Clone, Copy)]
-pub struct ElemsComponent<B: Bytes> {
-    elements: Vector<u64, B>,
+pub struct ElemsComponent<I: Input> {
+    elements: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for ElemsComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for ElemsComponent<I> {
     #[inline]
-    fn from(elements: Vector<u64, B>) -> Self {
+    fn from(elements: Vector<u64, I>) -> Self {
         Self { elements }
     }
 }
 
-fn elem_kind<B: Bytes>(offset: &mut u64, bytes: B) -> Result<()> {
-    match parser::one_byte_exact(offset, bytes).context("elemkind")? {
+fn elem_kind<I: Input>(offset: &mut u64, input: I) -> Parsed<()> {
+    #[inline(never)]
+    #[cold]
+    fn bad_kind(kind: u8) -> parser::Error {
+        parser::Error::new(parser::ErrorKind::BadElementKind(kind))
+    }
+
+    match parser::one_byte_exact(offset, input).context("elemkind")? {
         0 => Ok(()),
-        bad => Err(crate::parser_bad_format!(
-            "{bad:#04X} is not a valid elemkind"
-        )),
+        bad => Err(bad_kind(bad)),
     }
 }
 
-impl<B: Bytes> ElemsComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *element section* of a module, starting
+impl<I: Input> ElemsComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *element section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of element section")
             .map(Self::from)
     }
 
     /// Parses the next element segment in the section.
-    pub fn parse<Y, Z, M, I>(&mut self, mode_f: M, init_f: I) -> Result<Option<Z>>
+    pub fn parse<Y, Z, M, E>(&mut self, mode_f: M, init_f: E) -> Parsed<Option<Z>>
     where
-        M: FnOnce(&mut ElementMode<&mut u64, &B>) -> Result<Y>,
-        I: FnOnce(Y, &mut ElementInit<&mut u64, &B>) -> Result<Z>,
+        M: FnOnce(&mut ElementMode<&mut u64, &I>) -> Parsed<Y>,
+        E: FnOnce(Y, &mut ElementInit<&mut u64, &I>) -> Parsed<Z>,
     {
         self.elements
             .advance(|offset, bytes| {
@@ -313,10 +369,14 @@ impl<B: Bytes> ElemsComponent<B> {
                         );
                     }
                     _ => {
-                        return Err(crate::parser_bad_format_at_offset!(
-                            "file" @ start,
-                            "{segment_kind} is not a supported element segment mode"
-                        ))
+                        #[inline(never)]
+                        #[cold]
+                        fn unsupported_mode(offset: u64, mode: u32) -> parser::Error {
+                            parser::Error::new(parser::ErrorKind::BadElementSegmentMode(mode))
+                                .with_location_context("element segment entry", offset)
+                        }
+
+                        return Err(unsupported_mode(start, segment_kind));
                     }
                 }
 
@@ -333,29 +393,48 @@ impl<B: Bytes> ElemsComponent<B> {
     pub fn remaining_count(&self) -> u32 {
         self.elements.remaining_count()
     }
+}
 
+impl<I: Input> HasInput<I> for ElemsComponent<I> {
     #[inline]
-    pub(crate) fn borrowed(&self) -> ElemsComponent<&B> {
-        self.elements.borrowed().into()
+    fn input(&self) -> &I {
+        self.elements.input()
     }
 }
 
-impl<B: Bytes> Debug for ElemsComponent<B> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut elems = self.borrowed();
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for ElemsComponent<I> {
+    type Borrowed = ElemsComponent<&'a I>;
 
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.elements.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for ElemsComponent<&'a I> {
+    type Cloned = ElemsComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.elements.clone_input().into()
+    }
+}
+
+impl<I: Input> Debug for ElemsComponent<I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let mut elems = self.borrow_input();
         let mut list = f.debug_list();
 
-        struct Elem<'a, 'b, 'c, 'd, 'e, B: Bytes> {
-            mode: ElementMode<u64, &'a B>,
-            elements: &'b mut ElementInit<&'c mut u64, &'d &'e B>,
+        struct Elem<'a, I: Input> {
+            mode: ElementMode<u64, &'a I>,
+            elements: ElementInit<u64, &'a I>,
         }
 
-        impl<B: Bytes> Debug for Elem<'_, '_, '_, '_, '_, B> {
+        impl<I: Input> Debug for Elem<'_, I> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("ElementSegment")
                     .field("mode", &self.mode)
-                    .field("elements", self.elements)
+                    .field("elements", &self.elements)
                     .finish()
             }
         }
@@ -367,19 +446,22 @@ impl<B: Bytes> Debug for ElemsComponent<B> {
                         ElementMode::Passive => ElementMode::Passive,
                         ElementMode::Declarative => ElementMode::Declarative,
                         ElementMode::Active(table, offset) => {
-                            ElementMode::Active(*table, offset.cloned())
+                            ElementMode::Active(*table, offset.clone_input())
                         }
                     })
                 },
                 |mode, elements| {
-                    list.entry(&Elem { mode, elements });
+                    list.entry(&Elem {
+                        mode,
+                        elements: elements.clone_input(),
+                    });
 
-                    Result::Ok(())
+                    Parsed::Ok(())
                 },
             );
 
             if let Err(e) = result {
-                list.entry(&Result::<()>::Err(e));
+                list.entry(&Parsed::<()>::Err(e));
             }
         }
         list.finish()

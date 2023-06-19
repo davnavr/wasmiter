@@ -24,7 +24,7 @@ test_alloc $RUST_BACKTRACE="1":
     cargo test --doc {{cfg_alloc}}
 
 test_full $RUST_BACKTRACE="1":
-    cargo nextest run
+    cargo nextest run --all-targets
     cargo test --doc
 
 test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTRACE) (test_nostd RUST_BACKTRACE)

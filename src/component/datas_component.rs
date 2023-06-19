@@ -1,15 +1,15 @@
 use crate::{
-    bytes::{Bytes, Window},
     index::MemIdx,
+    input::{BorrowInput, CloneInput, HasInput, Input, Window},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Result, ResultExt as _, Vector},
+    parser::{self, Offset, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
 /// Specifies the mode of a
 /// [data segment](https://webassembly.github.io/spec/core/syntax/modules.html#data-segments).
 #[derive(Clone, Copy)]
-pub enum DataMode<O: Offset, B: Bytes> {
+pub enum DataMode<O: Offset, I: Input> {
     /// A **passive** data segment's elements are copied to a memory using the
     /// [`memory.init`](crate::instruction_set::Instruction::MemoryInit) instruction.
     Passive,
@@ -17,11 +17,11 @@ pub enum DataMode<O: Offset, B: Bytes> {
     /// offset specified by an expression, during
     /// [instantiation](https://webassembly.github.io/spec/core/exec/modules.html#exec-instantiation)
     /// of the module.
-    Active(MemIdx, InstructionSequence<O, B>),
+    Active(MemIdx, InstructionSequence<O, I>),
 }
 
-impl<O: Offset, B: Bytes> DataMode<O, B> {
-    fn finish(self) -> Result<()> {
+impl<O: Offset, I: Input> DataMode<O, I> {
+    fn finish(self) -> Parsed<()> {
         match self {
             Self::Passive => (),
             Self::Active(_, offset) => {
@@ -32,7 +32,7 @@ impl<O: Offset, B: Bytes> DataMode<O, B> {
     }
 }
 
-impl<O: Offset, B: Bytes> Debug for DataMode<O, B> {
+impl<O: Offset, I: Input> Debug for DataMode<O, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Passive => f.debug_tuple("Passive").finish(),
@@ -50,53 +50,56 @@ impl<O: Offset, B: Bytes> Debug for DataMode<O, B> {
 /// of a WebAssembly module, stored in and parsed from the
 /// [*data section*](https://webassembly.github.io/spec/core/binary/modules.html#data-section).
 #[derive(Clone, Copy)]
-pub struct DatasComponent<B: Bytes> {
-    entries: Vector<u64, B>,
+pub struct DatasComponent<I: Input> {
+    entries: Vector<u64, I>,
 }
 
-impl<B: Bytes> From<Vector<u64, B>> for DatasComponent<B> {
+impl<I: Input> From<Vector<u64, I>> for DatasComponent<I> {
     #[inline]
-    fn from(entries: Vector<u64, B>) -> Self {
+    fn from(entries: Vector<u64, I>) -> Self {
         Self { entries }
     }
 }
 
-impl<B: Bytes> DatasComponent<B> {
-    /// Uses the given [`Bytes`] to read the contents of the *data section* of a module, starting
+impl<I: Input> DatasComponent<I> {
+    /// Uses the given [`Input`] to read the contents of the *data section* of a module, starting
     /// at the specified `offset`.
-    pub fn new(offset: u64, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes)
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input)
             .context("at start of data section")
             .map(Self::from)
     }
 
     /// Parses the next data segment in the section.
-    pub fn parse<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Result<Option<Z>>
+    pub fn parse<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Parsed<Option<Z>>
     where
-        M: FnOnce(&mut DataMode<&mut u64, &B>) -> Result<Y>,
-        D: FnOnce(Y, Window<&B>) -> Result<Z>,
+        M: FnOnce(&mut DataMode<&mut u64, &I>) -> Parsed<Y>,
+        D: FnOnce(Y, Window<&I>) -> Parsed<Z>,
     {
-        self.entries.advance(|offset, bytes| {
+        self.entries.advance(|offset, input| {
             let mode_offset = *offset;
             let mode_tag=
-                parser::leb128::u32(offset, bytes).context("while parsing data segment mode")?;
+                parser::leb128::u32(offset, input).context("while parsing data segment mode")?;
 
             let mut copied_offset = *offset;
-            let mut mode: DataMode<&mut u64, &B> = match mode_tag {
+            let mut mode: DataMode<&mut u64, &I> = match mode_tag {
                 0 => DataMode::Active(
                     MemIdx::from(0u8),
-                    InstructionSequence::new(&mut copied_offset, bytes),
+                    InstructionSequence::new(&mut copied_offset, input),
                 ),
                 1 => DataMode::Passive,
                 2 => DataMode::Active(
-                    crate::component::index(&mut copied_offset, bytes).context("could not parse target memory of active data segment")?,
-                    InstructionSequence::new(&mut copied_offset, bytes),
+                    crate::component::index(&mut copied_offset, input).context("could not parse target memory of active data segment")?,
+                    InstructionSequence::new(&mut copied_offset, input),
                 ),
                 _ => {
-                    return Err(crate::parser_bad_format_at_offset!(
-                        "file" @ mode_offset,
-                        "{mode_tag} is not a supported data segment mode"
-                    ))
+                    #[inline(never)]
+                    #[cold]
+                    fn unsupported_mode(offset: u64, mode: u32) -> parser::Error {
+                        parser::Error::new(parser::ErrorKind::BadDataSegmentMode(mode)).with_location_context("data segment", offset)
+                    }
+
+                    return Err(unsupported_mode(mode_offset, mode_tag));
                 }
             };
 
@@ -105,16 +108,13 @@ impl<B: Bytes> DatasComponent<B> {
             *offset = copied_offset;
 
             let data_length =
-                parser::leb128::u64(offset, bytes).context("data segment length")?;
+                parser::leb128::u64(offset, input).context("data segment length")?;
 
-            let data = Window::new(bytes, *offset, data_length);
+            let data = Window::with_offset_and_length(input, *offset, data_length);
             let result = data_f(data_arg, data)?;
 
-            *offset = offset.checked_add(data_length).ok_or_else(|| {
-                crate::parser_bad_format_at_offset!(
-                    "file" @ offset,
-                    "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached"
-                )
+            crate::input::increment_offset(offset, data_length).with_context(|| move |f| {
+                write!(f, "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached")
             })?;
 
             Ok(result)
@@ -126,23 +126,43 @@ impl<B: Bytes> DatasComponent<B> {
     pub fn remaining_count(&self) -> u32 {
         self.entries.remaining_count()
     }
+}
 
+impl<I: Input> HasInput<I> for DatasComponent<I> {
     #[inline]
-    pub(crate) fn borrowed(&self) -> DatasComponent<&B> {
-        self.entries.borrowed().into()
+    fn input(&self) -> &I {
+        self.entries.input()
     }
 }
 
-impl<B: Bytes> Debug for DatasComponent<B> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut datas = self.borrowed();
+impl<'a, I: Input + 'a> BorrowInput<'a, I> for DatasComponent<I> {
+    type Borrowed = DatasComponent<&'a I>;
 
-        struct DataSegment<'a, B: Bytes> {
-            mode: DataMode<u64, B>,
-            data: Window<&'a B>,
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
+        self.entries.borrow_input().into()
+    }
+}
+
+impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for DatasComponent<&'a I> {
+    type Cloned = DatasComponent<I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        self.entries.clone_input().into()
+    }
+}
+
+impl<I: Input> Debug for DatasComponent<I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let mut datas = self.borrow_input();
+
+        struct DataSegment<'a, I: Input> {
+            mode: DataMode<u64, I>,
+            data: Window<&'a I>,
         }
 
-        impl<B: Bytes> Debug for DataSegment<'_, B> {
+        impl<I: Input> Debug for DataSegment<'_, I> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("DataSegment")
                     .field("mode", &self.mode)
@@ -158,12 +178,12 @@ impl<B: Bytes> Debug for DatasComponent<B> {
                     Ok(match mode {
                         DataMode::Passive => DataMode::Passive,
                         DataMode::Active(memory, offset) => {
-                            DataMode::Active(*memory, offset.cloned())
+                            DataMode::Active(*memory, offset.clone_input())
                         }
                     })
                 },
                 |mode, data| {
-                    list.entry(&Result::Ok(DataSegment { mode, data }));
+                    list.entry(&Parsed::Ok(DataSegment { mode, data }));
                     Ok(())
                 },
             );
@@ -172,7 +192,7 @@ impl<B: Bytes> Debug for DatasComponent<B> {
                 Ok(Some(())) => (),
                 Ok(None) => break,
                 Err(e) => {
-                    list.entry(&Result::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
             }

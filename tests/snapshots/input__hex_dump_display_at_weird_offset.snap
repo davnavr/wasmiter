@@ -1,0 +1,9 @@
+---
+source: tests/input.rs
+expression: "format_args!(\"{:#}\", HexDump :: from(window))"
+---
+offset   0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
+000000           20 74 68 65 20  6D 61 6E 20 77 65 6E 74  |... the man went|
+000010  20 6F 75 74 20 66 6F 72  20 6A 75 72 79 20 64 75  | out for jury du|
+000020  74 79 20 61 6E 64 20 65  78 63 6C 61 69 6D 65 64  |ty and exclaimed|
+

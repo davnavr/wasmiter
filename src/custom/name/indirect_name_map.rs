@@ -1,8 +1,8 @@
 use crate::{
-    bytes::Bytes,
     custom::name::NameMap,
     index::Index,
-    parser::{AscendingOrder, Offset, Result, ResultExt as _, Vector},
+    input::{BorrowInput, CloneInput, HasInput, Input},
+    parser::{AscendingOrder, Offset, Parsed, ResultExt as _, Vector},
 };
 
 /// An
@@ -12,14 +12,14 @@ use crate::{
 /// Like a [`NameMap`], each primary index is checked to ensure they are unique and in increasing
 /// order.
 #[derive(Clone, Copy)]
-pub struct IndirectNameMap<K: Index, V: Index, O: Offset, B: Bytes> {
-    entries: Vector<O, B>,
+pub struct IndirectNameMap<K: Index, V: Index, O: Offset, I: Input> {
+    entries: Vector<O, I>,
     order: AscendingOrder<u32, K>,
     _marker: core::marker::PhantomData<V>,
 }
 
-impl<K: Index, V: Index, O: Offset, B: Bytes> From<Vector<O, B>> for IndirectNameMap<K, V, O, B> {
-    fn from(entries: Vector<O, B>) -> Self {
+impl<K: Index, V: Index, O: Offset, I: Input> From<Vector<O, I>> for IndirectNameMap<K, V, O, I> {
+    fn from(entries: Vector<O, I>) -> Self {
         Self {
             entries,
             order: AscendingOrder::new(),
@@ -28,10 +28,10 @@ impl<K: Index, V: Index, O: Offset, B: Bytes> From<Vector<O, B>> for IndirectNam
     }
 }
 
-impl<K: Index, V: Index, O: Offset, B: Bytes> IndirectNameMap<K, V, O, B> {
+impl<K: Index, V: Index, O: Offset, I: Input> IndirectNameMap<K, V, O, I> {
     /// Parses a [`IndirectNameMap`] starting at the given `offset`.
-    pub fn new(offset: O, bytes: B) -> Result<Self> {
-        Vector::parse(offset, bytes).map(Self::from)
+    pub fn new(offset: O, input: I) -> Parsed<Self> {
+        Vector::parse(offset, input).map(Self::from)
     }
 
     /// Gets the remaining number of pairs in the [`IndirectNameMap`].
@@ -40,13 +40,13 @@ impl<K: Index, V: Index, O: Offset, B: Bytes> IndirectNameMap<K, V, O, B> {
     }
 
     /// Parses the next primary index and [`NameMap`] pair.
-    pub fn parse<T, F>(&mut self, f: F) -> Result<Option<T>>
+    pub fn parse<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
-        F: FnOnce(K, &mut NameMap<V, &mut u64, &B>) -> Result<T>,
+        F: FnOnce(K, &mut NameMap<V, &mut u64, &I>) -> Parsed<T>,
     {
         self.entries
-            .advance_with_index(|i, offset, bytes| {
-                let primary_index: K = crate::component::index(offset, bytes)
+            .advance_with_index(|i, offset, input| {
+                let primary_index: K = crate::component::index(offset, input)
                     .context("could not parse primary index for pair")?;
 
                 self.order
@@ -54,33 +54,62 @@ impl<K: Index, V: Index, O: Offset, B: Bytes> IndirectNameMap<K, V, O, B> {
                     .context("primary index is not valid")?;
 
                 let mut name_map =
-                    NameMap::new(offset, bytes).context("could not parse name map for pair")?;
+                    NameMap::new(offset, input).context("could not parse name map for pair")?;
 
                 let result = f(primary_index, &mut name_map)?;
                 name_map.finish()?;
-                Result::Ok(result)
+                Parsed::Ok(result)
             })
             .transpose()
             .context("could not parse entry in indirect name map")
     }
+}
 
-    fn borrowed(&self) -> IndirectNameMap<K, V, u64, &B> {
+impl<K: Index, V: Index, O: Offset, I: Input> HasInput<I> for IndirectNameMap<K, V, O, I> {
+    #[inline]
+    fn input(&self) -> &I {
+        self.entries.input()
+    }
+}
+
+impl<'a, K: Index, V: Index, O: Offset, I: Input + 'a> BorrowInput<'a, I>
+    for IndirectNameMap<K, V, O, I>
+{
+    type Borrowed = IndirectNameMap<K, V, u64, &'a I>;
+
+    #[inline]
+    fn borrow_input(&'a self) -> Self::Borrowed {
         IndirectNameMap {
-            entries: self.entries.borrowed(),
+            entries: self.entries.borrow_input(),
             order: self.order,
             _marker: core::marker::PhantomData,
         }
     }
 }
 
-impl<K: Index, V: Index, O: Offset, B: Bytes> core::fmt::Debug for IndirectNameMap<K, V, O, B> {
+impl<'a, K: Index, V: Index, O: Offset, I: Clone + Input + 'a> CloneInput<'a, I>
+    for IndirectNameMap<K, V, O, &'a I>
+{
+    type Cloned = IndirectNameMap<K, V, u64, I>;
+
+    #[inline]
+    fn clone_input(&self) -> Self::Cloned {
+        IndirectNameMap {
+            entries: self.entries.clone_input(),
+            order: self.order,
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
+impl<K: Index, V: Index, O: Offset, I: Input> core::fmt::Debug for IndirectNameMap<K, V, O, I> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        struct Entry<K: Index, V: Index, B: Bytes> {
+        struct Entry<K: Index, V: Index, I: Input> {
             key: K,
-            names: NameMap<V, u64, B>,
+            names: NameMap<V, u64, I>,
         }
 
-        impl<K: Index, V: Index, B: Bytes> core::fmt::Debug for Entry<K, V, B> {
+        impl<K: Index, V: Index, I: Input> core::fmt::Debug for Entry<K, V, I> {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct("Entry")
                     .field("key", &self.key)
@@ -89,19 +118,19 @@ impl<K: Index, V: Index, O: Offset, B: Bytes> core::fmt::Debug for IndirectNameM
             }
         }
 
-        let mut entries = self.borrowed();
+        let mut entries = self.borrow_input();
         let mut list = f.debug_list();
         loop {
             let result = entries.parse(|key, names| {
                 list.entry(&Entry {
                     key,
-                    names: names.dereferenced(),
+                    names: names.clone_input(),
                 });
-                Result::Ok(())
+                Parsed::Ok(())
             });
 
             if let Err(e) = result.as_ref() {
-                list.entry(&core::result::Result::<(), _>::Err(e));
+                list.entry(&Result::<(), _>::Err(e));
             }
 
             if matches!(result, Ok(None) | Err(_)) {

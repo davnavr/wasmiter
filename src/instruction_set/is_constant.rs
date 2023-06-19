@@ -15,7 +15,7 @@ pub enum IsConstant {
     NotConstant,
 }
 
-impl<B: crate::bytes::Bytes> Instruction<'_, B> {
+impl<B: crate::input::Input> Instruction<'_, B> {
     /// Returns `true` if the [`Instruction`] can be used in a
     /// [constant expression](https://webassembly.github.io/spec/core/valid/instructions.html#valid-constant).
     ///

@@ -1,7 +1,7 @@
-use crate::bytes::Bytes;
+use crate::input::Input;
 use crate::{component::DataMode, wat};
 
-impl<B: Bytes> wat::Wat for crate::component::DatasComponent<B> {
+impl<I: Input> wat::Wat for crate::component::DatasComponent<I> {
     fn write(mut self, mut w: &mut wat::Writer) -> wat::Parsed<()> {
         for i in (0u32..).flat_map(crate::index::DataIdx::try_from) {
             let result = self.parse(

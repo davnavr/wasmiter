@@ -13,8 +13,9 @@ impl core::fmt::Display for InvalidOpcode {
 impl std::error::Error for InvalidOpcode {}
 
 impl From<InvalidOpcode> for crate::parser::Error {
+    #[inline]
     fn from(error: InvalidOpcode) -> Self {
-        crate::parser_bad_format!("{error}")
+        Self::new(crate::parser::ErrorKind::InvalidOpcode(error))
     }
 }
 

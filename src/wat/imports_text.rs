@@ -1,6 +1,6 @@
 use crate::{component::ImportKind, index, wat};
 
-impl<B: Clone + crate::bytes::Bytes> wat::Wat for crate::component::ImportsComponent<B> {
+impl<B: Clone + crate::input::Input> wat::Wat for crate::component::ImportsComponent<B> {
     fn write(self, w: &mut wat::Writer) -> wat::Parsed<()> {
         let mut function_count = 0u32;
         let mut table_count = 0u32;
