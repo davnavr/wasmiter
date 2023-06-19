@@ -37,7 +37,7 @@ impl<I: Clone + Input> CustomSection<I> {
                 contents: Window::with_offset_and_length(
                     contents.into_inner(),
                     new_base,
-                    old_length - (new_base - old_base),
+                    old_length.saturating_sub(new_base - old_base),
                 ),
             }),
             Err(e) => Err(e),
