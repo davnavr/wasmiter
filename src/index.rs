@@ -12,6 +12,7 @@ impl core::fmt::Display for IndexConversionError {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 impl std::error::Error for IndexConversionError {}
 
 impl From<IndexConversionError> for crate::parser::Error {

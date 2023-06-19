@@ -13,6 +13,7 @@
 //!   the `std` flag.
 //!
 //! [`std`]: https://doc.rust-lang.org/std/
+//! [`std::backtrace::Backtrace`]: https://doc.rust-lang.org/std/backtrace/struct.Backtrace.html
 //! [`alloc`]: https://doc.rust-lang.org/alloc/
 
 #![deny(missing_debug_implementations)]
@@ -23,6 +24,7 @@
 #![deny(clippy::alloc_instead_of_core)]
 #![deny(clippy::std_instead_of_alloc)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

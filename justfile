@@ -57,3 +57,9 @@ clippy_fuzz:
 # Runs cargo-fuzz on the given target; requires a nightly version of Rust
 fuzz target='parser_random' *FLAGS='-- -jobs=2':
     cargo +nightly fuzz run {{target}} {{FLAGS}}
+
+# Documentation
+
+# Invoke rustdoc, requires a nightly version of Rust
+doc *FLAGS='--open':
+    RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc {{FLAGS}}

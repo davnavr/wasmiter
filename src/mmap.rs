@@ -29,6 +29,7 @@ fn parse_module_sections_inner(path: &Path) -> parser::Parsed<SectionSequence<Mm
 /// [`parse_module_sections`]: crate::parse_module_sections
 /// [`Mmap::map`]: memmap2::Mmap::map
 #[inline]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "mmap")))]
 pub fn parse_module_sections<P: AsRef<Path>>(path: P) -> parser::Parsed<SectionSequence<Mmap>> {
     parse_module_sections_inner(path.as_ref())
 }

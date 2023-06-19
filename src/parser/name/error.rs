@@ -47,6 +47,7 @@ impl Display for InvalidCodePoint {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 impl std::error::Error for InvalidCodePoint {}
 
 /// Errors which can occur when attempting to interpret a [`Name`](crate::parser::name::Name) as a
@@ -70,6 +71,7 @@ impl Display for NameError {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 impl std::error::Error for NameError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {

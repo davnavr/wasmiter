@@ -42,6 +42,7 @@ impl<const P: u8> core::fmt::Display for InvalidPrefixedOpcode<P> {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 impl<const P: u8> std::error::Error for InvalidPrefixedOpcode<P> {}
 
 impl<const P: u8> From<InvalidPrefixedOpcode<P>> for crate::parser::Error {

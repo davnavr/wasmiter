@@ -238,6 +238,7 @@ impl Error {
 
     /// Gets a [`Backtrace`] describing where in the code the error occured.
     #[cfg(feature = "backtrace")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "backtrace")))]
     #[inline]
     pub fn backtrace(&self) -> &Backtrace {
         &self.inner.backtrace

@@ -82,6 +82,7 @@ impl Error {
 }
 
 #[cfg(feature = "alloc")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
 impl Error {
     /// Gets the offset from the start of the [`Input`](crate::input::Input) where the error
     /// occured.
@@ -139,4 +140,5 @@ impl Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 impl std::error::Error for Error {}

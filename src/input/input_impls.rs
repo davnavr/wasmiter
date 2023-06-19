@@ -53,6 +53,7 @@ impl Input for [u8] {
 /// Although UB is easy if underlying storage is modified, **pretending** it doesn't happen should
 /// be fine, since bytes will still be read no matter what (their values don't matter).
 #[cfg(feature = "mmap")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "mmap")))]
 impl Input for memmap2::Mmap {
     #[inline]
     fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {

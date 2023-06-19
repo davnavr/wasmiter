@@ -10,6 +10,7 @@ impl core::fmt::Display for InvalidOpcode {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 impl std::error::Error for InvalidOpcode {}
 
 impl From<InvalidOpcode> for crate::parser::Error {

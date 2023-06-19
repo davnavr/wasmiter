@@ -7,6 +7,10 @@ rust-version.workspace = true
 readme.workspace = true
 repository.workspace = true
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
+
 [workspace]
 members = ["crates/wasmiter-dis"]
 

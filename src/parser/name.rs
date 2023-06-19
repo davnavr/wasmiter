@@ -167,6 +167,7 @@ impl<I: Input> From<Name<input::Window<I>>> for Name<I> {
 }
 
 #[cfg(feature = "alloc")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
 impl<I: Input> Name<I> {
     /// Allocates a byte vector to contain the contents of the [`Name`].
     ///
