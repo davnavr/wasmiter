@@ -15,7 +15,7 @@ expression: module.display_module()
 (import "extern" "fun_startup" (func (; 0 ;) (type 1)))
 (import "extern" "fun_link_startup" (func (; 1 ;) (type 2)))
 
-;; function section count = 3
+;; function section count = 4
 (table (; 0 ;) 0 funcref)
 
 (memory 0 16)
@@ -38,21 +38,28 @@ expression: module.display_module()
   call 1
   drop
 )
+(func (type 2) ;; code size = 6
+  (local (; 0 ;) i32)
+  (local (; 1 ;) i32)
+  (local (; 2 ;) i32)
+  (local (; 3 ;) i32)
+  local.get 0
+)
 
 (data (; 0 ;) "el amor")
 (data (; 1 ;)
   "\FF\FF\00QQQQQQQQQQQQQ"
   "Q\07")
 
-(; UNRECOGNIZED (0) @ 0x112 to 0x176
+(; UNRECOGNIZED (0) @ 0x11A to 0x17E
 offset   0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
-000110        04 6E 61 6D 65 01  23 04 01 0B 66 75 6E 5F  |...name.#...fun_|
-000120  73 74 61 72 74 75 70 02  04 6D 61 69 6E 03 06 5F  |startup..main.._|
-000130  73 74 61 72 74 04 05 5F  69 6E 69 74 05 12 02 00  |start.._init....|
-000140  08 5F 48 41 4E 44 4C 45  53 01 05 46 55 4E 43 53  |._HANDLES..FUNCS|
-000150  06 0A 01 01 07 53 43 52  41 54 43 48 07 19 02 01  |.....SCRATCH....|
-000160  09 46 55 4E 43 53 5F 50  54 52 02 0B 53 43 52 41  |.FUNCS_PTR..SCRA|
-000170  54 43 48 5F 50 54 52                              |TCH_PTR.........|
+000110                                 04 6E 61 6D 65 01  |...........name.|
+000120  23 04 01 0B 66 75 6E 5F  73 74 61 72 74 75 70 02  |#...fun_startup.|
+000130  04 6D 61 69 6E 03 06 5F  73 74 61 72 74 04 05 5F  |.main.._start.._|
+000140  69 6E 69 74 05 12 02 00  08 5F 48 41 4E 44 4C 45  |init....._HANDLE|
+000150  53 01 05 46 55 4E 43 53  06 0A 01 01 07 53 43 52  |S..FUNCS.....SCR|
+000160  41 54 43 48 07 19 02 01  09 46 55 4E 43 53 5F 50  |ATCH.....FUNCS_P|
+000170  54 52 02 0B 53 43 52 41  54 43 48 5F 50 54 52     |TR..SCRATCH_PTR.|
 
 ;)
 )

@@ -91,8 +91,8 @@ impl HexDumpRow {
             let written = self.count.get() + skipped;
             let remaining = 16 - written;
             if remaining > 0 {
-                let pad_amount = remaining * 3 + u8::from(remaining <= 8 && remaining > 0);
-                for _ in 0..=pad_amount {
+                let pad_amount = 49 - ((16 - remaining) * 3) - u8::from(remaining < 8);
+                for _ in 0..pad_amount {
                     f.write_char(' ')?;
                 }
             }
