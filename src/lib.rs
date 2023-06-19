@@ -1,4 +1,20 @@
 #![doc = include_str!("../README.md")]
+//! ## Feature Flags
+//!
+//! - `std`: Enables the usage of [`std`], providing
+//!   [`std::error::Error`](https://doc.rust-lang.org/std/error/trait.Error.html) implementations
+//!   among other things. Implies the `alloc` flag.
+//! - `alloc`: Enables support for heap allocations with [`alloc`]. This allows for more
+//!   descriptive [`parser::Error`] messages.
+//! - `backtrace`: Enables attaching [`std::backtrace::Backtrace`]s to [`parser::Error`]s. Requires
+//!   the `std` flag.
+//! - `mmap`: Enables the optional dependency on [`memmap2`](https://docs.rs/memmap2/), which
+//!   allows treating a memory mapped file as an [`Input`](input::Input) to the parser. Requires
+//!   the `std` flag.
+//!
+//! [`std`]: https://doc.rust-lang.org/std/
+//! [`alloc`]: https://doc.rust-lang.org/alloc/
+
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unreachable_pub)]
