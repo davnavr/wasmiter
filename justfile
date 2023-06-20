@@ -1,35 +1,31 @@
 #!/usr/bin/env -S just --justfile
 # Shebang should be compatible with Git Bash for Windows
 
-# Runs clippy, followed by all tests
-check: (clippy_all) (test_all)
-
-list:
-    @just --list --justfile {{justfile()}}
-
-fmt:
-    cargo fmt
-
 cfg_nostd := "--no-default-features"
 cfg_alloc := "--no-default-features --features alloc"
 
-# Test
+alias c := clippy_full
+alias d := doc
+alias f := fmt_all
+alias t := test_full
 
-test_nostd $RUST_BACKTRACE="1":
-    cargo nextest run {{cfg_nostd}}
-    cargo test --doc {{cfg_nostd}}
+# Runs clippy, followed by all tests
+check: clippy_all test_all
 
-test_alloc $RUST_BACKTRACE="1":
-    cargo nextest run {{cfg_alloc}}
-    cargo test --doc {{cfg_alloc}}
+# Lists all available recipes
+list:
+    @just --list --justfile {{justfile()}}
 
-test_full $RUST_BACKTRACE="1":
-    cargo nextest run --all-targets
-    cargo test --doc
+# Runs fmt, by default for all code
+fmt *FLAGS="--all":
+    cargo fmt {{FLAGS}}
 
-test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTRACE) (test_nostd RUST_BACKTRACE)
+# Runs fmt on the fuzzing code
+fmt_fuzz:
+    cd ./fuzz/ && cargo fmt
 
-# Clippy
+# Runs fmt on all code
+fmt_all: fmt fmt_fuzz
 
 # Runs clippy on the full no_std variant of wasmiter
 clippy_nostd:
@@ -43,23 +39,35 @@ clippy_alloc:
 clippy_full:
     cargo clippy
 
-# Runs clippy on all 3 major variants of wasmiter
-clippy_all: (clippy_full) (clippy_alloc) (clippy_nostd)
-
-# Fuzzing
-
-fmt_fuzz:
-    cd ./fuzz/ && cargo fmt
-
+# Runs clippy on the fuzzing code
 clippy_fuzz:
     cd ./fuzz/ && cargo clippy
 
-# Runs cargo-fuzz on the given target; requires a nightly version of Rust
-fuzz target='parser_random' *FLAGS='-- -jobs=2':
-    cargo +nightly fuzz run {{target}} {{FLAGS}}
+# Runs clippy on all 3 major variants of wasmiter and the fuzzing code
+clippy_all: clippy_full clippy_alloc clippy_nostd clippy_fuzz
 
-# Documentation
+# Runs all tests for the full no_std variant of wasmiter
+test_nostd $RUST_BACKTRACE="1":
+    cargo nextest run {{cfg_nostd}}
+    cargo test --doc {{cfg_nostd}}
+
+# Runs all tests for the no_std+alloc variant of wasmiter
+test_alloc $RUST_BACKTRACE="1":
+    cargo nextest run {{cfg_alloc}}
+    cargo test --doc {{cfg_alloc}}
+
+# Runs all tests for the default variant of wasmiter
+test_full $RUST_BACKTRACE="1":
+    cargo nextest run --all-targets
+    cargo test --doc
+
+# Runs all tests for all 3 major variants of wasmiter
+test_all $RUST_BACKTRACE="1": (test_full RUST_BACKTRACE) (test_alloc RUST_BACKTRACE) (test_nostd RUST_BACKTRACE)
 
 # Invoke rustdoc, requires a nightly version of Rust
 doc *FLAGS='--open':
     RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc {{FLAGS}}
+
+# Runs cargo-fuzz on the given target; requires a nightly version of Rust
+fuzz target='parser_random' *FLAGS='-- -jobs=2':
+    cargo +nightly fuzz run {{target}} {{FLAGS}}
