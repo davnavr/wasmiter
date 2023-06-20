@@ -2,7 +2,7 @@ use crate::{
     component,
     input::{BorrowInput, CloneInput, HasInput, Input, Window},
     instruction_set::InstructionSequence,
-    parser::{self, ResultExt as _, Vector},
+    parser::{self, MixedResult, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -36,19 +36,12 @@ impl<I: Input> Code<I> {
         &self.content
     }
 
-    /// Reads the contents of this code entry.
-    ///
-    /// The first closure is given a [`Locals`](component::Locals) used to read the compressed
-    /// local variable declarations.
-    ///
-    /// The second closure is given the output of the first closure, along with an
-    /// [`InstructionSequence`] used to read the function *body*.
-    pub fn read<Y, Z, E, L, C>(&self, locals_f: L, code_f: C) -> Result<Z, E>
-    where
-        E: From<parser::Error>,
-        L: FnOnce(&mut component::Locals<&mut u64, &Window<I>>) -> Result<Y, E>,
-        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<I>>) -> Result<Z, E>,
-    {
+    #[inline]
+    fn parse_inner<Y, Z, E>(
+        &self,
+        locals_f: impl FnOnce(&mut component::Locals<&mut u64, &Window<I>>) -> MixedResult<Y, E>,
+        code_f: impl FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<I>>) -> MixedResult<Z, E>,
+    ) -> MixedResult<Z, E> {
         let mut offset = self.content.base();
         let mut locals = component::Locals::new(&mut offset, &self.content)?;
         let code_arg = locals_f(&mut locals)?;
@@ -63,20 +56,49 @@ impl<I: Input> Code<I> {
         if final_length != expected_length {
             #[inline(never)]
             #[cold]
-            fn unused_bytes(
-                offset: u64,
-                expected_length: u64,
-                actual_length: u64,
-            ) -> parser::Error {
+            fn unused_bytes(expected_length: u64, actual_length: u64) -> parser::Error {
                 parser::Error::new(parser::ErrorKind::InvalidFormat).with_context(parser::Context::from_closure(move |f| write!(f,
                     "expected code entry content to have a length of {expected_length} bytes, but got {actual_length}",
-                ))).with_location_context("code section entry", offset)
+                )))
             }
 
-            Err(unused_bytes(offset, expected_length, final_length).into())
+            Err(unused_bytes(expected_length, final_length).into())
         } else {
             Ok(result)
         }
+    }
+
+    /// Parses the contents of this code entry using the given closures, allowing for custom
+    /// errors.
+    ///
+    /// See the documentation for [`Code::parse`] for more information.
+    pub fn parse_mixed<E, Y, Z, L, C>(&self, locals_f: L, code_f: C) -> MixedResult<Z, E>
+    where
+        L: FnOnce(&mut component::Locals<&mut u64, &Window<I>>) -> MixedResult<Y, E>,
+        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<I>>) -> MixedResult<Z, E>,
+    {
+        self.parse_inner(locals_f, code_f)
+            .with_location_context("code section entry", self.content.base())
+    }
+
+    /// Parses the contents of this code entry using the given closures.
+    ///
+    /// The first closure is given a [`Locals`](component::Locals) used to read the compressed
+    /// local variable declarations.
+    ///
+    /// The second closure is given the output of the first closure, along with an
+    /// [`InstructionSequence`] used to read the function *body*.
+    #[inline]
+    pub fn parse<Y, Z, L, C>(&self, locals_f: L, code_f: C) -> Parsed<Z>
+    where
+        L: FnOnce(&mut component::Locals<&mut u64, &Window<I>>) -> Parsed<Y>,
+        C: FnOnce(Y, &mut InstructionSequence<&mut u64, &Window<I>>) -> Parsed<Z>,
+    {
+        self.parse_mixed::<core::convert::Infallible, Y, Z, _, _>(
+            |locals| locals_f(locals).map_err(Into::into),
+            |result, code| code_f(result, code).map_err(Into::into),
+        )
+        .map_err(Into::into)
     }
 }
 
@@ -121,11 +143,11 @@ impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for Code<&'a I> {
 impl<I: Input> Debug for Code<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut s = f.debug_struct("Func");
-        let result = self.read(
+        let result = self.parse(
             |locals| Ok(s.field("locals", locals)),
             |s, body| {
                 s.field("body", body);
-                parser::Parsed::Ok(())
+                Ok(())
             },
         );
 
@@ -174,7 +196,7 @@ impl<I: Input> CodeSection<I> {
     }
 
     /// Parses the next entry in the *code section*.
-    pub fn parse(&mut self) -> parser::Parsed<Option<Code<&I>>> {
+    pub fn parse(&mut self) -> Parsed<Option<Code<&I>>> {
         self.entries
             .advance_with_index(|index, offset, bytes| {
                 let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
@@ -183,7 +205,7 @@ impl<I: Input> CodeSection<I> {
                 crate::input::increment_offset(offset, size)
                     .context("unable to advance offset to read next code section entry")?;
 
-                parser::Parsed::Ok(Code { index, content })
+                Parsed::Ok(Code { index, content })
             })
             .transpose()
             .context("within code section")
@@ -216,7 +238,7 @@ impl<'a, I: Clone + Input + 'a> CloneInput<'a, I> for CodeSection<&'a I> {
 }
 
 impl<I: Clone + Input> Iterator for CodeSection<I> {
-    type Item = parser::Parsed<Code<I>>;
+    type Item = Parsed<Code<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.parse() {

@@ -1,7 +1,7 @@
 use crate::{
     component::ResultType,
     input::{BorrowInput, CloneInput, HasInput, Input},
-    parser::{Parsed, ResultExt, Vector},
+    parser::{MixedResult, Parsed, ResultExt, Vector},
 };
 
 /// Represents the
@@ -35,18 +35,40 @@ impl<I: Input> TypesComponent<I> {
         self.types.remaining_count()
     }
 
-    /// Parses the next function type in the section.
+    /// Parses the next function type in the section with the given closures, allowing for custom
+    /// errors.
+    ///
+    /// See the documentation for [`TypesComponent::parse`] for more information.
+    pub fn parse_mixed<E, Y, Z, P, R>(
+        &mut self,
+        parameter_types: P,
+        result_types: R,
+    ) -> MixedResult<Option<Z>, E>
+    where
+        P: FnOnce(&mut ResultType<&mut u64, &I>) -> MixedResult<Y, E>,
+        R: FnOnce(Y, &mut ResultType<&mut u64, &I>) -> MixedResult<Z, E>,
+    {
+        self.types
+            .advance(|offset, bytes| {
+                let start = *offset;
+                crate::component::func_type(offset, bytes, parameter_types, result_types)
+                    .with_location_context("type section", start)
+            })
+            .transpose()
+    }
+
+    /// Parses the next function type in the section with the given closures.
     #[inline]
     pub fn parse<Y, Z, P, R>(&mut self, parameter_types: P, result_types: R) -> Parsed<Option<Z>>
     where
         P: FnOnce(&mut ResultType<&mut u64, &I>) -> Parsed<Y>,
         R: FnOnce(Y, &mut ResultType<&mut u64, &I>) -> Parsed<Z>,
     {
-        self.types
-            .advance(|offset, bytes| {
-                crate::component::func_type(offset, bytes, parameter_types, result_types)
-            })
-            .transpose()
+        self.parse_mixed(
+            |params| parameter_types(params).map_err(Into::into),
+            |y, results| result_types(y, results).map_err(Into::into),
+        )
+        .map_err(Into::into)
     }
 }
 

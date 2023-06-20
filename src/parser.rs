@@ -4,6 +4,7 @@ use crate::input::Input;
 
 mod ascending_order;
 mod error;
+mod mixed_error;
 mod offset;
 mod result_ext;
 mod vector;
@@ -16,6 +17,7 @@ pub(crate) use error::{Context, ErrorKind};
 pub(crate) use result_ext::ResultExt;
 
 pub use error::Error;
+pub use mixed_error::{MixedError, MixedResult};
 pub use offset::Offset;
 pub use vector::Vector;
 

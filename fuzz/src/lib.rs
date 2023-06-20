@@ -78,7 +78,7 @@ pub fn process_sections(wasm: &[u8]) -> wasmiter::parser::Parsed<()> {
                 KnownSection::Code(code) => {
                     for result in code {
                         let entry = result?;
-                        entry.read(|_| wasmiter::parser::Parsed::Ok(()), |(), _| Ok(()))?;
+                        entry.parse(|_| wasmiter::parser::Parsed::Ok(()), |(), _| Ok(()))?;
                     }
                 }
                 KnownSection::Data(mut data) => loop {

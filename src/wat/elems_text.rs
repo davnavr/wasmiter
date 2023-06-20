@@ -42,7 +42,7 @@ impl<I: Input> wat::Wat for crate::component::ElemsComponent<I> {
                             let writer = core::cell::RefCell::new(w);
 
                             loop {
-                                let result = expressions.next(|item| {
+                                let result = expressions.parse(|item| {
                                     let mut w = writer.borrow_mut();
                                     w.open_paren();
                                     w.write_str("item ");

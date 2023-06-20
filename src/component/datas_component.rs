@@ -2,7 +2,7 @@ use crate::{
     index::MemIdx,
     input::{BorrowInput, CloneInput, HasInput, Input, Window},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Parsed, ResultExt as _, Vector},
+    parser::{self, MixedResult, Offset, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -70,55 +70,85 @@ impl<I: Input> DatasComponent<I> {
             .map(Self::from)
     }
 
-    /// Parses the next data segment in the section.
+    #[inline]
+    fn parse_inner<Y, Z, E>(
+        offset: &mut u64,
+        input: &I,
+        mode_f: impl FnOnce(&mut DataMode<&mut u64, &I>) -> MixedResult<Y, E>,
+        data_f: impl FnOnce(Y, Window<&I>) -> MixedResult<Z, E>,
+    ) -> MixedResult<Z, E> {
+        let mode_tag =
+            parser::leb128::u32(offset, input).context("while parsing data segment mode")?;
+
+        let mut copied_offset = *offset;
+        let mut mode: DataMode<&mut u64, &I> = match mode_tag {
+            0 => DataMode::Active(
+                MemIdx::from(0u8),
+                InstructionSequence::new(&mut copied_offset, input),
+            ),
+            1 => DataMode::Passive,
+            2 => DataMode::Active(
+                crate::component::index(&mut copied_offset, input)
+                    .context("could not parse target memory of active data segment")?,
+                InstructionSequence::new(&mut copied_offset, input),
+            ),
+            _ => {
+                #[inline(never)]
+                #[cold]
+                fn unsupported_mode(mode: u32) -> parser::Error {
+                    parser::Error::new(parser::ErrorKind::BadDataSegmentMode(mode))
+                }
+
+                return Err(unsupported_mode(mode_tag).into());
+            }
+        };
+
+        let data_arg = mode_f(&mut mode)?;
+        mode.finish()?;
+        *offset = copied_offset;
+
+        let data_length = parser::leb128::u64(offset, input).context("data segment length")?;
+
+        let data = Window::with_offset_and_length(input, *offset, data_length);
+        let result = data_f(data_arg, data)?;
+
+        crate::input::increment_offset(offset, data_length).with_context(|| move |f| {
+            write!(f, "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached")
+        })?;
+
+        Ok(result)
+    }
+
+    /// Parses the next data segment in the section with the given closures, allowing for custom
+    /// errors.
+    ///
+    /// See the documentation for [`DatasComponent::parse`] for more information.
+    pub fn parse_mixed<E, Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> MixedResult<Option<Z>, E>
+    where
+        M: FnOnce(&mut DataMode<&mut u64, &I>) -> MixedResult<Y, E>,
+        D: FnOnce(Y, Window<&I>) -> MixedResult<Z, E>,
+    {
+        self.entries
+            .advance(|offset, input| {
+                let start = *offset;
+                Self::parse_inner(offset, input, mode_f, data_f)
+                    .with_location_context("data segment", start)
+            })
+            .transpose()
+            .context("within data section")
+    }
+
+    /// Parses the next data segment in the section with the given closures.
     pub fn parse<Y, Z, M, D>(&mut self, mode_f: M, data_f: D) -> Parsed<Option<Z>>
     where
         M: FnOnce(&mut DataMode<&mut u64, &I>) -> Parsed<Y>,
         D: FnOnce(Y, Window<&I>) -> Parsed<Z>,
     {
-        self.entries.advance(|offset, input| {
-            let mode_offset = *offset;
-            let mode_tag=
-                parser::leb128::u32(offset, input).context("while parsing data segment mode")?;
-
-            let mut copied_offset = *offset;
-            let mut mode: DataMode<&mut u64, &I> = match mode_tag {
-                0 => DataMode::Active(
-                    MemIdx::from(0u8),
-                    InstructionSequence::new(&mut copied_offset, input),
-                ),
-                1 => DataMode::Passive,
-                2 => DataMode::Active(
-                    crate::component::index(&mut copied_offset, input).context("could not parse target memory of active data segment")?,
-                    InstructionSequence::new(&mut copied_offset, input),
-                ),
-                _ => {
-                    #[inline(never)]
-                    #[cold]
-                    fn unsupported_mode(offset: u64, mode: u32) -> parser::Error {
-                        parser::Error::new(parser::ErrorKind::BadDataSegmentMode(mode)).with_location_context("data segment", offset)
-                    }
-
-                    return Err(unsupported_mode(mode_offset, mode_tag));
-                }
-            };
-
-            let data_arg = mode_f(&mut mode)?;
-            mode.finish()?;
-            *offset = copied_offset;
-
-            let data_length =
-                parser::leb128::u64(offset, input).context("data segment length")?;
-
-            let data = Window::with_offset_and_length(input, *offset, data_length);
-            let result = data_f(data_arg, data)?;
-
-            crate::input::increment_offset(offset, data_length).with_context(|| move |f| {
-                write!(f, "expected data segment to have a length of {data_length} bytes, but end of section was unexpectedly reached")
-            })?;
-
-            Ok(result)
-        }).transpose().context("within data section")
+        self.parse_mixed::<core::convert::Infallible, Y, Z, _, _>(
+            |mode| mode_f(mode).map_err(Into::into),
+            |result, data| data_f(result, data).map_err(Into::into),
+        )
+        .map_err(Into::into)
     }
 
     /// Gets the expected remaining number of entires in the *data section* that have yet to be parsed.

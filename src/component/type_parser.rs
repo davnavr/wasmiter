@@ -1,7 +1,7 @@
 use crate::{
     component,
     input::Input,
-    parser::{self, leb128, Context, Error, ErrorKind, Parsed, ResultExt},
+    parser::{self, leb128, Context, Error, ErrorKind, MixedResult, Parsed, ResultExt},
     types::{self, BlockType, GlobalMutability, IdxType, Limits, TableType, ValType},
 };
 
@@ -175,19 +175,23 @@ pub fn limits<I: Input>(offset: &mut u64, input: &I) -> Parsed<Limits> {
     }
 }
 
-/// Parses a
-/// [WebAssembly function type](https://webassembly.github.io/spec/core/syntax/types.html#function-types),
-/// which specifies the parameter and result types of a function.
-pub fn func_type<Y, Z, I, P, R>(
+/// Parses a WebAssembly [function type], which specifies the parameter and result types of a
+/// function.
+///
+/// This is used, for example, to parse each entry in a
+/// [`TypesComponent`](component::TypesComponent).
+///
+/// [function type]: https://webassembly.github.io/spec/core/syntax/types.html#function-types
+pub fn func_type<I, E, Y, Z, P, R>(
     offset: &mut u64,
     input: &I,
     parameter_types: P,
     result_types: R,
-) -> Parsed<Z>
+) -> MixedResult<Z, E>
 where
     I: Input,
-    P: FnOnce(&mut component::ResultType<&mut u64, &I>) -> Parsed<Y>,
-    R: FnOnce(Y, &mut component::ResultType<&mut u64, &I>) -> Parsed<Z>,
+    P: FnOnce(&mut component::ResultType<&mut u64, &I>) -> MixedResult<Y, E>,
+    R: FnOnce(Y, &mut component::ResultType<&mut u64, &I>) -> MixedResult<Z, E>,
 {
     let tag = parser::one_byte_exact(offset, input).context("function type")?;
     if tag != 0x60 {
@@ -197,13 +201,12 @@ where
             Error::new(ErrorKind::BadFuncTypeTag(tag))
         }
 
-        return Err(bad_tag(tag));
+        return Err(bad_tag(tag).into());
     }
 
-    let offset_reborrow: &mut u64 = offset;
-    let mut parameters = component::ResultType::parse(offset_reborrow, input)?;
+    let mut parameters = component::ResultType::parse(offset, input)?;
     let result_types_closure_argument = parameter_types(&mut parameters)?;
-    parameters.finish()?;
+    let offset = parameters.finish()?;
     let mut results = component::ResultType::parse(offset, input)?;
     let ret = result_types(result_types_closure_argument, &mut results)?;
     results.finish()?;

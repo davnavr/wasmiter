@@ -93,8 +93,10 @@ impl<I: Input> Iterator for TagsComponent<I> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.tags
-            .advance(|offset, bytes| parse(offset, bytes).context("within tag section"))
+        self.tags.advance(|offset, bytes| {
+            let start = *offset;
+            parse(offset, bytes).with_location_context("tag section", start)
+        })
     }
 
     #[inline]

@@ -142,6 +142,15 @@ cfg_if::cfg_if! {
             {
                 Self::from_display(ContextFn(f))
             }
+
+            #[cold]
+            #[inline(never)]
+            pub(crate) fn from_closure_cold<F>(f: F) -> Self
+            where
+                F: Fn(&mut Formatter) -> core::fmt::Result + Send + Sync + 'static,
+            {
+                Self::from_closure(f)
+            }
         }
 
         impl From<&'static str> for Context {
@@ -188,6 +197,14 @@ cfg_if::cfg_if! {
 
             #[inline]
             pub(crate) fn from_closure<F>(_: F) -> Self
+            where
+                F: Fn(&mut Formatter) -> core::fmt::Result + Send + Sync
+            {
+                Self
+            }
+
+            #[inline]
+            pub(crate) fn from_closure_cold<F>(_: F) -> Self
             where
                 F: Fn(&mut Formatter) -> core::fmt::Result + Send + Sync
             {
@@ -249,6 +266,12 @@ impl Error {
         self.with_context(Context::from_closure(move |f| {
             write!(f, "within the {description}, at offset {offset:#X}")
         }))
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn with_location_context_cold(self, description: &'static str, offset: u64) -> Self {
+        self.with_location_context(description, offset)
     }
 }
 

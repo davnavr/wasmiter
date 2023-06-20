@@ -3,7 +3,7 @@ use crate::{
     index::{self, TableIdx},
     input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
-    parser::{self, Offset, Parsed, ResultExt as _, Vector},
+    parser::{self, MixedResult, Offset, Parsed, ResultExt as _, Vector},
 };
 use core::fmt::{Debug, Formatter};
 
@@ -27,26 +27,47 @@ impl<O: Offset, I: Input> ElementExpressions<O, I> {
             .map(Self::from)
     }
 
-    /// Parses the next expression.
-    pub fn next<T, F>(&mut self, f: F) -> Parsed<Option<T>>
+    /// Parses the next expression with the given closure, allowing for custom
+    /// errors.
+    ///
+    /// See the documentation for [`ElementExpressions::parse`] for more information.
+    pub fn parse_mixed<E, T, F>(&mut self, f: F) -> MixedResult<Option<T>, E>
+    where
+        F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> MixedResult<T, E>,
+    {
+        #[inline]
+        fn parse_inner<I, E, T, F>(offset: &mut u64, input: &I, f: F) -> MixedResult<T, E>
+        where
+            I: Input,
+            F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> MixedResult<T, E>,
+        {
+            let mut expression = InstructionSequence::new(offset, input);
+            let result = f(&mut expression)?;
+            expression.finish()?;
+            Ok(result)
+        }
+
+        self.expressions
+            .advance(|offset, input| {
+                let start = *offset;
+                parse_inner(offset, input, f)
+                    .with_location_context("element segment expression", start)
+            })
+            .transpose()
+    }
+
+    /// Parses the next expression with the given closure.
+    #[inline]
+    pub fn parse<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
         F: FnOnce(&mut InstructionSequence<&mut u64, &I>) -> Parsed<T>,
     {
-        self.expressions
-            .advance(|offset, input| {
-                let mut offset_cell = *offset;
-                let mut expression = InstructionSequence::new(&mut offset_cell, input);
-                let result = f(&mut expression)?;
-                let (_, final_offset) = expression.finish()?;
-                *offset = *final_offset;
-                Parsed::Ok(result)
-            })
-            .transpose()
-            .context("could not parse element segment expression")
+        self.parse_mixed::<core::convert::Infallible, T, _>(|exprs| f(exprs).map_err(Into::into))
+            .map_err(Into::into)
     }
 
     fn finish(mut self) -> Parsed<()> {
-        while self.next(|_| Parsed::Ok(()))?.is_some() {}
+        while self.parse(|_| Ok(()))?.is_some() {}
         Ok(())
     }
 }
@@ -81,7 +102,7 @@ impl<O: Offset, I: Input> Debug for ElementExpressions<O, I> {
         let mut borrowed = self.borrow_input();
         let mut list = f.debug_list();
         loop {
-            let result = borrowed.next(|instructions| {
+            let result = borrowed.parse(|instructions| {
                 list.entry(&Parsed::Ok(instructions));
                 Ok(())
             });

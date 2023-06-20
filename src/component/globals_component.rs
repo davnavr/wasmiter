@@ -1,7 +1,7 @@
 use crate::{
     input::{BorrowInput, CloneInput, HasInput, Input},
     instruction_set::InstructionSequence,
-    parser::{Parsed, ResultExt as _, Vector},
+    parser::{MixedResult, Parsed, ResultExt as _, Vector},
     types::GlobalType,
 };
 
@@ -30,22 +30,46 @@ impl<I: Input> GlobalsComponent<I> {
             .map(Self::from)
     }
 
-    /// Parses a
-    /// [WebAssembly `global`](https://webassembly.github.io/spec/core/binary/modules.html#global-section).
+    /// Parses a WebAssembly [`global`] with the given closure, allowing for custom errors.
+    ///
+    /// See the documentation for [`GlobalsComponent::parse`] for more information.
+    ///
+    /// [`global`]: https://webassembly.github.io/spec/core/binary/modules.html#global-section
+    pub fn parse_mixed<E, T, F>(&mut self, f: F) -> MixedResult<Option<T>, E>
+    where
+        F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> MixedResult<T, E>,
+    {
+        #[inline]
+        fn parse_inner<I, E, T, F>(offset: &mut u64, input: &I, f: F) -> MixedResult<T, E>
+        where
+            I: Input,
+            F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> MixedResult<T, E>,
+        {
+            let global_type = crate::component::global_type(offset, input)?;
+            let mut expression = InstructionSequence::new(offset, input);
+            let result = f(global_type, &mut expression)?;
+            expression.finish()?;
+            Ok(result)
+        }
+
+        self.globals
+            .advance(|offset, input| {
+                let start = *offset;
+                parse_inner(offset, input, f).with_location_context("global section", start)
+            })
+            .transpose()
+    }
+
+    /// Parses a WebAssembly [`global`] with the given closure.
+    ///
+    /// [`global`]: https://webassembly.github.io/spec/core/binary/modules.html#global-section
+    #[inline]
     pub fn parse<T, F>(&mut self, f: F) -> Parsed<Option<T>>
     where
         F: FnOnce(GlobalType, &mut InstructionSequence<&mut u64, &I>) -> Parsed<T>,
     {
-        self.globals
-            .advance(|offset, input| {
-                let global_type = crate::component::global_type(offset, input)?;
-                let mut expression = InstructionSequence::new(offset, input);
-                let result = f(global_type, &mut expression).context("global expression")?;
-                expression.finish().context("global expression")?;
-                Parsed::Ok(result)
-            })
-            .transpose()
-            .context("within global section")
+        self.parse_mixed(|gt, init| f(gt, init).map_err(Into::into))
+            .map_err(Into::into)
     }
 
     /// Gets the expected remaining number of entires in the *global section* that have yet to be parsed.

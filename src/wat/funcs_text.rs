@@ -11,7 +11,7 @@ impl<T: Clone + Input, C: Clone + Input> wat::Wat for crate::component::FuncsCom
             write!(w, " ;; code size = {}", code.content().length());
             writeln!(w);
 
-            w = code.read(
+            w = code.parse(
                 move |locals| {
                     for (i, result) in (0u32..)
                         .flat_map(crate::index::LocalIdx::try_from)
@@ -26,7 +26,7 @@ impl<T: Clone + Input, C: Clone + Input> wat::Wat for crate::component::FuncsCom
                         w.close_paren();
                         writeln!(w);
                     }
-                    wat::Parsed::Ok(w)
+                    Ok(w)
                 },
                 |w, code| {
                     wat::instruction_text::expression_indented(code, true, w)?;

@@ -9,12 +9,15 @@ use core::{
     num::NonZeroU32,
 };
 
-/// Represents the local declarations in the [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
-/// which corresponds to the
-/// [**locals** field](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func) of
-/// each function in the
-/// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
-/// of a WebAssembly module.
+/// Represents the local declarations in the [*code section*], which corresponds to the
+/// [**locals** field] of each function in the [**funcs** component] of a WebAssembly module.
+///
+/// To read [`Locals`], parse an entry of the [*code section*] with the [`Code::parse`] method.
+///
+/// [*code section*]: https://webassembly.github.io/spec/core/binary/modules.html#code-section
+/// [**locals** field]: https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func
+/// [**funcs** component]: https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func
+/// [`Code::parse`]: component::Code::parse
 pub struct Locals<O: Offset, I: Input> {
     offset: O,
     input: I,
@@ -62,7 +65,7 @@ impl<O: Offset, I: Input> Locals<O, I> {
     /// Gets the next group of local variable declarations. Returns a type, and the number of
     /// locals of that type.
     ///
-    /// To save on size, locals of the same type can be grouped together.
+    /// To save on size, WebAssembly allows locals of the same type can be grouped together.
     pub fn next_group(&mut self) -> parser::Parsed<Option<(NonZeroU32, ValType)>> {
         self.load_next_group()?;
         Ok(self.current.take())
