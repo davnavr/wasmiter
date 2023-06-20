@@ -194,7 +194,7 @@ impl<I: Input> Name<I> {
 /// Parses a UTF-8 string [`Name`].
 pub fn parse<I: Input>(offset: &mut u64, input: I) -> parser::Parsed<Name<I>> {
     let name = Name::new(input, offset)?;
-    input::increment_offset(offset, name.length() as usize)?;
+    input::increment_offset(offset, name.length())?;
     Ok(name)
 }
 

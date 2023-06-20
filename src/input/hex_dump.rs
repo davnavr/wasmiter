@@ -236,7 +236,8 @@ impl<I: Input> Iterator for HexDump<I> {
             .window
             .read_at(start, &mut bytes[0..fill_length])
             .and_then(|buf| {
-                let len = buf.len() as u8;
+                #[allow(clippy::cast_possible_truncation)]
+                let len = buf.len() as u8; // buf.len <= 16 <= u8::MAX
                 self.window.advance(len.into())?;
                 Ok(NonZeroU8::new(len))
             });
@@ -265,17 +266,15 @@ impl<I: Input> Display for HexDump<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         const OFFSET_HEADER: &str = "offset";
 
-        let max_width = usize::try_from(
-            self.window
-                .base()
-                .saturating_add(self.window.length())
-                .checked_ilog(16)
-                .unwrap_or(0u32),
-        )
-        .map(|log| log.saturating_add(1))
-        .unwrap_or(4);
+        let max_width = self
+            .window
+            .base()
+            .saturating_add(self.window.length())
+            .checked_ilog(16)
+            .unwrap_or(0u32)
+            .saturating_add(1);
 
-        let offset_width = core::cmp::max(max_width, OFFSET_HEADER.len());
+        let offset_width = core::cmp::max(crate::int::u32_to_usize(max_width), OFFSET_HEADER.len());
 
         if f.alternate() {
             write!(f, "{:<offset_width$}  ", OFFSET_HEADER)?;

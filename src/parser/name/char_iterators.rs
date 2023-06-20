@@ -65,6 +65,8 @@ impl CharsBuffer {
             };
 
             // Skip the amount of bytes that were read
+            // will advance at most 15, which is less than u8::MAX
+            #[allow(clippy::cast_possible_truncation)]
             self.advance((original_len - chars.as_str().len()) as u8);
 
             Ok(Some(c))
@@ -97,13 +99,21 @@ impl CharsBuffer {
         if saved_length < self.buffer.len() {
             let remaining = self.buffer.len() - saved_length;
             let actual_remaining = core::cmp::min(remaining, *length as usize);
+
+            #[allow(clippy::cast_possible_truncation)]
             let result = input
                 .read(offset, &mut self.buffer[saved_length..][..actual_remaining])
-                .map(|buf| buf.len() as u8);
+                .map(|buf| buf.len() as u8); // buf.len() <= 15 <= u8::MAX
 
             match result {
                 Ok(filled) => {
-                    self.lengths = (self.lengths & 0xF0) | ((saved_length as u8 + filled) & 0xF);
+                    #[allow(clippy::cast_possible_truncation)]
+                    {
+                        // saved_length <= 15 <= u8::MAX
+                        self.lengths =
+                            (self.lengths & 0xF0) | ((saved_length as u8 + filled) & 0xF);
+                    }
+
                     *length -= u32::from(filled);
                 }
                 Err(e) => {
@@ -133,7 +143,12 @@ impl CharsBuffer {
             }
         };
 
-        self.lengths = ((valid_len as u8) << 4) | (self.lengths & 0xF);
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            // valid_len <= 15 <= u8::MAX
+            self.lengths = ((valid_len as u8) << 4) | (self.lengths & 0xF);
+        }
+
         Ok(())
     }
 }

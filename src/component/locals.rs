@@ -98,15 +98,10 @@ impl<O: Offset, I: Input> Iterator for Locals<O, I> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let min = self
             .current
-            .and_then(|(count, _)| usize::try_from(count.get()).ok())
+            .map(|(count, _)| crate::int::u32_to_usize(count.get()))
             .unwrap_or(0);
 
-        (
-            min,
-            usize::try_from(self.count)
-                .ok()
-                .and_then(|count| min.checked_add(count)),
-        )
+        (min, min.checked_add(crate::int::u32_to_usize(self.count)))
     }
 }
 

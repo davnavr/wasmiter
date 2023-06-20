@@ -1,6 +1,8 @@
 //! Functions for parsing integers in the
 //! [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 
+#![allow(clippy::cast_possible_truncation)]
+
 use crate::input::Input;
 use crate::parser::{Context, Error, ErrorKind, Parsed, ResultExt as _};
 

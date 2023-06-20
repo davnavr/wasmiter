@@ -33,9 +33,11 @@ impl From<IndexConversionError> for crate::parser::Error {
 pub trait Index:
     From<u8>
     + From<u16>
+    + From<u32>
     + Into<u32>
     + Into<usize>
-    + TryFrom<u32, Error = IndexConversionError>
+    + TryFrom<u64, Error = IndexConversionError>
+    + TryFrom<usize, Error = IndexConversionError>
     + core::fmt::Debug
     + Eq
     + core::hash::Hash
@@ -73,7 +75,19 @@ macro_rules! indices {
             /// Returns the index as a `usize`.
             #[inline]
             pub const fn to_usize(self) -> usize {
-                self.0 as usize
+                crate::int::u32_to_usize(self.0)
+            }
+
+            #[inline]
+            fn try_from_other<I>(index: I) -> Result<Self, IndexConversionError>
+            where
+                u32: TryFrom<I>,
+            {
+                if let Ok(actual_index) = u32::try_from(index) {
+                    Ok(Self(actual_index))
+                } else {
+                    Err(IndexConversionError(&Self::NAME))
+                }
             }
         }
 
@@ -105,6 +119,13 @@ macro_rules! indices {
             }
         }
 
+        impl From<u32> for $name {
+            #[inline]
+            fn from(index: u32) -> Self {
+                Self(index)
+            }
+        }
+
         impl From<$name> for usize {
             #[inline]
             fn from(index: $name) -> usize {
@@ -119,28 +140,19 @@ macro_rules! indices {
             }
         }
 
-        impl TryFrom<u32> for $name {
-            type Error = IndexConversionError;
-
-            fn try_from(index: u32) -> Result<Self, Self::Error> {
-                if usize::try_from(index).is_ok() {
-                    Ok(Self(index))
-                } else {
-                    Err(IndexConversionError(&Self::NAME))
-                }
-            }
-        }
-
         impl TryFrom<u64> for $name {
             type Error = IndexConversionError;
 
             fn try_from(index: u64) -> Result<Self, Self::Error> {
-                match u32::try_from(index) {
-                    Ok(actual_index) if usize::try_from(index).is_ok() => {
-                        Ok(Self(actual_index))
-                    }
-                    _ => Err(IndexConversionError(&Self::NAME)),
-                }
+                Self::try_from_other(index)
+            }
+        }
+
+        impl TryFrom<usize> for $name {
+            type Error = IndexConversionError;
+
+            fn try_from(index: usize) -> Result<Self, Self::Error> {
+                Self::try_from_other(index)
             }
         }
 

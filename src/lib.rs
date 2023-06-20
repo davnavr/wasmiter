@@ -22,6 +22,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![deny(clippy::alloc_instead_of_core)]
+#![deny(clippy::cast_possible_truncation)]
 #![deny(clippy::std_instead_of_alloc)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
@@ -29,6 +30,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod int;
 mod wat;
 
 pub mod component;
@@ -39,6 +41,10 @@ pub mod instruction_set;
 pub mod parser;
 pub mod sections;
 pub mod types;
+
+const _CHECK_POINTER_SIZE: () = if usize::BITS < 32 {
+    panic!("wasmiter is not supported in environments with a pointer size less than 32-bits")
+};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "mmap")] {
