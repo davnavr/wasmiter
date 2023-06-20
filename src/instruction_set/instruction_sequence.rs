@@ -4,10 +4,10 @@ use crate::{
     instruction_set::{
         self, FCPrefixedOpcode, FEPrefixedOpcode, Instruction, Opcode, VectorOpcode,
     },
-    parser::{self, leb128, Error, ErrorKind, Offset, ResultExt as _},
+    parser::{self, leb128, Error, ErrorKind, MixedResult, Offset, Parsed, ResultExt as _},
 };
 
-fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Parsed<instruction_set::MemArg> {
+fn memarg<I: Input>(offset: &mut u64, input: &I) -> Parsed<instruction_set::MemArg> {
     let a = leb128::u32(offset, input).context("memory argument alignment")?;
     let o = leb128::u64(offset, input).context("memory argument offset")?;
 
@@ -40,7 +40,7 @@ fn memarg<I: Input>(offset: &mut u64, input: &I) -> parser::Parsed<instruction_s
 fn instruction<'a, 'b, I: Input>(
     offset: &'a mut u64,
     input: &'b I,
-) -> parser::Parsed<Instruction<'a, &'b I>> {
+) -> Parsed<Instruction<'a, &'b I>> {
     let opcode = Opcode::try_from(parser::one_byte_exact(offset, input).context("opcode byte")?)?;
     Ok(match opcode {
         Opcode::Unreachable => Instruction::Unreachable,
@@ -888,16 +888,15 @@ fn instruction<'a, 'b, I: Input>(
 }
 
 #[inline]
-fn next_instruction<'a, T, E, I, F>(
+fn next_instruction<'a, I, E, T, F>(
     offset: &'a mut u64,
     input: &'a I,
     blocks: &mut u32,
     f: F,
-) -> Result<T, E>
+) -> MixedResult<T, E>
 where
-    E: From<parser::Error>,
     I: Input,
-    F: FnOnce(&mut Instruction<'a, &'a I>) -> Result<T, E>,
+    F: FnOnce(&mut Instruction<'a, &'a I>) -> MixedResult<T, E>,
 {
     let mut instruction = self::instruction(offset, input)?;
     let result = f(&mut instruction)?;
@@ -945,6 +944,7 @@ where
 /// [`expr`](https://webassembly.github.io/spec/core/syntax/instructions.html), which is a sequence
 /// of instructions that is terminated by an [**end**](Instruction::End) instruction.
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct InstructionSequence<O: Offset, I: Input> {
     blocks: u32,
     offset: O,
@@ -981,11 +981,12 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
         self.blocks
     }
 
-    /// Processes the next [`Instruction`] in the sequence, providing it to the given closure.
-    pub fn next<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
+    /// Parses the next [`Instruction`] in the sequence, providing it to the given closure, allowing for custom errors.
+    ///
+    /// See the documentation for [`InstructionSequence::parse`] for more information.
+    pub fn parse_mixed<'a, E, T, F>(&'a mut self, f: F) -> Option<MixedResult<T, E>>
     where
-        E: From<parser::Error>,
-        F: FnOnce(&mut Instruction<'a, &'a I>) -> Result<T, E>,
+        F: FnOnce(&mut Instruction<'a, &'a I>) -> MixedResult<T, E>,
     {
         if self.is_finished() {
             return None;
@@ -1001,6 +1002,16 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
         Some(result)
     }
 
+    /// Parses the next [`Instruction`] in the sequence, providing it to the given closure.
+    #[inline]
+    pub fn parse<'a, T, F>(&'a mut self, f: F) -> Option<Parsed<T>>
+    where
+        F: FnOnce(&mut Instruction<'a, &'a I>) -> Parsed<T>,
+    {
+        self.parse_mixed(|instr| f(instr).map_err(Into::into))
+            .map(|r| r.map_err(Into::into))
+    }
+
     /// Processes the remaining instructions in the sequence. Returns `true` if all instructions
     /// were already processed, and the offset to the byte after the last byte of the last
     /// instruction.
@@ -1010,7 +1021,7 @@ impl<O: Offset, I: Input> InstructionSequence<O, I> {
     pub fn finish(mut self) -> parser::Parsed<(bool, O)> {
         let mut was_finished = true;
         loop {
-            match self.next(|_| parser::Parsed::Ok(())) {
+            match self.parse(|_| parser::Parsed::Ok(())) {
                 Some(Ok(())) => was_finished = false,
                 Some(Err(e)) => return Err(e),
                 None => break,
@@ -1069,15 +1080,15 @@ impl<O: Offset, I: Input> core::fmt::Debug for InstructionSequence<O, I> {
         let mut instructions = self.borrow_input();
         let mut list = f.debug_list();
         loop {
-            let result = instructions.next(|i| {
-                list.entry(&parser::Parsed::Ok(i));
+            let result = instructions.parse(|i| {
+                list.entry(&Parsed::Ok(i));
                 Ok(())
             });
 
             match result {
                 None => break,
                 Some(Err(e)) => {
-                    list.entry(&parser::Parsed::<()>::Err(e));
+                    list.entry(&Parsed::<()>::Err(e));
                     break;
                 }
                 Some(Ok(_)) => (),
