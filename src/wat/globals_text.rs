@@ -1,15 +1,15 @@
 use crate::wat;
 
 impl<B: crate::input::Input> wat::Wat for crate::component::GlobalsComponent<B> {
-    fn write(mut self, mut w: &mut wat::Writer) -> wat::Parsed<()> {
+    fn write(mut self, mut w: &mut wat::Writer) -> wat::Result {
         loop {
-            let result = self.parse(move |global_type, init| {
-                w.open_paren();
-                w.write_str("global ");
-                wat::write_global_type(global_type, w);
+            let result = self.parse_mixed(move |global_type, init| {
+                w.open_paren()?;
+                w.write_str("global ")?;
+                wat::write_global_type(global_type, w)?;
                 wat::instruction_text::expression_linear(init, w)?;
-                w.close_paren();
-                writeln!(w);
+                w.close_paren()?;
+                writeln!(w)?;
                 Ok(w)
             })?;
 

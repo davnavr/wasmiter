@@ -1,16 +1,14 @@
 use crate::{
     component,
     input::{BorrowInput as _, Input},
-    wat::{self, Wat, Writer},
+    wat::{Wat, Writer},
 };
 use core::fmt::{Display, Formatter, Result};
 
 fn write_wat(thing: impl Wat, f: &mut Formatter) -> Result {
     let mut writer = Writer::new(f);
-    if let Err(e) = thing.write(&mut writer) {
-        wat::write_err(&e, &mut writer);
-    }
-    writer.finish()
+    let result = thing.write(&mut writer);
+    writer.finish(result)
 }
 
 impl<T: Input, C: Input> Display for component::FuncsComponent<T, C> {

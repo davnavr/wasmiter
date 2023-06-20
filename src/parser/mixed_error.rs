@@ -69,6 +69,13 @@ impl<E> From<Error> for MixedError<E> {
     }
 }
 
+impl<E> From<crate::input::Error> for MixedError<E> {
+    #[inline]
+    fn from(error: crate::input::Error) -> Self {
+        Self::Parser(error.into())
+    }
+}
+
 impl From<MixedError> for Error {
     fn from(error: MixedError) -> Self {
         match error {

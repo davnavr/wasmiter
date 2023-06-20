@@ -3,34 +3,37 @@ use crate::{
     instruction_set::{self, Instruction as Instr, InstructionSequence},
     parser::Offset,
     types::{self, BlockType},
-    wat::{self, Writer},
+    wat::{self, Result, Writer},
 };
 
-fn write_block_type(block_type: BlockType, w: &mut Writer) {
+fn write_block_type(block_type: BlockType, w: &mut Writer) -> Result {
     match block_type {
-        BlockType::Empty => (),
+        BlockType::Empty => Ok(()),
         BlockType::Inline(ty) => write!(w, "(result {ty})"),
         BlockType::Index(idx) => wat::write_type_use(idx, w),
     }
 }
 
-fn write_non_zero_index<I: Copy + Into<u32>>(idx: I, w: &mut Writer) {
+fn write_non_zero_index<I: Copy + Into<u32>>(idx: I, w: &mut Writer) -> Result {
     if idx.into() != 0 {
-        w.write_char(' ');
-        wat::write_index(false, idx, w);
+        w.write_char(' ')?;
+        wat::write_index(false, idx, w)?;
     }
+    Ok(())
 }
 
-fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) {
-    write_non_zero_index(arg.memory(), w);
+fn write_mem_arg(arg: &instruction_set::MemArg, w: &mut Writer) -> Result {
+    write_non_zero_index(arg.memory(), w)?;
 
     if arg.offset() != 0 {
-        write!(w, " offset={}", arg.offset());
+        write!(w, " offset={}", arg.offset())?;
     }
 
     if arg.align() != instruction_set::Align::None {
-        write!(w, " align={}", arg.align());
+        write!(w, " align={}", arg.align())?;
     }
+
+    Ok(())
 }
 
 fn instruction<I: Input>(
@@ -38,7 +41,7 @@ fn instruction<I: Input>(
     indentation: Option<u32>,
     last: bool,
     w: &mut Writer,
-) -> wat::Parsed<()> {
+) -> Result {
     if matches!(instr, Instr::End if last) {
         return Ok(());
     }
@@ -53,55 +56,55 @@ fn instruction<I: Input>(
 
         // InstructionSequence has nesting >= 1, so function bodies will always have indentation
         for _ in 0..level {
-            w.write_str(wat::INDENTATION);
+            w.write_str(wat::INDENTATION)?;
         }
     }
 
-    w.write_str(instr.name());
+    w.write_str(instr.name())?;
 
     match instr {
         Instr::Block(ty) | Instr::Loop(ty) | Instr::If(ty) | Instr::Try(ty) => {
-            w.write_char(' ');
-            write_block_type(*ty, w);
+            w.write_char(' ')?;
+            write_block_type(*ty, w)?;
         }
         Instr::Catch(idx) | Instr::Throw(idx) => {
-            w.write_char(' ');
-            wat::write_index(false, *idx, w)
+            w.write_char(' ')?;
+            wat::write_index(false, *idx, w)?;
         }
         Instr::Br(target)
         | Instr::BrIf(target)
         | Instr::Delegate(target)
         | Instr::Rethrow(target) => {
-            write!(w, " {}", target.to_u32())
+            write!(w, " {}", target.to_u32())?;
         }
         Instr::BrTable(entries) => {
             for target in entries {
-                write!(w, " {}", u32::from(target?));
+                write!(w, " {}", u32::from(target?))?;
             }
         }
         Instr::Call(idx) | Instr::RefFunc(idx) | Instr::ReturnCall(idx) => {
-            w.write_char(' ');
-            wat::write_index(false, *idx, w)
+            w.write_char(' ')?;
+            wat::write_index(false, *idx, w)?;
         }
         Instr::CallIndirect(signature, table) | Instr::ReturnCallIndirect(signature, table) => {
-            w.write_char(' ');
-            wat::write_index(false, *table, w);
-            wat::write_type_use(*signature, w);
+            w.write_char(' ')?;
+            wat::write_index(false, *table, w)?;
+            wat::write_type_use(*signature, w)?;
         }
         Instr::Select(types) => {
-            w.write_char(' ');
-            w.open_paren();
-            w.write_str("result");
+            w.write_char(' ')?;
+            w.open_paren()?;
+            w.write_str("result")?;
             wat::write_types(types.borrow_input(), w)?;
-            w.close_paren();
+            w.close_paren()?;
         }
         Instr::LocalGet(idx) | Instr::LocalSet(idx) | Instr::LocalTee(idx) => {
-            w.write_char(' ');
-            wat::write_index(false, *idx, w);
+            w.write_char(' ')?;
+            wat::write_index(false, *idx, w)?;
         }
         Instr::GlobalGet(idx) | Instr::GlobalSet(idx) => {
-            w.write_char(' ');
-            wat::write_index(false, *idx, w);
+            w.write_char(' ')?;
+            wat::write_index(false, *idx, w)?;
         }
         Instr::I32Load(arg)
         | Instr::I64Load(arg)
@@ -206,58 +209,58 @@ fn instruction<I: Input>(
         | Instr::I64AtomicRmw8CmpxchgU(arg)
         | Instr::I64AtomicRmw16CmpxchgU(arg)
         | Instr::I64AtomicRmw32CmpxchgU(arg) => {
-            write_mem_arg(arg, w);
+            write_mem_arg(arg, w)?;
         }
         Instr::MemorySize(idx) | Instr::MemoryGrow(idx) | Instr::MemoryFill(idx) => {
-            write_non_zero_index(*idx, w)
+            write_non_zero_index(*idx, w)?;
         }
-        Instr::I32Const(i) => write!(w, " {i:#010X} (; {i} signed, {} unsigned ;)", *i as u32),
-        Instr::I64Const(i) => write!(w, " {i:#018X} (; {i} signed, {} unsigned ;)", *i as u64),
-        Instr::F32Const(f) => write!(w, " {:#010X} (; {f} ;)", f.to_bits()),
-        Instr::F64Const(f) => write!(w, " {:#018X} (; {f} ;)", f.to_bits()),
+        Instr::I32Const(i) => write!(w, " {i:#010X} (; {i} signed, {} unsigned ;)", *i as u32)?,
+        Instr::I64Const(i) => write!(w, " {i:#018X} (; {i} signed, {} unsigned ;)", *i as u64)?,
+        Instr::F32Const(f) => write!(w, " {:#010X} (; {f} ;)", f.to_bits())?,
+        Instr::F64Const(f) => write!(w, " {:#018X} (; {f} ;)", f.to_bits())?,
         Instr::RefNull(rt) => w.write_str(match rt {
             types::RefType::Extern => " extern",
             types::RefType::Func => " func",
-        }),
+        })?,
         Instr::TableGet(idx)
         | Instr::TableSet(idx)
         | Instr::TableSize(idx)
         | Instr::TableGrow(idx)
         | Instr::TableFill(idx) => {
-            w.write_char(' ');
-            wat::write_index(false, *idx, w)
+            w.write_char(' ')?;
+            wat::write_index(false, *idx, w)?;
         }
         Instr::MemoryCopy {
             destination: x,
             source: y,
         } => {
-            write_non_zero_index(*x, w);
-            write_non_zero_index(*y, w);
+            write_non_zero_index(*x, w)?;
+            write_non_zero_index(*y, w)?;
         }
         Instr::TableCopy {
             destination: x,
             source: y,
         } => {
-            write_non_zero_index(*x, w);
-            write_non_zero_index(*y, w);
+            write_non_zero_index(*x, w)?;
+            write_non_zero_index(*y, w)?;
         }
         Instr::MemoryInit(data, mem) => {
-            write_non_zero_index(*mem, w);
-            w.write_char(' ');
-            wat::write_index(false, *data, w);
+            write_non_zero_index(*mem, w)?;
+            w.write_char(' ')?;
+            wat::write_index(false, *data, w)?;
         }
         Instr::TableInit(elem, table) => {
-            write_non_zero_index(*table, w);
-            w.write_char(' ');
-            wat::write_index(false, *elem, w);
+            write_non_zero_index(*table, w)?;
+            w.write_char(' ')?;
+            wat::write_index(false, *elem, w)?;
         }
         Instr::DataDrop(data) => {
-            w.write_char(' ');
-            wat::write_index(false, *data, w);
+            w.write_char(' ')?;
+            wat::write_index(false, *data, w)?;
         }
         Instr::ElemDrop(elem) => {
-            w.write_char(' ');
-            wat::write_index(false, *elem, w);
+            w.write_char(' ')?;
+            wat::write_index(false, *elem, w)?;
         }
         Instr::V128Load8Lane(mem, lane)
         | Instr::V128Load16Lane(mem, lane)
@@ -267,18 +270,18 @@ fn instruction<I: Input>(
         | Instr::V128Store16Lane(mem, lane)
         | Instr::V128Store32Lane(mem, lane)
         | Instr::V128Store64Lane(mem, lane) => {
-            write_mem_arg(mem, w);
-            write!(w, " {lane}");
+            write_mem_arg(mem, w)?;
+            write!(w, " {lane}")?;
         }
         Instr::V128Const(vec) => {
-            w.write_str(" i8x16");
+            w.write_str(" i8x16")?;
             for b in vec.to_le_bytes() {
-                write!(w, " {b:#04X}");
+                write!(w, " {b:#04X}")?;
             }
         }
         Instr::I8x16Shuffle(lanes) => {
             for index in lanes {
-                write!(w, " {index}");
+                write!(w, " {index}")?;
             }
         }
         Instr::I8x16ExtractLaneS(lane)
@@ -295,7 +298,7 @@ fn instruction<I: Input>(
         | Instr::F32x4ReplaceLane(lane)
         | Instr::F64x2ExtractLane(lane)
         | Instr::F64x2ReplaceLane(lane) => {
-            write!(w, " {lane}")
+            write!(w, " {lane}")?;
         }
         _ => (),
     }
@@ -304,13 +307,13 @@ fn instruction<I: Input>(
 }
 
 impl<I: Input> wat::Wat for Instr<'_, I> {
-    fn write(mut self, writer: &mut Writer) -> wat::Parsed<()> {
+    fn write(mut self, writer: &mut Writer) -> Result {
         instruction(&mut self, None, false, writer)
     }
 }
 
 impl<O: Offset, I: Input> wat::Wat for InstructionSequence<O, I> {
-    fn write(mut self, writer: &mut Writer) -> crate::parser::Parsed<()> {
+    fn write(mut self, writer: &mut Writer) -> Result {
         expression_indented(&mut self, false, writer)
     }
 }
@@ -318,16 +321,16 @@ impl<O: Offset, I: Input> wat::Wat for InstructionSequence<O, I> {
 pub(super) fn expression_linear(
     expr: &mut instruction_set::InstructionSequence<impl Offset, &impl Input>,
     w: &mut Writer,
-) -> wat::Parsed<()> {
+) -> Result {
     loop {
         let last = expr.nesting_level() <= 1;
         let printer = |instr: &mut Instr<_>| {
-            w.write_char(' ');
+            w.write_char(' ')?;
             instruction(instr, None, last, w)?;
             Ok(())
         };
 
-        match expr.next(printer) {
+        match expr.parse_mixed(printer) {
             Some(Ok(())) => continue,
             None => return Ok(()),
             Some(Err(e)) => return Err(e),
@@ -339,7 +342,7 @@ pub(super) fn expression_indented(
     expr: &mut instruction_set::InstructionSequence<impl Offset, impl Input>,
     is_function: bool,
     w: &mut Writer,
-) -> wat::Parsed<()> {
+) -> Result {
     let mut first = true;
 
     loop {
@@ -347,7 +350,7 @@ pub(super) fn expression_indented(
         let last = expr.nesting_level() <= 1;
         let printer = |instr: &mut Instr<_>| {
             if !first {
-                writeln!(w);
+                writeln!(w)?;
             }
 
             first = false;
@@ -356,7 +359,7 @@ pub(super) fn expression_indented(
             Ok(())
         };
 
-        match expr.next(printer) {
+        match expr.parse_mixed(printer) {
             Some(Ok(())) => continue,
             None => return Ok(()),
             Some(Err(e)) => return Err(e),

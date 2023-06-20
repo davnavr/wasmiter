@@ -16,7 +16,7 @@ expression: module.display_module()
 (import "extern" "fun_link_startup" (func (; 1 ;) (type 2)))
 
 ;; function section count = 4
-(table (; 0 ;) 0 funcref)
+(table 0 funcref)
 
 (memory 0 16)
 
