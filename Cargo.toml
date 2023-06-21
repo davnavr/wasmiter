@@ -17,7 +17,7 @@ members = ["crates/wasmiter-dis"]
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.70"
 readme = "README.md"
 repository = "https://github.com/davnavr/wasmiter"
 
@@ -37,7 +37,7 @@ alloc = []
 
 [dev-dependencies]
 arbitrary = "1.3.0"
-criterion = "0.5.1"
+criterion = { version = "0.5.1", features = ["real_blackbox"]}
 insta = "1.29.0"
 leb128 = "0.2.5"
 rand = "0.8.5"
