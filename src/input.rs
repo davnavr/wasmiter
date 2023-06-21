@@ -51,23 +51,15 @@ pub(crate) fn increment_offset<A: TryInto<u64>>(offset: &mut u64, amount: A) -> 
 /// [`std::io::Read`]: https://doc.rust-lang.org/std/io/trait.Read.html
 /// [`std::io::Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
 pub trait Input {
-    /// Reads bytes starting at the given `offset`, copying them into the `buffer`. Returns the
-    /// portion of the `buffer` that was actually copied to.
-    ///
-    /// An empty slice (`Ok(&[])`) is returned to indicate no bytes were copied into the `buffer`.
-    ///
-    /// Attempts to read at an `offset` considered "out of bounds" may result in an error or no
-    /// bytes being copied. The exact behavior is implementation defined.
+    /// Reads bytes starting at the given `offset` and copies them into the `buffer`, returning the
+    /// number of bytes that were copied into the `buffer`.
     ///
     /// # Errors
     ///
     /// The attempt to read the bytes failed for some reason, such as an I/O error.
-    fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]>;
+    fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<usize>;
 
     /// Calculates the maximum number of bytes that can at read the given `offset`.
-    ///
-    /// Attempts to calculate the length at an `offset` considered "out of bounds" may result in an
-    /// error or `0` being returned. The exact behavior is implementation defined.
     ///
     /// # Errors
     ///
@@ -84,8 +76,9 @@ pub trait Input {
         let mut buffer = [0u8; BUFFER_LEN];
 
         for chunk in bytes.chunks(BUFFER_LEN) {
-            let filled = self.read(&mut offset, &mut buffer)?;
-            let comparand = &filled[..filled.len().min(chunk.len())];
+            // copied <= BUFFER_LEN <= usize::MAX
+            let copied = self.read(&mut offset, &mut buffer)?;
+            let comparand = &buffer[..copied.min(chunk.len())];
             if comparand != chunk {
                 return Ok(false);
             }
@@ -106,15 +99,16 @@ pub trait Input {
         let buffer_length = buffer.len();
         let copied = self.read_at(offset, buffer)?;
 
-        if copied.len() != buffer_length {
-            return Err(Error::new(
+        // copied <= buffer_length <= usize::MAX
+        if copied != buffer_length {
+            Err(Error::new(
                 error::ErrorKind::CannotFillBuffer,
                 offset,
-                copied.len().try_into().ok(),
-            ));
+                u64::try_from(copied).ok(),
+            ))
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 
     /// Borrows the current [`Input`] instance, using a returned reference that also implements
@@ -124,7 +118,7 @@ pub trait Input {
         self
     }
 
-    /// Reads bytes starting at the given `offset`, copying them into the `buffer`, and then
+    /// Reads bytes starting at the given `offset` and copies them into the `buffer`, and then
     /// advances the `offset` by the number of bytes that were read.
     ///
     /// See the documentation for [`read_at`](Input::read_at) for more information.
@@ -133,10 +127,10 @@ pub trait Input {
     ///
     /// Returns an error if the read failed, or if the `offset` would overflow.
     #[inline]
-    fn read<'b>(&self, offset: &mut u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        let output = self.read_at(*offset, buffer)?;
-        increment_offset(offset, output.len())?;
-        Ok(output)
+    fn read(&self, offset: &mut u64, buffer: &mut [u8]) -> Result<usize> {
+        let copied = self.read_at(*offset, buffer)?;
+        increment_offset(offset, copied)?;
+        Ok(copied)
     }
 
     /// Reads an exact number of bytes starting at the given `offset`, copying them into the

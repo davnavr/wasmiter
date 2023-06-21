@@ -15,7 +15,7 @@ use crate::input::{self, BorrowInput, Input, Result};
 ///
 /// let mut buffer = [0u8; 6];
 /// let copied = window.read_at(15, &mut buffer)?;
-/// assert_eq!(copied, b"of the");
+/// assert_eq!(&buffer[..copied], b"of the");
 /// # wasmiter::input::Result::Ok(())
 /// ```
 #[derive(Clone, Copy)]
@@ -112,9 +112,10 @@ impl<I: Input> From<I> for Window<I> {
 }
 
 impl<I: Input> Input for Window<I> {
-    fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+    #[inline]
+    fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<usize> {
         let remaining = usize::try_from(self.bounds_check(offset)?).unwrap_or(usize::MAX);
-        let actual_len = core::cmp::min(remaining, buffer.len());
+        let actual_len = remaining.min(buffer.len());
         self.inner.read_at(offset, &mut buffer[0..actual_len])
     }
 

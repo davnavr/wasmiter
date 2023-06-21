@@ -35,7 +35,8 @@ macro_rules! unsigned {
             const MAX_BYTE_WIDTH: u8 = (BITS / 7) + 1;
 
             let mut buffer = [0u8; MAX_BYTE_WIDTH as usize];
-            let input = input.read_at(*offset, &mut buffer)?;
+            let width = input.read_at(*offset, &mut buffer)?;
+            let input = &buffer[..width as usize];
 
             let mut remaining = input.iter().copied();
             let mut value: $ty = 0;
@@ -71,7 +72,8 @@ unsigned! {
 pub fn s32<I: Input>(offset: &mut u64, bytes: I) -> Parsed<i32> {
     let mut destination = 0u32;
     let mut buffer = [0u8; 5];
-    let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
+    let width = bytes.read_at(*offset, &mut buffer)?;
+    let input = &buffer[..width];
     let mut remaining = input.iter().copied();
 
     // Read the first 4 bytes
@@ -107,7 +109,8 @@ pub fn s32<I: Input>(offset: &mut u64, bytes: I) -> Parsed<i32> {
 pub fn s64<I: Input>(offset: &mut u64, bytes: I) -> Parsed<i64> {
     let mut destination = 0u64;
     let mut buffer = [0u8; 10];
-    let input: &[u8] = bytes.read_at(*offset, &mut buffer)?;
+    let width = bytes.read_at(*offset, &mut buffer)?;
+    let input = &buffer[..width];
     let mut remaining = input.iter().copied();
 
     // Read the first 9 bytes

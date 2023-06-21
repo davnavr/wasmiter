@@ -235,9 +235,9 @@ impl<I: Input> Iterator for HexDump<I> {
         let result = self
             .window
             .read_at(start, &mut bytes[0..fill_length])
-            .and_then(|buf| {
+            .and_then(|amt| {
                 #[allow(clippy::cast_possible_truncation)]
-                let len = buf.len() as u8; // buf.len <= 16 <= u8::MAX
+                let len = amt as u8; // buf.len <= 16 <= u8::MAX
                 self.window.advance(len.into())?;
                 Ok(NonZeroU8::new(len))
             });
@@ -255,6 +255,7 @@ impl<I: Input> Iterator for HexDump<I> {
                 bytes,
             })),
             Err(e) => {
+                // Set window length to 0
                 self.window.shrink(self.window.length());
                 e.map(Err)
             }

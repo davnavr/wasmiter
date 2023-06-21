@@ -99,16 +99,15 @@ impl CharsBuffer {
         if saved_length < self.buffer.len() {
             let remaining = self.buffer.len() - saved_length;
             let actual_remaining = core::cmp::min(remaining, *length as usize);
+            match input.read(offset, &mut self.buffer[saved_length..][..actual_remaining]) {
+                Ok(amount) => {
+                    let filled: u8;
 
-            #[allow(clippy::cast_possible_truncation)]
-            let result = input
-                .read(offset, &mut self.buffer[saved_length..][..actual_remaining])
-                .map(|buf| buf.len() as u8); // buf.len() <= 15 <= u8::MAX
-
-            match result {
-                Ok(filled) => {
                     #[allow(clippy::cast_possible_truncation)]
                     {
+                        // buf.len() <= 15 <= u8::MAX
+                        filled = amount as u8;
+
                         // saved_length <= 15 <= u8::MAX
                         self.lengths =
                             (self.lengths & 0xF0) | ((saved_length as u8 + filled) & 0xF);

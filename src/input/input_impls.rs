@@ -2,18 +2,25 @@ use crate::input::{self, Input, Result};
 
 impl Input for [u8] {
     #[inline]
-    fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
-        let start = usize::try_from(offset).unwrap_or(usize::MAX);
-        if let Some(source) = self.get(start..) {
-            let copy_amount = core::cmp::min(source.len(), buffer.len());
-            let destination = &mut buffer[..copy_amount];
-            destination.copy_from_slice(&source[..copy_amount]);
-            Ok(destination)
+    fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<usize> {
+        let start = usize::try_from(offset).ok();
+
+        if let Some(source) = start.and_then(|i| self.get(i..)) {
+            let copy_amount = source.len().min(buffer.len());
+
+            // Optimize calls to copy a single byte, just like <[u8] as std::io::Read>
+            if copy_amount == 1 {
+                buffer[0] = source[0];
+            } else {
+                buffer[..copy_amount].copy_from_slice(&source[..copy_amount]);
+            }
+
+            Ok(copy_amount)
         } else {
             Err(input::out_of_bounds(
                 offset,
-                self.len()
-                    .checked_sub(start)
+                start
+                    .and_then(|i| self.len().checked_sub(i))
                     .and_then(|len| u64::try_from(len).ok()),
             ))
         }
@@ -56,7 +63,7 @@ impl Input for [u8] {
 #[cfg_attr(doc_cfg, doc(cfg(feature = "mmap")))]
 impl Input for memmap2::Mmap {
     #[inline]
-    fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+    fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<usize> {
         <[u8] as Input>::read_at(self.as_ref(), offset, buffer)
     }
 
@@ -75,7 +82,7 @@ macro_rules! delegated_input_impl {
     ($b:ident in $($implementor:ty $(,)?)+) => {$(
         impl<$b: Input + ?Sized> Input for $implementor {
             #[inline]
-            fn read_at<'b>(&self, offset: u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+            fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<usize> {
                 <$b as Input>::read_at(self, offset, buffer)
             }
 
@@ -95,7 +102,7 @@ macro_rules! delegated_input_impl {
             }
 
             #[inline]
-            fn read<'b>(&self, offset: &mut u64, buffer: &'b mut [u8]) -> Result<&'b mut [u8]> {
+            fn read(&self, offset: &mut u64, buffer: &mut [u8]) -> Result<usize> {
                 <$b as Input>::read(self, offset, buffer)
             }
 

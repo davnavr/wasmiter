@@ -25,23 +25,17 @@ pub use vector::Vector;
 pub type Parsed<T> = Result<T, Error>;
 
 #[inline]
-pub(crate) fn bytes<'b, I: Input>(
-    offset: &mut u64,
-    input: I,
-    buffer: &'b mut [u8],
-) -> Parsed<&'b mut [u8]> {
-    let length = buffer.len();
-    input
-        .read(offset, buffer)
-        .with_context(|| move |f| write!(f, "could not read {length} bytes"))
-}
-
-#[inline]
 pub(crate) fn bytes_exact<I: Input>(offset: &mut u64, input: I, buffer: &mut [u8]) -> Parsed<()> {
     let length = buffer.len();
-    input
-        .read_exact(offset, buffer)
-        .with_context(|| move |f| write!(f, "expected {length} bytes"))
+    input.read_exact(offset, buffer).with_context(|| {
+        move |f| {
+            write!(f, "expected {length} byte")?;
+            if length != 1 {
+                core::fmt::Write::write_char(f, 's')?;
+            }
+            Ok(())
+        }
+    })
 }
 
 #[inline]
@@ -53,11 +47,12 @@ pub(crate) fn byte_array<I: Input, const N: usize>(offset: &mut u64, input: I) -
 
 #[inline]
 pub(crate) fn one_byte<I: Input>(offset: &mut u64, input: I) -> Parsed<Option<u8>> {
-    Ok(if let [value] = self::bytes(offset, input, &mut [0u8])? {
-        Some(*value)
-    } else {
-        None
-    })
+    let mut byte = 0u8;
+    let width = input
+        .read(offset, core::slice::from_mut(&mut byte))
+        .context("could not read a byte")?;
+
+    Ok(if width == 1 { Some(byte) } else { None })
 }
 
 #[inline]
