@@ -159,6 +159,16 @@ impl<I: Input> Debug for Code<I> {
     }
 }
 
+fn parse_code<'a, I: Input>(index: u32, offset: &mut u64, input: &'a I) -> Parsed<Code<&'a I>> {
+    let size = parser::leb128::u64(offset, input).context("code entry size")?;
+    let content = Window::with_offset_and_length(input, *offset, size);
+
+    crate::input::increment_offset(offset, size)
+        .context("unable to advance offset to read next code section entry")?;
+
+    Parsed::Ok(Code { index, content })
+}
+
 /// Represents the
 /// [*code section*](https://webassembly.github.io/spec/core/binary/modules.html#code-section),
 /// which corresponds to the
@@ -167,6 +177,7 @@ impl<I: Input> Debug for Code<I> {
 /// [**funcs** component](https://webassembly.github.io/spec/core/syntax/modules.html#syntax-func)
 /// of a WebAssembly module.
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct CodeSection<I: Input> {
     entries: Vector<u64, I>,
 }
@@ -182,7 +193,7 @@ impl<I: Input> CodeSection<I> {
     /// Uses the given [`Input`] to read the contents of the *code section* of a module, which
     /// begins at the given `offset`.
     #[inline]
-    pub fn new(offset: u64, input: I) -> parser::Parsed<Self> {
+    pub fn new(offset: u64, input: I) -> Parsed<Self> {
         Vector::parse(offset, input)
             .context("at start of code section")
             .map(Self::from)
@@ -198,17 +209,23 @@ impl<I: Input> CodeSection<I> {
     /// Parses the next entry in the *code section*.
     pub fn parse(&mut self) -> Parsed<Option<Code<&I>>> {
         self.entries
-            .advance_with_index(|index, offset, bytes| {
-                let size = parser::leb128::u64(offset, bytes).context("code entry size")?;
-                let content = Window::with_offset_and_length(bytes, *offset, size);
-
-                crate::input::increment_offset(offset, size)
-                    .context("unable to advance offset to read next code section entry")?;
-
-                Parsed::Ok(Code { index, content })
+            .advance_with_index(|index, offset, input| {
+                let start = *offset;
+                parse_code(index, offset, input).with_location_context("code section", start)
             })
             .transpose()
-            .context("within code section")
+    }
+
+    /// Parses all of the remaining entries in the *code section*.
+    pub fn parse_all_mixed<E, F>(self, mut f: F) -> MixedResult<(u64, I), E>
+    where
+        F: FnMut(Code<&I>) -> MixedResult<(), E>,
+    {
+        self.entries.finish_with_index(|index, offset, input| {
+            // Copied from CodeSection::parse
+            let start = *offset;
+            f(parse_code(index, offset, input).with_location_context("code section", start)?)
+        })
     }
 }
 
