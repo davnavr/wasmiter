@@ -206,7 +206,7 @@ where
 
     let mut parameters = component::ResultType::parse(offset, input)?;
     let result_types_closure_argument = parameter_types(&mut parameters)?;
-    let offset = parameters.finish()?;
+    let (offset, _) = parameters.finish()?;
     let mut results = component::ResultType::parse(offset, input)?;
     let ret = result_types(result_types_closure_argument, &mut results)?;
     results.finish()?;

@@ -53,9 +53,9 @@ impl<N: Index, O: Offset, I: Input> NameMap<N, O, I> {
     }
 
     /// Parses all remaining entries in the [`NameMap`].
-    pub fn finish(mut self) -> Parsed<O> {
+    pub fn finish(mut self) -> Parsed<(O, I)> {
         while self.parse()?.is_some() {}
-        Ok(self.entries.into_offset())
+        Ok(self.entries.into_offset_and_input())
     }
 }
 

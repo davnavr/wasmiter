@@ -7,6 +7,7 @@ use crate::{
 
 /// Represents a [`Vector`] of WebAssembly indices.
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct IndexVector<N: Index, O: Offset, I: Input> {
     indices: Vector<O, I>,
     _marker: core::marker::PhantomData<&'static N>,
@@ -33,12 +34,12 @@ impl<N: Index, O: Offset, I: Input> IndexVector<N, O, I> {
     }
 
     /// Parses the remaining indices.
-    pub fn finish(mut self) -> Parsed<O> {
+    pub fn finish(mut self) -> Parsed<(O, I)> {
         for result in &mut self {
             let _ = result?;
         }
 
-        Ok(self.indices.into_offset())
+        Ok(self.indices.into_offset_and_input())
     }
 }
 

@@ -36,12 +36,12 @@ impl<O: Offset, I: Input> ResultType<O, I> {
     }
 
     /// Parses the remaining types.
-    pub fn finish(mut self) -> Parsed<O> {
+    pub fn finish(mut self) -> Parsed<(O, I)> {
         for result in &mut self {
             let _ = result?;
         }
 
-        Ok(self.types.into_offset())
+        Ok(self.types.into_offset_and_input())
     }
 }
 

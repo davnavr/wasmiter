@@ -7,6 +7,7 @@ use crate::{
 /// WebAssembly format as a
 /// [`vec` or vector](https://webassembly.github.io/spec/core/binary/conventions.html#vectors).
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct Vector<O: Offset, I: Input> {
     total: u32,
     remaining: u32,
@@ -48,33 +49,40 @@ impl<O: Offset, I: Input> Vector<O, I> {
         )
     }
 
-    /// Parses an element with the given closure, passing the number of items that have been parsed
-    /// so far as the first parameter.
+    /// Returns the [`Offset`] into the next element of the [`Vector`], and the [`Input`] elements
+    /// were read from.
+    #[inline]
+    pub fn into_offset_and_input(self) -> (O, I) {
+        (self.offset, self.input)
+    }
+
+    /// Parses an element with the given closure, passing the element's index as the first
+    /// parameter.
     ///
     /// # Errors
     ///
-    /// See [`Vector::advance`] for more information.
+    /// See the documentation for [`Vector::advance`] for more information.
     pub fn advance_with_index<'a, T, E, F>(&'a mut self, f: F) -> Option<Result<T, E>>
     where
         F: FnOnce(u32, &'a mut u64, &'a I) -> Result<T, E>,
     {
         if self.remaining == 0 {
-            return None;
-        }
-
-        let result = f(
-            self.total - self.remaining,
-            self.offset.offset_mut(),
-            &self.input,
-        );
-
-        if result.is_ok() {
-            self.remaining -= 1;
+            None
         } else {
-            self.remaining = 0;
-        }
+            let result = f(
+                self.total - self.remaining,
+                self.offset.offset_mut(),
+                &self.input,
+            );
 
-        Some(result)
+            if result.is_ok() {
+                self.remaining -= 1;
+            } else {
+                self.remaining = 0;
+            };
+
+            Some(result)
+        }
     }
 
     /// Parses an element with the given closure.
@@ -91,9 +99,44 @@ impl<O: Offset, I: Input> Vector<O, I> {
         self.advance_with_index(|_, offset, bytes| f(offset, bytes))
     }
 
+    /// Parses all of the remaining elements in the vector with the given closure, passing the
+    /// element's index as the first parameter.
+    ///
+    /// # Errors
+    ///
+    /// See the documentation for [`Vector::advance`] for more information.
+    pub fn finish_with_index<E, F>(self, mut f: F) -> Result<(O, I), E>
+    where
+        F: FnMut(u32, &mut u64, &I) -> Result<(), E>,
+    {
+        let Self {
+            mut offset,
+            input,
+            remaining,
+            ..
+        } = self;
+
+        for index in 0..remaining {
+            f(index, offset.offset_mut(), &input)?;
+        }
+
+        Ok((offset, input))
+    }
+
+    /// Parses all of the remaining elements in the vector with the given closure.
+    ///
+    /// If the closure requires the index of the element, use [`Vector::finish_with_index`]
+    /// instead.
+    ///
+    /// # Errors
+    ///
+    /// See the documentation for [`Vector::advance`] for more information.
     #[inline]
-    pub(crate) fn into_offset(self) -> O {
-        self.offset
+    pub fn finish<E, F>(self, mut f: F) -> Result<(O, I), E>
+    where
+        F: FnMut(&mut u64, &I) -> Result<(), E>,
+    {
+        self.finish_with_index(|_, offset, input| f(offset, input))
     }
 }
 
