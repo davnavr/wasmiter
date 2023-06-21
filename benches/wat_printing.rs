@@ -27,6 +27,12 @@ fn printing(c: &mut criterion::Criterion) {
     let unstructured_sizes = [0x40000usize, 0x40000000];
     let mut unstructured_buffer = vec![0u8; *unstructured_sizes.last().unwrap()];
     for size in unstructured_sizes {
+        let group = if size > 0x20000000 {
+            group.sample_size(30)
+        } else {
+            &mut group
+        };
+
         group.throughput(criterion::Throughput::Bytes(size as u64));
         group.bench_with_input(
             BenchmarkId::new("wasmiter", size),
